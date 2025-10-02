@@ -1,0 +1,77 @@
+{
+  "name": "@shibuya/backend",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "main": "dist/index.js",
+  "types": "dist/public.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/public.d.ts",
+      "import": "./dist/public.js"
+    },
+    "./app": {
+      "types": "./dist/app.d.ts",
+      "import": "./dist/app.js"
+    },
+    "./services/firestoreService": {
+      "types": "./dist/services/firestoreService.d.ts",
+      "import": "./dist/services/firestoreService.js"
+    },
+    "./services/scheduledSpotService": {
+      "types": "./dist/services/scheduledSpotService.d.ts",
+      "import": "./dist/services/scheduledSpotService.js"
+    },
+    "./services/firebaseAdmin": {
+      "types": "./dist/services/firebaseAdmin.d.ts",
+      "import": "./dist/services/firebaseAdmin.js"
+    },
+    "./services/posterProfileService": {
+      "types": "./dist/services/posterProfileService.d.ts",
+      "import": "./dist/services/posterProfileService.js"
+    },
+    "./constants/billing": {
+      "types": "./dist/constants/billing.d.ts",
+      "import": "./dist/constants/billing.js"
+    },
+    "./services/quotaService": {
+      "types": "./dist/services/quotaService.d.ts",
+      "import": "./dist/services/quotaService.js"
+    }
+  },
+  "files": ["dist"],
+  "scripts": {
+    "dev": "tsx watch src/index.ts",
+    "build": "tsc -p tsconfig.json",
+    "start": "node dist/index.js",
+    "set-admin": "tsx src/scripts/setAdminClaim.ts",
+    "seed-moderation": "tsx src/scripts/seedModerationFixtures.ts",
+    "preview-quota-reset": "tsx src/scripts/previewQuotaReset.ts",
+    "lint": "eslint 'src/**/*.{ts,tsx,js}'",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@sentry/node": "^7.114.0",
+    "cors": "^2.8.5",
+    "dotenv": "^16.4.5",
+    "express": "^4.19.2",
+    "firebase-admin": "^12.6.0",
+    "stripe": "^18.5.0",
+    "zod": "^3.23.8"
+  },
+  "devDependencies": {
+    "@types/cors": "^2.8.17",
+    "@types/express": "^4.17.21",
+    "@types/node": "^20.12.7",
+    "@typescript-eslint/eslint-plugin": "^7.16.1",
+    "@typescript-eslint/parser": "^7.16.1",
+    "eslint": "^8.57.1",
+    "eslint-config-prettier": "^9.1.0",
+    "eslint-plugin-import": "^2.29.1",
+    "ts-node": "^10.9.2",
+    "tslib": "^2.6.2",
+    "tsx": "^4.10.5",
+    "typescript": "^5.4.5",
+    "vitest": "^1.5.0"
+  }
+}

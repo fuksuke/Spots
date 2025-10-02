@@ -1,0 +1,20 @@
+{
+  "name": "shibuya-livemap",
+  "private": true,
+  "workspaces": {
+    "packages": [
+      "frontend",
+      "backend",
+      "firebase/functions"
+    ]
+  },
+  "scripts": {
+    "build": "npm run build --workspaces",
+    "lint": "npm run lint --workspaces --if-present",
+    "test": "npm run test --workspaces --if-present",
+    "typecheck": "npm run build --workspaces"
+  },
+  "engines": {
+    "node": ">=18.17"
+  }
+}

@@ -1,0 +1,17 @@
+# Node dependencies
+node_modules/
+**/node_modules/
+
+# Build outputs
+dist/
+**/dist/
+
+# Environment files
+frontend/.env
+backend/.env
+
+# Logs
+*.log
+
+# Firebase local config
+.firebase/

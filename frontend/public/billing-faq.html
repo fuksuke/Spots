@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="ja">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Billing / Quota FAQ | Shibuya LiveMap</title>
+    <style>
+      body {
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+        margin: 0;
+        padding: 2rem 1.5rem 4rem;
+        background: #0f172a;
+        color: #e2e8f0;
+        line-height: 1.6;
+      }
+      main {
+        max-width: 720px;
+        margin: 0 auto;
+        background: rgba(15, 23, 42, 0.72);
+        border-radius: 16px;
+        border: 1px solid rgba(148, 163, 184, 0.2);
+        backdrop-filter: blur(12px);
+        padding: 2.5rem;
+      }
+      h1, h2 {
+        color: #f8fafc;
+      }
+      a {
+        color: #38bdf8;
+      }
+      ul {
+        padding-left: 1.5rem;
+      }
+      footer {
+        margin-top: 3rem;
+        text-align: center;
+        font-size: 0.875rem;
+        color: #94a3b8;
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <h1>Billing / Quota FAQ</h1>
+
+      <section>
+        <h2>決済について</h2>
+        <ul>
+          <li><strong>支払い方法</strong>: Stripeに登録したクレジットカードで決済されます。Apple Pay / Google PayなどStripeがサポートするウォレットも利用できます。</li>
+          <li><strong>請求サイクル</strong>: プラン変更当日に初回請求が発生し、以降は同じ日付に自動更新されます。</li>
+          <li><strong>キャンセル方法</strong>: アプリ内の「Stripeポータルを開く」からキャンセル・プラン変更がいつでも可能です。キャンセル後も請求期間の終了までは機能を利用できます。</li>
+        </ul>
+      </section>
+
+      <section>
+        <h2>クォータ更新について</h2>
+        <ul>
+          <li><strong>反映タイミング</strong>: 決済直後にWebhookでクォータが更新されますが、表示に反映されるまで最長で数分かかる場合があります。「クォータを再取得」ボタンで最新情報に同期できます。</li>
+          <li><strong>毎月のリセット</strong>: 毎月1日 03:00 (JST) にクォータを自動リセットします。Dry Runを利用した検証は <code>npm run preview-quota-reset --workspace @shibuya/backend</code> で実行できます。</li>
+          <li><strong>異常時の対処</strong>: クォータが更新されない・計算が合わない場合は <code>stripe_webhook_events</code> コレクションにエラーが記録されます。Sentryの通知と合わせて確認し、必要に応じてサポート窓口へご連絡ください。</li>
+        </ul>
+      </section>
+
+      <section>
+        <h2>サポート</h2>
+        <p>
+          返金や請求内容に関するお問い合わせは
+          <a href="mailto:support@shibuya-livemap.local">support@shibuya-livemap.local</a>
+          までメールでご連絡ください。障害が疑われる場合は決済時刻・登録メールアドレス・発生した画面のスクリーンショットを添えてご連絡いただくと調査がスムーズです。
+        </p>
+      </section>
+
+      <section>
+        <h2>開発者向けメモ</h2>
+        <p>
+          Stripe CLIを利用した検証手順や月次クォータリセットのDry Runについては
+          <code>docs/operations.md</code> を参照してください。
+        </p>
+      </section>
+    </main>
+
+    <footer>© 2025 Shibuya LiveMap</footer>
+  </body>
+</html>

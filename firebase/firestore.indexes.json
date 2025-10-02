@@ -1,0 +1,31 @@
+{
+  "indexes": [
+    {
+      "collectionGroup": "scheduled_spots",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "owner_id", "order": "ASCENDING" },
+        { "fieldPath": "announcement_type", "order": "ASCENDING" },
+        { "fieldPath": "publish_at", "order": "ASCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "scheduled_spots",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "status", "order": "ASCENDING" },
+        { "fieldPath": "publish_at", "order": "ASCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "promotions",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "status", "order": "ASCENDING" },
+        { "fieldPath": "priority", "order": "DESCENDING" },
+        { "fieldPath": "publish_at", "order": "ASCENDING" }
+      ]
+    }
+  ],
+  "fieldOverrides": []
+}
