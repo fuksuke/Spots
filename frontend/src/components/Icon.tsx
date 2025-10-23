@@ -14,7 +14,9 @@ import {
   PiMusicNoteFill,
   PiPlus,
   PiScrollLight,
-  PiListBullets
+  PiListBullets,
+  PiGear,
+  PiUser
 } from "react-icons/pi";
 
 const ICONS = {
@@ -32,7 +34,9 @@ const ICONS = {
   camera: PiCameraPlus,
   trend: PiChartLineUp,
   cafe: PiCoffee,
-  refresh: PiArrowClockwise
+  refresh: PiArrowClockwise,
+  gear: PiGear,
+  user: PiUser
 } as const;
 
 export type IconName = keyof typeof ICONS;

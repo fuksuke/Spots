@@ -1,5 +1,5 @@
 import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { onAuthStateChanged, User } from "firebase/auth";
+import { onAuthStateChanged, signOut, User } from "firebase/auth";
 import { collection, doc, limit, onSnapshot, orderBy, query, updateDoc, where } from "firebase/firestore";
 import { MapView } from "./components/MapView";
 import { SidebarNav } from "./components/SidebarNav";
@@ -14,6 +14,7 @@ import { PopularSpotsPanel } from "./components/PopularSpotsPanel";
 import { PromotionBanner } from "./components/PromotionBanner";
 import { SpotForm } from "./components/SpotForm";
 import { AdminDashboard } from "./components/AdminDashboard";
+import { AccountPanel } from "./components/AccountPanel";
 import { trackEvent, trackError, trackPageView } from "./lib/analytics";
 import { setSentryUser } from "./lib/sentry";
 import { useSpotFeed } from "./hooks/useSpotFeed";
@@ -191,6 +192,7 @@ function App() {
     }
   });
   const [isAuthModalOpen, setAuthModalOpen] = useState(false);
+  const [isAccountPanelOpen, setAccountPanelOpen] = useState(false);
   const [isSpotDrawerOpen, setSpotDrawerOpen] = useState(false);
   const [selectedLocation, setSelectedLocation] = useState<Coordinates | null>(null);
   const [focusCoordinates, setFocusCoordinates] = useState<Coordinates | null>(null);
@@ -825,7 +827,7 @@ function App() {
     triggerMessage("多言語対応は近日公開予定です");
   }, [triggerMessage]);
 
-  const handleSettingsClick = useCallback(() => {
+  const handleUpgradeClick = useCallback(() => {
     if (!currentUser) {
       triggerMessage("設定を開くにはログインしてください");
       setAuthModalOpen(true);
@@ -884,6 +886,86 @@ function App() {
     markNotificationsAsRead(notifications.filter((notification) => notification.source === "remote"));
     setNotifications([]);
   }, [markNotificationsAsRead, notifications]);
+
+  const handleAccountPanelOpen = useCallback(() => {
+    if (!currentUser) {
+      triggerMessage("アカウント情報を確認するにはログインしてください");
+      setAuthModalOpen(true);
+      return;
+    }
+    setAccountPanelOpen(true);
+  }, [currentUser, triggerMessage]);
+
+  const handleAccountPanelClose = useCallback(() => {
+    setAccountPanelOpen(false);
+  }, []);
+
+  const handleAccountShare = useCallback(async () => {
+    if (!currentUser) {
+      triggerMessage("共有するにはログインしてください");
+      return;
+    }
+    if (typeof navigator === "undefined") {
+      triggerMessage("この環境では共有できません");
+      return;
+    }
+    const profileUrl = `https://shibuya-livemap.example/users/${currentUser.uid}`;
+    const displayName = currentUser.displayName ?? userProfile?.displayName ?? "Spots ユーザー";
+    const shareData = {
+      title: displayName,
+      text: `${displayName} さんのスポット投稿をチェックしよう`,
+      url: profileUrl
+    };
+    try {
+      if (navigator.share) {
+        await navigator.share(shareData);
+      } else if (navigator.clipboard) {
+        await navigator.clipboard.writeText(profileUrl);
+        triggerMessage("プロフィールリンクをコピーしました");
+      } else {
+        triggerMessage("共有機能をサポートしていないブラウザです");
+      }
+    } catch (error) {
+      if ((error as DOMException)?.name !== "AbortError") {
+        triggerMessage("共有に失敗しました。再度お試しください");
+      }
+    }
+  }, [currentUser, triggerMessage, userProfile?.displayName]);
+
+  const handleAccountPrivateToggle = useCallback(
+    async (next: boolean) => {
+      if (!authToken) {
+        throw new Error("ログインが必要です。");
+      }
+      const response = await fetch("/api/profile", {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${authToken}`
+        },
+        body: JSON.stringify({ isPrivateAccount: next })
+      });
+
+      if (!response.ok) {
+        const body = await response.json().catch(() => ({}));
+        throw new Error(body.message ?? "プライバシー設定の更新に失敗しました");
+      }
+
+      await mutateProfile();
+      triggerMessage(next ? "アカウントを非公開に設定しました" : "アカウントを公開に設定しました");
+    },
+    [authToken, mutateProfile, triggerMessage]
+  );
+
+  const handleAccountLogout = useCallback(async () => {
+    try {
+      await signOut(auth);
+      triggerMessage("ログアウトしました");
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "ログアウトに失敗しました";
+      triggerMessage(message);
+    }
+  }, [triggerMessage]);
 
   const updateSpotLocally = useCallback(
     (spotId: string, updates: Partial<Spot>) => {
@@ -1013,6 +1095,10 @@ function App() {
   }, [authToken, currentUser, stripeCustomerId, triggerMessage]);
 
   const notificationsCount = notifications.length;
+  const mySpotCount = useMemo(() => {
+    if (!currentUser) return 0;
+    return spots.filter((spot) => spot.ownerId === currentUser.uid).length;
+  }, [currentUser, spots]);
 
   useEffect(() => {
     if (typeof window !== "undefined") {
@@ -1045,7 +1131,7 @@ function App() {
         onModeToggle={handleModeToggle}
         onRefreshClick={handleRefreshSpots}
         onLanguageClick={handleLanguageClick}
-        onSettingsClick={handleSettingsClick}
+        onAccountClick={handleAccountPanelOpen}
         onNotificationsClick={handleNotificationsClick}
         showAdminButton={hasAdminClaim}
         onAdminClick={handleAdminClick}
@@ -1056,7 +1142,8 @@ function App() {
           notificationsCount={notificationsCount}
           onLogoClick={handleLogoClick}
           onLoginClick={handleLoginClick}
-          onAccountClick={handleSettingsClick}
+          onNotificationsClick={handleNotificationsClick}
+          onAccountClick={handleAccountPanelOpen}
           language={language}
           onLanguageChange={setLanguage}
         />
@@ -1137,6 +1224,22 @@ function App() {
           )}
         </section>
       </div>
+
+      <AccountPanel
+        isOpen={isAccountPanelOpen}
+        user={currentUser}
+        profile={userProfile ?? null}
+        spotCount={mySpotCount}
+        authToken={authToken}
+        onClose={handleAccountPanelClose}
+        onShare={handleAccountShare}
+        onUpgrade={handleUpgradeClick}
+        onLogout={handleAccountLogout}
+        onPrivateToggle={handleAccountPrivateToggle}
+        onProfileRefresh={() => {
+          void mutateProfile();
+        }}
+      />
 
       <div className={`auth-modal ${isAuthModalOpen ? "open" : ""}`.trim()} role="dialog" aria-hidden={!isAuthModalOpen}>
         <div className="modal-scrim" aria-hidden="true" onClick={() => setAuthModalOpen(false)} />

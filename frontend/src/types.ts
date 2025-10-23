@@ -80,6 +80,9 @@ export type UserProfile = {
   email: string | null;
   displayName: string | null;
   photoUrl: string | null;
+  bio?: string | null;
+  websiteUrl?: string | null;
+  isPrivateAccount?: boolean;
   followedUserIds: string[];
   followedUsers: FollowedUser[];
   favoriteSpotIds: string[];

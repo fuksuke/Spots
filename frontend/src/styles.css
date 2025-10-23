@@ -55,6 +55,756 @@ button {
   background: #ffffff;
 }
 
+.main-layout {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+}
+
+.content-area {
+  display: flex;
+  flex: 1;
+  gap: 1.5rem;
+  padding: 1.5rem;
+  min-height: 0;
+}
+
+.content-area.map {
+  align-items: stretch;
+}
+
+.content-area.trending {
+  flex-direction: column;
+}
+
+.map-container {
+  flex: 1;
+  min-height: 0;
+  height: 100%;
+  border-radius: 20px;
+  overflow: hidden;
+  box-shadow: 0 15px 35px rgba(15, 23, 42, 0.08);
+}
+
+/* Global overlays & modals -------------------------------- */
+.modal-scrim,
+.floating-scrim,
+.drawer-scrim {
+  position: absolute;
+  inset: 0;
+  background: rgba(15, 23, 42, 0.45);
+}
+
+.floating-panel,
+.auth-modal,
+.category-modal,
+.spot-drawer {
+  position: fixed;
+  inset: 0;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+  transition: opacity 0.2s ease;
+  z-index: 80;
+}
+
+.floating-panel.open,
+.auth-modal.open,
+.category-modal.open,
+.spot-drawer.open {
+  opacity: 1;
+  visibility: visible;
+  pointer-events: auto;
+}
+
+.floating-panel .floating-scrim,
+.auth-modal .modal-scrim,
+.category-modal .modal-scrim,
+.spot-drawer .drawer-scrim {
+  position: absolute;
+  inset: 0;
+}
+
+.floating-panel .floating-body,
+.auth-modal .modal-body,
+.category-modal .modal-body,
+.spot-drawer .drawer-body {
+  position: relative;
+  z-index: 1;
+  max-height: 90vh;
+  overflow-y: auto;
+  width: min(520px, 90vw);
+}
+
+.auth-modal.billing-modal .modal-body {
+  width: min(640px, 92vw);
+}
+
+.category-modal .modal-body {
+  width: min(640px, 92vw);
+}
+
+.spot-drawer {
+  align-items: flex-end;
+}
+
+.spot-drawer .drawer-body {
+  width: min(640px, 100vw);
+  max-height: 75vh;
+  background: #ffffff;
+  border-radius: 20px 20px 0 0;
+  padding: 1.5rem;
+  box-shadow: 0 -20px 40px rgba(15, 23, 42, 0.18);
+}
+
+.floating-panel .floating-body {
+  width: min(780px, 94vw);
+}
+
+.spot-detail-sheet {
+  position: fixed;
+  inset: 0;
+  display: flex;
+  justify-content: center;
+  align-items: flex-end;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.25s ease;
+  z-index: 70;
+}
+
+.spot-detail-sheet.open {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.spot-detail-sheet .sheet-scrim {
+  position: absolute;
+  inset: 0;
+  background: rgba(15, 23, 42, 0.6);
+}
+
+.spot-detail-sheet .sheet-body {
+  position: relative;
+  width: min(640px, 95vw);
+  max-height: 90vh;
+  overflow-y: auto;
+  background: #ffffff;
+  border-radius: 24px 24px 0 0;
+  padding: 1.75rem;
+  box-shadow: 0 24px 60px rgba(15, 23, 42, 0.2);
+  z-index: 1;
+}
+
+.spot-detail-sheet .sheet-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 1rem;
+  margin-bottom: 1rem;
+}
+
+.spot-detail-sheet .sheet-header h2 {
+  margin: 0;
+  font-size: 1.4rem;
+  color: #0f172a;
+}
+
+.spot-detail-sheet .sheet-subtitle {
+  margin: 0.35rem 0 0;
+  color: rgba(71, 85, 105, 0.85);
+  font-size: 0.9rem;
+}
+
+.spot-detail-sheet .sheet-actions {
+  display: inline-flex;
+  gap: 0.5rem;
+}
+
+.spot-detail-sheet .sheet-actions .icon-button {
+  width: 40px;
+  height: 40px;
+}
+
+.spot-detail-sheet .sheet-media {
+  margin-bottom: 1.25rem;
+  border-radius: 16px;
+  overflow: hidden;
+}
+
+.spot-detail-sheet .sheet-media img {
+  width: 100%;
+  height: auto;
+  display: block;
+}
+
+.spot-detail-sheet .sheet-content {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+}
+
+.spot-detail-sheet .sheet-description {
+  margin: 0;
+  line-height: 1.65;
+  color: rgba(30, 41, 59, 0.95);
+}
+
+.spot-detail-sheet .sheet-actions-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+}
+
+.spot-detail-sheet .action-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.45rem 0.85rem;
+  border-radius: 999px;
+  border: 1px solid rgba(148, 163, 184, 0.35);
+  background: rgba(248, 250, 252, 0.9);
+  cursor: pointer;
+  transition: background-color 0.2s ease, border-color 0.2s ease;
+}
+
+.spot-detail-sheet .action-chip:hover {
+  background: rgba(59, 130, 246, 0.12);
+  border-color: rgba(59, 130, 246, 0.35);
+}
+
+.spot-detail-sheet .action-chip.active {
+  background: rgba(59, 130, 246, 0.18);
+  border-color: rgba(59, 130, 246, 0.45);
+}
+
+.spot-detail-sheet .sheet-info {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: 0.85rem 1.5rem;
+}
+
+.spot-detail-sheet .sheet-info dt {
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  color: rgba(71, 85, 105, 0.8);
+  letter-spacing: 0.04em;
+}
+
+.spot-detail-sheet .sheet-info dd {
+  margin: 0.15rem 0 0;
+  color: #0f172a;
+  font-weight: 600;
+}
+
+.spot-detail-sheet .sheet-placeholder {
+  padding: 2.5rem 1.5rem;
+  text-align: center;
+  color: rgba(71, 85, 105, 0.85);
+}
+
+.account-card {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 1.75rem;
+  padding: 1.75rem;
+  background: #ffffff;
+  color: #0f172a;
+  border-radius: 22px;
+  box-shadow: 0 28px 60px rgba(15, 23, 42, 0.12);
+  width: min(720px, 92vw);
+}
+
+.account-card-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.account-card-header .text-button,
+.account-card-header .icon-button {
+  background: rgba(148, 163, 184, 0.2);
+  color: #0f172a;
+}
+
+.account-card-header .icon-button {
+  width: 44px;
+  height: 44px;
+}
+
+.account-card-body {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+}
+
+.account-card-summary {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 1.5rem;
+}
+
+.account-avatar {
+  width: 96px;
+  height: 96px;
+  border-radius: 24px;
+  overflow: hidden;
+  background: rgba(148, 163, 184, 0.18);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 2rem;
+  font-weight: 600;
+}
+
+.account-avatar img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.avatar-placeholder {
+  color: rgba(15, 23, 42, 0.7);
+}
+
+.account-summary-meta {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  min-width: 220px;
+}
+
+.account-display-name {
+  font-size: 1.45rem;
+  font-weight: 700;
+  color: #0f172a;
+}
+
+.account-stats {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1.5rem;
+  margin: 0;
+  padding: 0;
+}
+
+.account-stats div {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+}
+
+.account-stats dt {
+  font-size: 0.75rem;
+  color: rgba(71, 85, 105, 0.8);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.account-stats dd {
+  margin: 0;
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: #0f172a;
+}
+
+.account-bio {
+  font-size: 0.95rem;
+  line-height: 1.6;
+  color: rgba(51, 65, 85, 0.95);
+}
+
+.account-website a {
+  color: #2563eb;
+  font-weight: 600;
+}
+
+.account-actions {
+  display: flex;
+  justify-content: center;
+  gap: 1rem;
+}
+
+.account-actions .button {
+  min-width: 140px;
+  padding-inline: 1.5rem;
+}
+
+.settings-toggle {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  font-weight: 600;
+  color: rgba(15, 23, 42, 0.8);
+}
+
+.logout-dialog .floating-body {
+  width: min(360px, 90vw);
+}
+
+.logout-card {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  padding: 1.5rem;
+  background: #ffffff;
+  border-radius: 20px;
+  box-shadow: 0 18px 45px rgba(15, 23, 42, 0.16);
+}
+
+.logout-card h3 {
+  margin: 0;
+  font-size: 1.1rem;
+  color: rgba(15, 23, 42, 0.9);
+}
+
+.logout-actions {
+  display: flex;
+  gap: 0.75rem;
+  justify-content: flex-end;
+}
+
+
+
+
+.account-card-content {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 260px);
+  gap: 2rem;
+  align-items: start;
+}
+
+.account-main {
+  flex: 1;
+  min-width: 0;
+}
+
+
+.account-header-actions {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.account-settings-panel {
+  max-width: 0;
+  overflow: hidden;
+  transform: translateX(24px);
+  opacity: 0;
+  transition: opacity 0.25s ease, max-width 0.25s ease, padding 0.25s ease;
+  background: rgba(148, 163, 184, 0.16);
+  border-radius: 20px;
+  padding: 0;
+  backdrop-filter: blur(10px);
+  pointer-events: none;
+}
+
+.account-settings-panel.open {
+  max-width: min(320px, 40vw);
+  opacity: 1;
+  padding: 1.5rem;
+  pointer-events: auto;
+}
+
+.account-settings-panel .settings-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 1.25rem;
+}
+
+.account-settings-panel .settings-toggle,
+.account-settings-panel .button {
+  width: 100%;
+}
+
+.account-settings-panel .button {
+  justify-content: center;
+  border: 1px solid rgba(148, 163, 184, 0.4);
+}
+
+.account-avatar {
+  box-shadow: 0 18px 35px rgba(15, 23, 42, 0.1);
+  border: 3px solid rgba(241, 245, 249, 0.9);
+}
+
+.account-edit-header h2 {
+  color: #0f172a;
+}
+
+.account-edit-avatar {
+  border: 3px solid rgba(226, 232, 240, 0.8);
+  box-shadow: 0 18px 40px rgba(15, 23, 42, 0.12);
+}
+
+.account-edit-avatar-hint {
+  background: rgba(37, 99, 235, 0.9);
+  color: #ffffff;
+}
+
+.account-edit-footer .button.primary {
+  background: linear-gradient(135deg, #2563eb, #38bdf8);
+  color: #ffffff;
+  box-shadow: 0 12px 28px rgba(37, 99, 235, 0.25);
+}
+
+.account-card ::selection {
+  background: rgba(59, 130, 246, 0.45);
+  color: #0b1120;
+}
+
+
+.account-card .button.subtle {
+  background: rgba(148, 163, 184, 0.14);
+  color: #0f172a;
+}
+
+.account-card .button.primary {
+  background: linear-gradient(135deg, #2563eb, #38bdf8);
+  color: #ffffff;
+  box-shadow: 0 12px 28px rgba(37, 99, 235, 0.25);
+}
+
+.account-card .button:hover {
+  transform: translateY(-1px);
+}
+
+.account-card .status {
+  color: inherit;
+}
+
+.account-card .status.error {
+  color: #dc2626;
+}
+
+.account-card .status.success {
+  color: #15803d;
+}
+
+.account-edit {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+.account-edit-header {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.account-edit-header h2 {
+  margin: 0;
+  font-size: 1.25rem;
+}
+
+.account-edit-body {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.account-edit-avatar {
+  align-self: center;
+  width: 124px;
+  height: 124px;
+  border-radius: 32px;
+  overflow: hidden;
+  background: rgba(148, 163, 184, 0.2);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  position: relative;
+}
+
+.account-edit-avatar img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.account-edit-avatar-hint {
+  position: absolute;
+  bottom: 8px;
+  left: 50%;
+  transform: translateX(-50%);
+  padding: 0.2rem 0.6rem;
+  border-radius: 999px;
+  background: rgba(15, 23, 42, 0.7);
+  color: #ffffff;
+  font-size: 0.75rem;
+}
+
+.account-edit-footer {
+  display: flex;
+  justify-content: flex-end;
+}
+
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  border: 0;
+}
+
+/* Form & button primitives -------------------------------- */
+.auth-form,
+.form-card,
+.form-group {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.form-card {
+  background: #ffffff;
+  border-radius: 18px;
+  padding: 1.75rem;
+  box-shadow: 0 15px 35px rgba(15, 23, 42, 0.08);
+}
+
+.form-group span {
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: rgba(15, 23, 42, 0.8);
+}
+
+.input,
+.textarea,
+select.input {
+  width: 100%;
+  padding: 0.65rem 0.85rem;
+  border-radius: 0.75rem;
+  border: 1px solid rgba(148, 163, 184, 0.35);
+  background: rgba(255, 255, 255, 0.95);
+  font: inherit;
+  color: inherit;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.input:focus,
+.textarea:focus,
+select.input:focus {
+  outline: none;
+  border-color: rgba(59, 130, 246, 0.6);
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.16);
+}
+
+.textarea {
+  resize: vertical;
+  min-height: 120px;
+}
+
+.button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.45rem;
+  padding: 0.65rem 1.1rem;
+  border-radius: 0.9rem;
+  border: none;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+  background: rgba(148, 163, 184, 0.18);
+  color: rgba(15, 23, 42, 0.9);
+  transition: background-color 0.2s ease, color 0.2s ease, transform 0.2s ease;
+}
+
+.button.primary {
+  background: linear-gradient(135deg, #2563eb, #0ea5e9);
+  color: #ffffff;
+}
+
+.button.subtle {
+  background: rgba(148, 163, 184, 0.16);
+  color: rgba(15, 23, 42, 0.85);
+}
+
+.button.secondary {
+  background: transparent;
+  border: 1px solid rgba(148, 163, 184, 0.35);
+  color: rgba(15, 23, 42, 0.85);
+}
+
+.button:hover {
+  transform: translateY(-1px);
+}
+
+.button.primary:hover {
+  background: linear-gradient(135deg, #1d4ed8, #0284c7);
+}
+
+.button.subtle:hover,
+.button.secondary:hover {
+  background: rgba(148, 163, 184, 0.24);
+}
+
+.button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  transform: none;
+}
+
+.oauth-section {
+  margin: 1.25rem 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.oauth-divider {
+  position: relative;
+  text-align: center;
+  font-size: 0.8rem;
+  color: rgba(100, 116, 139, 0.9);
+}
+
+.oauth-divider::before,
+.oauth-divider::after {
+  content: "";
+  position: absolute;
+  top: 50%;
+  width: 40%;
+  height: 1px;
+  background: rgba(148, 163, 184, 0.35);
+}
+
+.oauth-divider::before {
+  left: 0;
+}
+
+.oauth-divider::after {
+  right: 0;
+}
+
+.oauth-button {
+  background: #ffffff;
+  border: 1px solid rgba(148, 163, 184, 0.4);
+  color: rgba(15, 23, 42, 0.85);
+}
+
+.oauth-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.5rem;
+  height: 1.5rem;
+  border-radius: 50%;
+  background: #ffffff;
+  box-shadow: 0 2px 6px rgba(15, 23, 42, 0.12);
+}
+
 /* Sidebar -------------------------------------------------- */
 .sidebar-nav {
   display: flex;
@@ -140,6 +890,10 @@ button {
   z-index: 20;
 }
 
+.layout-column > .category-tabs:first-of-type {
+  margin-top: 0;
+}
+
 .header-logo {
   border: none;
   background: transparent;
@@ -159,6 +913,24 @@ button {
   gap: 0.75rem;
 }
 
+.header-auth-buttons {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.65rem;
+}
+
+.header-account-button {
+  width: 40px;
+  height: 40px;
+}
+
+.header-account-button img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border-radius: 50%;
+}
+
 .icon-button {
   position: relative;
   display: inline-flex;
@@ -173,6 +945,11 @@ button {
 
 .icon-button:hover {
   background: rgba(59, 130, 246, 0.2);
+}
+
+.icon-button.active {
+  background: rgba(59, 130, 246, 0.24);
+  color: #0f172a;
 }
 
 .icon-badge {
@@ -211,17 +988,25 @@ button {
 /* Category tabs ------------------------------------------- */
 .category-tabs {
   position: sticky;
-  top: 64px;
+  top: 0;
   z-index: 15;
   background: rgba(255, 255, 255, 0.95);
   border-bottom: 1px solid rgba(148, 163, 184, 0.2);
-  padding: 0.25rem 0.75rem 0;
+  padding: 0 0.75rem;
   backdrop-filter: blur(6px);
+}
+
+@media (max-width: 1024px) {
+  .category-tabs {
+    top: 48px;
+    padding-top: 0.25rem;
+  }
 }
 
 .category-scroll {
   display: flex;
   align-items: center;
+  flex-wrap: nowrap;
   gap: 0.2rem;
   overflow-x: auto;
   padding: 0.2rem 0;
@@ -271,6 +1056,7 @@ button {
   justify-content: center;
   gap: 0.35rem;
   margin-right: 0.2rem;
+  flex-shrink: 0;
 }
 
 .category-pill.inline.active {
@@ -498,5 +1284,47 @@ button {
 
   .spot-card {
     grid-template-columns: 1fr;
+  }
+
+  .account-card {
+    width: min(600px, 96vw);
+    padding: 1.75rem 1.5rem;
+  }
+
+  .account-card-summary {
+    justify-content: center;
+    text-align: center;
+  }
+
+  .account-summary-meta {
+    align-items: center;
+  }
+
+  .account-stats {
+    justify-content: center;
+  }
+
+  .account-card-content {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .account-settings-panel {
+    max-width: 0;
+    transform: translateY(16px);
+  }
+
+  .account-settings-panel.open {
+    max-width: 100%;
+    padding: 1.25rem;
+  }
+
+  .spot-detail-sheet .sheet-body {
+    width: min(640px, 100vw);
+    border-radius: 20px 20px 0 0;
+    padding: 1.5rem 1.25rem;
+  }
+
+  .spot-detail-sheet .sheet-info {
+    grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
   }
 }

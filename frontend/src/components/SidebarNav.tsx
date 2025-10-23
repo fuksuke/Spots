@@ -14,7 +14,7 @@ export type SidebarNavProps = {
   onModeToggle: () => void;
   onRefreshClick: () => void;
   onLanguageClick: () => void;
-  onSettingsClick: () => void;
+  onAccountClick: () => void;
   onNotificationsClick: () => void;
   showAdminButton?: boolean;
   onAdminClick?: () => void;
@@ -55,7 +55,7 @@ export const SidebarNav = ({
   onModeToggle,
   onRefreshClick,
   onLanguageClick,
-  onSettingsClick,
+  onAccountClick,
   onNotificationsClick,
   showAdminButton = false,
   onAdminClick
@@ -80,7 +80,7 @@ export const SidebarNav = ({
               通知
             </NavButton>
             <NavButton onClick={onRefreshClick}>更新</NavButton>
-            <NavButton onClick={onSettingsClick}>アカウント</NavButton>
+            <NavButton onClick={onAccountClick}>アカウント</NavButton>
             {showAdminButton ? <NavButton onClick={onAdminClick ?? (() => undefined)}>審査</NavButton> : null}
           </>
         ) : (
@@ -90,7 +90,7 @@ export const SidebarNav = ({
       <div className="sidebar-section bottom">
         {pageMode === "home" ? <NavButton onClick={onModeToggle}>{modeLabel}</NavButton> : null}
         <NavButton onClick={onLanguageClick}>Language</NavButton>
-        <NavButton onClick={onSettingsClick}>設定</NavButton>
+        <NavButton onClick={onAccountClick}>設定</NavButton>
       </div>
     </aside>
   );

@@ -7,6 +7,7 @@ export type HeaderBarProps = {
   notificationsCount: number;
   onLogoClick: () => void;
   onLoginClick: () => void;
+  onNotificationsClick: () => void;
   onAccountClick: () => void;
   language: string;
   onLanguageChange: (language: string) => void;
@@ -17,23 +18,40 @@ export const HeaderBar = ({
   notificationsCount,
   onLogoClick,
   onLoginClick,
+  onNotificationsClick,
   onAccountClick,
   language,
   onLanguageChange
 }: HeaderBarProps) => {
-  const renderAuthButton = () => {
-    if (currentUser) {
+  const renderActions = () => {
+    if (!currentUser) {
       return (
-        <button type="button" className="icon-button" onClick={onAccountClick} aria-label="アカウント">
-          <Icon name="bell" label="通知" />
-          {notificationsCount > 0 ? <span className="icon-badge">{notificationsCount}</span> : null}
+        <button type="button" className="text-button" onClick={onLoginClick} aria-label="ログイン">
+          Login
         </button>
       );
     }
+
     return (
-      <button type="button" className="text-button" onClick={onLoginClick} aria-label="ログイン">
-        Login
-      </button>
+      <div className="header-auth-buttons">
+        <button
+          type="button"
+          className="icon-button"
+          onClick={onNotificationsClick}
+          aria-label="通知"
+        >
+          <Icon name="bell" label="通知" />
+          {notificationsCount > 0 ? <span className="icon-badge">{notificationsCount}</span> : null}
+        </button>
+        <button
+          type="button"
+          className="icon-button header-account-button"
+          onClick={onAccountClick}
+          aria-label="アカウント"
+        >
+          <Icon name="user" label="アカウント" />
+        </button>
+      </div>
     );
   };
 
@@ -62,7 +80,7 @@ export const HeaderBar = ({
             <option value="ko">한국어</option>
           </select>
         </div>
-        {renderAuthButton()}
+        {renderActions()}
       </div>
     </header>
   );
