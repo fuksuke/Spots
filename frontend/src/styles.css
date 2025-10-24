@@ -116,6 +116,26 @@ button {
   box-shadow: none;
 }
 
+@media (min-width: 1025px) {
+  .layout-column.map-view {
+    grid-template-rows: auto 1fr;
+    grid-auto-rows: auto;
+  }
+
+  .layout-column.map-view .content-area.map {
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+    height: 100%;
+    overflow: hidden;
+  }
+
+  .layout-column.map-view .content-area.map > * {
+    flex: 1 1 auto;
+    min-height: 0;
+  }
+}
+
 /* Global overlays & modals -------------------------------- */
 .modal-scrim,
 .floating-scrim,

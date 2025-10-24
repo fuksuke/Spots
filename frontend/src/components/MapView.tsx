@@ -1,4 +1,4 @@
-import { useEffect, useRef } from "react";
+import { useCallback, useEffect, useRef } from "react";
 import mapboxgl, { Map } from "mapbox-gl";
 import "mapbox-gl/dist/mapbox-gl.css";
 import { Coordinates, Spot } from "../types";
@@ -31,38 +31,70 @@ export const MapView = ({
   const selectionMarkerRef = useRef<mapboxgl.Marker | null>(null);
   const resizeObserverRef = useRef<ResizeObserver | null>(null);
 
+  const syncContainerSize = useCallback(() => {
+    const container = mapContainerRef.current;
+    if (!container) return false;
+    const rect = container.getBoundingClientRect();
+    return rect.width > 0 && rect.height > 0;
+  }, []);
+
   useEffect(() => {
-    if (!mapContainerRef.current || mapRef.current) return;
+    if (mapRef.current) return;
 
-    const map = new mapboxgl.Map({
-      container: mapContainerRef.current,
-      style: "mapbox://styles/mapbox/streets-v12",
-      center: [initialView.longitude, initialView.latitude],
-      zoom: initialView.zoom
-    });
+    let frameId: number | null = null;
+    let aborted = false;
 
-    map.addControl(new mapboxgl.NavigationControl(), "top-right");
-    mapRef.current = map;
+    const initializeMap = () => {
+      if (aborted) return;
+      const container = mapContainerRef.current;
+      if (!container || mapRef.current) return;
 
-    if (typeof ResizeObserver !== "undefined" && mapContainerRef.current) {
-      const observer = new ResizeObserver(() => {
+      const hasSize = syncContainerSize();
+      const { width, height } = container.getBoundingClientRect();
+      if (!hasSize || width <= 0 || height <= 0) {
+        frameId = window.requestAnimationFrame(initializeMap);
+        return;
+      }
+
+      const map = new mapboxgl.Map({
+        container,
+          style: "mapbox://styles/mapbox/streets-v12",
+        center: [initialView.longitude, initialView.latitude],
+        zoom: initialView.zoom
+      });
+
+      map.addControl(new mapboxgl.NavigationControl(), "top-right");
+      mapRef.current = map;
+
+      if (typeof ResizeObserver !== "undefined") {
+        const observer = new ResizeObserver(() => {
+          map.resize();
+        });
+        observer.observe(container);
+        resizeObserverRef.current = observer;
+      }
+
+      window.requestAnimationFrame(() => {
         map.resize();
       });
-      observer.observe(mapContainerRef.current);
-      resizeObserverRef.current = observer;
-    }
 
-    requestAnimationFrame(() => {
-      map.resize();
-    });
+      map.once("load", () => {
+        map.resize();
+      });
+    };
 
-    map.once("load", () => {
-      map.resize();
-    });
+    initializeMap();
 
     return () => {
-      map.remove();
-      mapRef.current = null;
+      aborted = true;
+      if (frameId !== null) {
+        window.cancelAnimationFrame(frameId);
+      }
+      const map = mapRef.current;
+      if (map) {
+        map.remove();
+        mapRef.current = null;
+      }
       if (selectionMarkerRef.current) {
         selectionMarkerRef.current.remove();
         selectionMarkerRef.current = null;
@@ -72,7 +104,7 @@ export const MapView = ({
         resizeObserverRef.current = null;
       }
     };
-  }, [initialView]);
+  }, [initialView, syncContainerSize]);
 
   useEffect(() => {
     const map = mapRef.current;
@@ -82,16 +114,18 @@ export const MapView = ({
 
   useEffect(() => {
     const handleResize = () => {
+      syncContainerSize();
       const map = mapRef.current;
       if (map) {
         map.resize();
       }
     };
+    syncContainerSize();
     window.addEventListener("resize", handleResize);
     return () => {
       window.removeEventListener("resize", handleResize);
     };
-  }, []);
+  }, [syncContainerSize]);
 
   useEffect(() => {
     const map = mapRef.current;
