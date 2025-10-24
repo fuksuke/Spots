@@ -1,4 +1,5 @@
 :root {
+  --mobile-action-bar-height: 72px;
   color: #0f172a;
   font-family: "Inter", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
   line-height: 1.5;
@@ -45,21 +46,21 @@ button {
   display: grid;
   grid-template-columns: 240px minmax(0, 1fr);
   min-height: 100vh;
+  height: 100vh;
   background: #f1f5f9;
 }
 
 .layout-column {
-  display: flex;
-  flex-direction: column;
+  display: grid;
+  grid-template-rows: auto auto minmax(0, 1fr) auto auto;
   min-height: 100vh;
+  height: 100dvh;
   background: #ffffff;
 }
 
-.main-layout {
-  display: flex;
-  flex-direction: column;
-  flex: 1;
-  min-height: 0;
+.layout-column.map-view {
+  grid-template-rows: auto auto minmax(320px, 1fr) auto auto;
+  overflow: hidden;
 }
 
 .content-area {
@@ -68,10 +69,33 @@ button {
   gap: 1.5rem;
   padding: 1.5rem;
   min-height: 0;
+  overflow-y: auto;
 }
 
 .content-area.map {
   align-items: stretch;
+  padding-bottom: 0;
+  padding-top: 0;
+}
+
+.layout-column.map-view .content-area.map {
+  flex: 1;
+  padding: 0;
+  min-height: 0;
+  height: 100%;
+}
+
+.layout-column.map-view .content-area.map > * {
+  flex: 1 1 auto;
+  min-height: 0;
+}
+
+.category-spacer {
+  height: 0;
+}
+
+.layout-column.map-view .app-footer {
+  display: none;
 }
 
 .content-area.trending {
@@ -80,11 +104,16 @@ button {
 
 .map-container {
   flex: 1;
-  min-height: 0;
+  min-height: 320px;
   height: 100%;
   border-radius: 20px;
   overflow: hidden;
   box-shadow: 0 15px 35px rgba(15, 23, 42, 0.08);
+}
+
+.layout-column.map-view .map-container {
+  border-radius: 0;
+  box-shadow: none;
 }
 
 /* Global overlays & modals -------------------------------- */
@@ -992,7 +1021,7 @@ select.input:focus {
   z-index: 15;
   background: rgba(255, 255, 255, 0.95);
   border-bottom: 1px solid rgba(148, 163, 184, 0.2);
-  padding: 0 0.75rem;
+  padding: 0 1.25rem;
   backdrop-filter: blur(6px);
 }
 
@@ -1009,7 +1038,7 @@ select.input:focus {
   flex-wrap: nowrap;
   gap: 0.2rem;
   overflow-x: auto;
-  padding: 0.2rem 0;
+  padding: 0.6rem 0;
   scrollbar-width: none;
 }
 
@@ -1110,6 +1139,11 @@ select.input:focus {
   border-top: 1px solid rgba(148, 163, 184, 0.2);
   padding: 0.55rem 0.75rem;
   z-index: 30;
+}
+
+.layout-column .action-bar {
+  width: 100%;
+  justify-self: stretch;
 }
 
 .action-bar-button {
@@ -1255,6 +1289,10 @@ select.input:focus {
 }
 
 /* Mobile adjustments -------------------------------------- */
+.mobile-only {
+  display: none;
+}
+
 @media (max-width: 1024px) {
   .app-shell {
     grid-template-columns: minmax(0, 1fr);
@@ -1269,6 +1307,15 @@ select.input:focus {
   }
 
   .action-bar {
+    display: flex;
+    padding-bottom: calc(0.55rem + env(safe-area-inset-bottom));
+  }
+
+  .content-area:not(.map) {
+    padding-bottom: calc(1.5rem + var(--mobile-action-bar-height));
+  }
+
+  .mobile-only {
     display: flex;
   }
 }

@@ -29,6 +29,7 @@ export const MapView = ({
   const mapContainerRef = useRef<HTMLDivElement | null>(null);
   const mapRef = useRef<Map | null>(null);
   const selectionMarkerRef = useRef<mapboxgl.Marker | null>(null);
+  const resizeObserverRef = useRef<ResizeObserver | null>(null);
 
   useEffect(() => {
     if (!mapContainerRef.current || mapRef.current) return;
@@ -43,6 +44,22 @@ export const MapView = ({
     map.addControl(new mapboxgl.NavigationControl(), "top-right");
     mapRef.current = map;
 
+    if (typeof ResizeObserver !== "undefined" && mapContainerRef.current) {
+      const observer = new ResizeObserver(() => {
+        map.resize();
+      });
+      observer.observe(mapContainerRef.current);
+      resizeObserverRef.current = observer;
+    }
+
+    requestAnimationFrame(() => {
+      map.resize();
+    });
+
+    map.once("load", () => {
+      map.resize();
+    });
+
     return () => {
       map.remove();
       mapRef.current = null;
@@ -50,8 +67,31 @@ export const MapView = ({
         selectionMarkerRef.current.remove();
         selectionMarkerRef.current = null;
       }
+      if (resizeObserverRef.current) {
+        resizeObserverRef.current.disconnect();
+        resizeObserverRef.current = null;
+      }
     };
   }, [initialView]);
+
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map) return;
+    map.resize();
+  }, [spots.length, selectedLocation, focusCoordinates]);
+
+  useEffect(() => {
+    const handleResize = () => {
+      const map = mapRef.current;
+      if (map) {
+        map.resize();
+      }
+    };
+    window.addEventListener("resize", handleResize);
+    return () => {
+      window.removeEventListener("resize", handleResize);
+    };
+  }, []);
 
   useEffect(() => {
     const map = mapRef.current;

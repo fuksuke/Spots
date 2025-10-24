@@ -1106,16 +1106,8 @@ function App() {
     }
   }, [language]);
 
-  const footer = (
-    <footer className="app-footer">
-      <span>© 2025 MyApp</span>
-      <a href="#privacy">Privacy</a>
-      <a href="#terms">Terms of Use</a>
-      <a href={BILLING_FAQ_PATH} target="_blank" rel="noreferrer">
-        Billing FAQ
-      </a>
-    </footer>
-  );
+  const isHomePage = pageMode === "home";
+  const isMapHomeView = isHomePage && viewMode === "map";
 
   return (
     <div className="app-shell">
@@ -1136,7 +1128,7 @@ function App() {
         showAdminButton={hasAdminClaim}
         onAdminClick={handleAdminClick}
       />
-      <div className="layout-column">
+      <div className={`layout-column ${isMapHomeView ? "map-view" : ""}`.trim()}>
         <HeaderBar
           currentUser={currentUser}
           notificationsCount={notificationsCount}
@@ -1147,72 +1139,79 @@ function App() {
           language={language}
           onLanguageChange={setLanguage}
         />
-        <div className="main-layout">
-          {pageMode === "home" ? (
-            <>
-              <CategoryTabs
-                options={categoryOptions}
-                activeKey={activeCategoryKey}
-                onSelect={handleCategorySelect}
-                onSearchToggle={handleSearchToggle}
-                onManageCategories={handleCategoryManagerOpen}
+        {isHomePage ? (
+          <CategoryTabs
+            options={categoryOptions}
+            activeKey={activeCategoryKey}
+            onSelect={handleCategorySelect}
+            onSearchToggle={handleSearchToggle}
+            onManageCategories={handleCategoryManagerOpen}
+          />
+        ) : (
+          <div className="category-spacer" aria-hidden="true" />
+        )}
+        {isHomePage ? (
+          <div className={`content-area ${viewMode}`.trim()}>
+            {viewMode === "map" ? (
+              <MapView
+                initialView={{ longitude: 139.7016, latitude: 35.6595, zoom: 14 }}
+                spots={displaySpots}
+                selectedLocation={selectedLocation}
+                onSelectLocation={handleSelectLocation}
+                focusCoordinates={focusCoordinates}
+                onSpotClick={handleMapSpotClick}
               />
-              <div className={`content-area ${viewMode}`.trim()}>
-                {viewMode === "map" ? (
-                  <MapView
-                    initialView={{ longitude: 139.7016, latitude: 35.6595, zoom: 14 }}
-                    spots={displaySpots}
-                    selectedLocation={selectedLocation}
-                    onSelectLocation={handleSelectLocation}
-                    focusCoordinates={focusCoordinates}
-                    onSpotClick={handleMapSpotClick}
-                  />
-                ) : (
-                  <SpotListView
-                    spots={displaySpots}
-                    isLoading={isLoadingSpots}
-                    error={spotError}
-                    onSpotSelect={handleSpotSelect}
-                  />
-                )}
-              </div>
-            </>
-          ) : (
-            <div className="content-area trending">
-              <div className="trending-content">
-                <header className="trending-header">
-                  <h2>トレンド & プロモーション</h2>
-                  <p className="hint">注目のイベントと公式告知をまとめて確認できます。</p>
-                </header>
-                {promotionsError ? (
-                  <div className="panel error">公式告知の取得に失敗しました。</div>
-                ) : isLoadingPromotions ? (
-                  <div className="panel">公式告知を読み込み中...</div>
-                ) : (
-                  <PromotionBanner promotions={promotions} onSelect={(promotion) => handlePromotionSelect(promotion.spotId)} />
-                )}
-                <PopularSpotsPanel
-                  spots={popularSpots}
-                  isLoading={isLoadingPopularSpots}
-                  error={popularError}
-                  onSpotSelect={handleSpotSelect}
-                />
-              </div>
+            ) : (
+              <SpotListView
+                spots={displaySpots}
+                isLoading={isLoadingSpots}
+                error={spotError}
+                onSpotSelect={handleSpotSelect}
+              />
+            )}
+          </div>
+        ) : (
+          <div className="content-area trending">
+            <div className="trending-content">
+              <header className="trending-header">
+                <h2>トレンド & プロモーション</h2>
+                <p className="hint">注目のイベントと公式告知をまとめて確認できます。</p>
+              </header>
+              {promotionsError ? (
+                <div className="panel error">公式告知の取得に失敗しました。</div>
+              ) : isLoadingPromotions ? (
+                <div className="panel">公式告知を読み込み中...</div>
+              ) : (
+                <PromotionBanner promotions={promotions} onSelect={(promotion) => handlePromotionSelect(promotion.spotId)} />
+              )}
+              <PopularSpotsPanel
+                spots={popularSpots}
+                isLoading={isLoadingPopularSpots}
+                error={popularError}
+                onSpotSelect={handleSpotSelect}
+              />
             </div>
-          )}
-        </div>
-        {footer}
+          </div>
+        )}
+        <footer className="app-footer mobile-only">
+          <span>© 2025 MyApp</span>
+          <a href="#privacy">Privacy</a>
+          <a href="#terms">Terms of Use</a>
+          <a href={BILLING_FAQ_PATH} target="_blank" rel="noreferrer">
+            Billing FAQ
+          </a>
+        </footer>
+        <ActionBar
+          pageMode={pageMode}
+          viewMode={viewMode}
+          onSpotClick={handleSpotAction}
+          onSelectPage={handleSelectPage}
+          onModeToggle={handleModeToggle}
+          onRefresh={handleRefreshSpots}
+          showAdmin={hasAdminClaim}
+          onAdminClick={handleAdminClick}
+        />
       </div>
-      <ActionBar
-        pageMode={pageMode}
-        viewMode={viewMode}
-        onSpotClick={handleSpotAction}
-        onSelectPage={handleSelectPage}
-        onModeToggle={handleModeToggle}
-        onRefresh={handleRefreshSpots}
-        showAdmin={hasAdminClaim}
-        onAdminClick={handleAdminClick}
-      />
 
       <div className={`floating-panel admin-panel ${isAdminPanelOpen ? "open" : ""}`.trim()} role="dialog" aria-hidden={!isAdminPanelOpen}>
         <div className="floating-scrim" aria-hidden="true" onClick={() => setAdminPanelOpen(false)} />
