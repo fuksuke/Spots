@@ -4,7 +4,12 @@ import { z } from "zod";
 import { SPOT_CATEGORY_VALUES } from "../constants/categories.js";
 import { REVIEW_TEMPLATES } from "../constants/moderation.js";
 import { firebaseAuth } from "../services/firebaseAdmin.js";
-import { getPosterProfile, SchedulingRuleError, assertRealtimePostWindow } from "../services/posterProfileService.js";
+import {
+  getPosterProfile,
+  SchedulingRuleError,
+  assertRealtimePostWindow,
+  PhoneVerificationRequiredError
+} from "../services/posterProfileService.js";
 import type { ScheduledSpot, AnnouncementType, ScheduledSpotReviewLog } from "../services/scheduledSpotService.js";
 import {
   cancelScheduledSpot,
@@ -57,6 +62,9 @@ export const createScheduledSpotHandler = async (req: Request, res: Response, ne
     }
     const payload = scheduledSpotPayloadSchema.parse(req.body);
     const poster = await getPosterProfile(uid);
+    if (!poster.phoneVerified) {
+      throw new PhoneVerificationRequiredError("スポットを投稿するにはSMS本人認証が必要です。");
+    }
 
     const input = {
       title: payload.title,
@@ -75,6 +83,9 @@ export const createScheduledSpotHandler = async (req: Request, res: Response, ne
     const spot = await createScheduledSpot(input, poster);
     res.status(201).json(toApiSpot(spot));
   } catch (error) {
+    if (error instanceof PhoneVerificationRequiredError) {
+      return res.status(412).json({ message: error.message, code: "PHONE_VERIFICATION_REQUIRED" });
+    }
     if (error instanceof SchedulingRuleError) {
       return res.status(400).json({ message: error.message });
     }
@@ -90,6 +101,9 @@ export const updateScheduledSpotHandler = async (req: Request, res: Response, ne
     }
     const payload = updateScheduledSpotSchema.parse(req.body);
     const poster = await getPosterProfile(uid);
+    if (!poster.phoneVerified) {
+      throw new PhoneVerificationRequiredError("スポットを更新するにはSMS本人認証が必要です。");
+    }
 
     const updated = await updateScheduledSpot(
       req.params.id,
@@ -105,6 +119,9 @@ export const updateScheduledSpotHandler = async (req: Request, res: Response, ne
     );
     res.json(toApiSpot(updated));
   } catch (error) {
+    if (error instanceof PhoneVerificationRequiredError) {
+      return res.status(412).json({ message: error.message, code: "PHONE_VERIFICATION_REQUIRED" });
+    }
     if (error instanceof SchedulingRuleError) {
       return res.status(400).json({ message: error.message });
     }
@@ -269,6 +286,9 @@ export const reviewScheduledSpotHandler = async (req: Request, res: Response, ne
 
 export const enforceRealtimeSpotWindow = async (uid: string, startTime: Date) => {
   const poster = await getPosterProfile(uid);
+  if (!poster.phoneVerified) {
+    throw new PhoneVerificationRequiredError("スポットを投稿するにはSMS本人認証が必要です。");
+  }
   assertRealtimePostWindow(poster.tier, startTime);
 };
 

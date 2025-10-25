@@ -274,7 +274,14 @@ export const SpotDetailSheet = ({
               </div>
               <div>
                 <dt>投稿者</dt>
-                <dd>{spot.ownerDisplayName ?? spot.ownerId}</dd>
+                <dd>
+                  {spot.ownerDisplayName ?? spot.ownerId}
+                  {spot.ownerPhoneVerified ? (
+                    <span className="spot-owner-verified" title="SMS認証済み" aria-label="SMS認証済み">
+                      ✅
+                    </span>
+                  ) : null}
+                </dd>
               </div>
               <div>
                 <dt>場所</dt>

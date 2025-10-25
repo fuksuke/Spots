@@ -1,6 +1,7 @@
-import { ReactNode, useState } from "react";
-import { Coordinates, Spot } from "../types";
+import { ReactNode, useEffect, useState } from "react";
+import { Coordinates, Spot, UserProfile } from "../types";
 import { SpotForm } from "./SpotForm";
+import { PhoneVerificationModal } from "./PhoneVerificationModal";
 
 export type SpotCreatePageProps = {
   selectedLocation: Coordinates | null;
@@ -12,6 +13,8 @@ export type SpotCreatePageProps = {
   canPostLongTerm?: boolean;
   canPostRecurring?: boolean;
   headerActions?: ReactNode;
+  profile: UserProfile | null;
+  onProfileRefresh?: () => Promise<void> | void;
 };
 
 export const SpotCreatePage = ({
@@ -23,9 +26,23 @@ export const SpotCreatePage = ({
   authToken,
   canPostLongTerm,
   canPostRecurring,
-  headerActions
+  headerActions,
+  profile,
+  onProfileRefresh
 }: SpotCreatePageProps) => {
   const [isCancelConfirmOpen, setCancelConfirmOpen] = useState(false);
+  const [isVerificationOpen, setVerificationOpen] = useState(false);
+  const [localPhoneVerified, setLocalPhoneVerified] = useState<boolean>(Boolean(profile?.phoneVerified));
+
+  useEffect(() => {
+    setLocalPhoneVerified(Boolean(profile?.phoneVerified));
+  }, [profile?.phoneVerified]);
+
+  const handleVerificationSuccess = (nextProfile: UserProfile) => {
+    setLocalPhoneVerified(Boolean(nextProfile.phoneVerified));
+    setVerificationOpen(false);
+    onProfileRefresh?.();
+  };
 
   return (
     <div className="spot-create-page">
@@ -48,6 +65,8 @@ export const SpotCreatePage = ({
             authToken={authToken}
             canPostLongTerm={canPostLongTerm}
             canPostRecurring={canPostRecurring}
+            phoneVerified={localPhoneVerified}
+            onRequirePhoneVerification={() => setVerificationOpen(true)}
           />
         </div>
       </main>
@@ -75,6 +94,13 @@ export const SpotCreatePage = ({
           </div>
         </div>
       ) : null}
+
+      <PhoneVerificationModal
+        isOpen={isVerificationOpen}
+        authToken={authToken}
+        onClose={() => setVerificationOpen(false)}
+        onVerified={handleVerificationSuccess}
+      />
     </div>
   );
 };

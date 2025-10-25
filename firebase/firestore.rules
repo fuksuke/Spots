@@ -20,8 +20,20 @@ service cloud.firestore {
     }
 
     match /users/{userId} {
-      allow read: if true;
-      allow write: if request.auth != null && request.auth.uid == userId;
+      allow read: if request.auth != null;
+      allow create: if request.auth != null && request.auth.uid == userId &&
+        !('phone_verified' in request.resource.data) &&
+        !('phone_verified_at' in request.resource.data) &&
+        !('phone_hash' in request.resource.data);
+      allow update: if request.auth != null && request.auth.uid == userId && phoneVerificationFieldsUnchanged();
+      allow delete: if false;
+    }
+
+    function phoneVerificationFieldsUnchanged() {
+      return
+        (request.resource.data.phone_verified == resource.data.phone_verified) &&
+        (request.resource.data.phone_verified_at == resource.data.phone_verified_at) &&
+        (request.resource.data.phone_hash == resource.data.phone_hash);
     }
 
     match /comment_likes/{likeId} {

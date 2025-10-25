@@ -52,6 +52,8 @@ type SpotFormProps = {
   authToken?: string;
   canPostLongTerm?: boolean;
   canPostRecurring?: boolean;
+  phoneVerified?: boolean;
+  onRequirePhoneVerification?: () => void;
 };
 
 export const SpotForm = ({
@@ -61,7 +63,9 @@ export const SpotForm = ({
   onCreated,
   authToken,
   canPostLongTerm = false,
-  canPostRecurring = false
+  canPostRecurring = false,
+  phoneVerified = false,
+  onRequirePhoneVerification
 }: SpotFormProps) => {
   const totalSteps = 3;
   const [step, setStep] = useState(0);
@@ -218,6 +222,12 @@ export const SpotForm = ({
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [formErrors, setFormErrors] = useState<string[]>([]);
   const startTimeMin = useMemo(() => toDatetimeLocal(new Date()), []);
+
+  useEffect(() => {
+    if (phoneVerified) {
+      setErrorMessage(null);
+    }
+  }, [phoneVerified]);
 
   const renderStepContent = () => {
     switch (step) {
@@ -526,6 +536,11 @@ export const SpotForm = ({
 
     setIsSubmitting(true);
     try {
+      if (!phoneVerified) {
+        onRequirePhoneVerification?.();
+        throw new Error("スポット投稿にはSMS本人確認が必要です。先に認証を完了してください。");
+      }
+
       let uploadedImageUrl: string | undefined;
       if (imageFile) {
         try {
@@ -602,6 +617,27 @@ export const SpotForm = ({
       </div>
 
       <div className="spot-step-container">{renderStepContent()}</div>
+
+      {isLastStep ? (
+        <div className="spot-verification-banner">
+          {phoneVerified ? (
+            <span className="status success">✅ SMS認証済みのアカウントです。</span>
+          ) : (
+            <>
+              <p className="hint">
+                投稿を完了する前にSMS本人確認が必要です。下のボタンから認証を済ませてください。
+              </p>
+              <button
+                type="button"
+                className="button subtle"
+                onClick={() => onRequirePhoneVerification?.()}
+              >
+                SMS認証を開始
+              </button>
+            </>
+          )}
+        </div>
+      ) : null}
 
       <div className="spot-wizard-footer">
         {step > 0 ? (

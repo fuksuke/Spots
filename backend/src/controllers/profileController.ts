@@ -1,3 +1,5 @@
+import crypto from "node:crypto";
+
 import type { Request, Response, NextFunction } from "express";
 import { Timestamp } from "firebase-admin/firestore";
 import { z } from "zod";
@@ -28,6 +30,9 @@ type UserDocData = {
     is_sponsor?: boolean;
   };
   stripe_customer_id?: string | null;
+  phone_verified?: boolean;
+  phone_verified_at?: Timestamp | string;
+  phone_hash?: string | null;
 };
 
 const toFollowedUserIds = (value: unknown): string[] => {
@@ -62,6 +67,8 @@ type ProfileResponse = {
   isVerified: boolean;
   isSponsor: boolean;
   stripeCustomerId: string | null;
+  phoneVerified: boolean;
+  phoneVerifiedAt: string | null;
 };
 
 const ensureUserDocument = async (uid: string): Promise<{ data: UserDocData; ref: FirebaseFirestore.DocumentReference<UserDocData> }> => {
@@ -178,8 +185,30 @@ const buildProfileResponse = async (uid: string): Promise<ProfileResponse> => {
     stripeCustomerId:
       typeof data.stripe_customer_id === "string" && data.stripe_customer_id.trim().length > 0
         ? data.stripe_customer_id.trim()
+        : null,
+    phoneVerified: Boolean(data.phone_verified),
+    phoneVerifiedAt:
+      typeof data.phone_verified_at === "string"
+        ? data.phone_verified_at
+        : data.phone_verified_at && typeof (data.phone_verified_at as Timestamp).toDate === "function"
+        ? (data.phone_verified_at as Timestamp).toDate().toISOString()
         : null
   } satisfies ProfileResponse;
+};
+
+const phoneVerificationSchema = z.object({
+  phoneNumber: z
+    .string()
+    .trim()
+    .regex(/^\+[1-9]\d{6,14}$/, "電話番号はE.164形式(+81...)で送信してください。")
+});
+
+const resolvePhoneHashSecret = () => {
+  const secret = process.env.PHONE_HASH_SECRET ?? process.env.SMS_PHONE_HASH_SECRET;
+  if (!secret) {
+    throw new Error("PHONE_HASH_SECRET is not configured");
+  }
+  return secret;
 };
 
 export const getProfileHandler = async (req: Request, res: Response, next: NextFunction) => {
@@ -192,6 +221,51 @@ export const getProfileHandler = async (req: Request, res: Response, next: NextF
     const profile = await buildProfileResponse(uid);
     res.json(profile);
   } catch (error) {
+    next(error);
+  }
+};
+
+export const verifyPhoneHandler = async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const uid = (req as Request & { uid?: string }).uid;
+    if (!uid) {
+      return res.status(401).json({ message: "Authentication required" });
+    }
+
+    const { phoneNumber } = phoneVerificationSchema.parse(req.body ?? {});
+    const normalized = phoneNumber.trim();
+    const secret = resolvePhoneHashSecret();
+    const phoneHash = crypto.createHmac("sha256", secret).update(normalized).digest("hex");
+
+    const existing = await firestore
+      .collection("users")
+      .where("phone_hash", "==", phoneHash)
+      .limit(1)
+      .get();
+
+    if (!existing.empty && existing.docs[0]?.id !== uid) {
+      return res.status(409).json({ message: "この電話番号は既に使用されています。", code: "PHONE_NUMBER_IN_USE" });
+    }
+
+    const now = Timestamp.now();
+    await firestore.collection("users").doc(uid).set(
+      {
+        phone_verified: true,
+        phone_verified_at: now,
+        phone_hash: phoneHash
+      },
+      { merge: true }
+    );
+
+    const profile = await buildProfileResponse(uid);
+    res.json(profile);
+  } catch (error) {
+    if (error instanceof z.ZodError) {
+      return res.status(400).json({ message: error.errors?.[0]?.message ?? "電話番号が不正です" });
+    }
+    if (error instanceof Error && error.message === "PHONE_HASH_SECRET is not configured") {
+      return res.status(500).json({ message: "SMS認証の設定が不足しています" });
+    }
     next(error);
   }
 };

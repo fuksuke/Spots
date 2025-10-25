@@ -320,7 +320,12 @@ export const SpotFeed = ({
               <p className="badge">{spot.category.toUpperCase()}</p>
               <h3>{spot.title}</h3>
               <div className="spot-owner-row">
-                <SpotOwnerBadge ownerId={spot.ownerId} displayName={spot.ownerDisplayName} photoUrl={spot.ownerPhotoUrl} />
+                <SpotOwnerBadge
+                  ownerId={spot.ownerId}
+                  displayName={spot.ownerDisplayName}
+                  photoUrl={spot.ownerPhotoUrl}
+                  phoneVerified={spot.ownerPhoneVerified}
+                />
                 <button
                   type="button"
                   className={`button subtle follow-button ${followedOwnerIds.has(spot.ownerId) ? "active" : ""}`}

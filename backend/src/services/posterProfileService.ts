@@ -4,6 +4,13 @@ import { firestore } from "./firebaseAdmin.js";
 
 export type PosterTier = "tier_a" | "tier_b" | "tier_c";
 
+export class PhoneVerificationRequiredError extends Error {
+  constructor(message = "SMS認証が必要です。") {
+    super(message);
+    this.name = "PhoneVerificationRequiredError";
+  }
+}
+
 export type PromotionQuota = {
   short_term?: number;
   long_term?: number;
@@ -19,6 +26,8 @@ export type PosterProfile = {
   isVerified: boolean;
   isSponsor: boolean;
   stripeCustomerId: string | null;
+  phoneVerified: boolean;
+  phoneVerifiedAt: string | null;
 };
 
 const DEFAULT_PROFILE: PosterProfile = {
@@ -30,7 +39,9 @@ const DEFAULT_PROFILE: PosterProfile = {
   promotionQuotaUpdatedAt: null,
   isVerified: false,
   isSponsor: false,
-  stripeCustomerId: null
+  stripeCustomerId: null,
+  phoneVerified: false,
+  phoneVerifiedAt: null
 };
 
 type UserDocument = {
@@ -44,6 +55,8 @@ type UserDocument = {
     is_sponsor?: boolean;
   };
   stripe_customer_id?: string | null;
+  phone_verified?: boolean;
+  phone_verified_at?: Timestamp | string;
 };
 
 export const getPosterProfile = async (uid: string): Promise<PosterProfile> => {
@@ -65,9 +78,17 @@ export const getPosterProfile = async (uid: string): Promise<PosterProfile> => {
         : DEFAULT_PROFILE.promotionQuotaUpdatedAt,
     isVerified: Boolean(data.flags?.is_verified),
     isSponsor: Boolean(data.flags?.is_sponsor),
-    stripeCustomerId: typeof data.stripe_customer_id === "string" && data.stripe_customer_id.trim()
-      ? data.stripe_customer_id.trim()
-      : null
+    stripeCustomerId:
+      typeof data.stripe_customer_id === "string" && data.stripe_customer_id.trim()
+        ? data.stripe_customer_id.trim()
+        : null,
+    phoneVerified: Boolean(data.phone_verified),
+    phoneVerifiedAt:
+      typeof data.phone_verified_at === "string"
+        ? data.phone_verified_at
+        : data.phone_verified_at instanceof Timestamp
+        ? data.phone_verified_at.toDate().toISOString()
+        : DEFAULT_PROFILE.phoneVerifiedAt
   } satisfies PosterProfile;
 };
 

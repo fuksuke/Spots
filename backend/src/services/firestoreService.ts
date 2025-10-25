@@ -57,6 +57,7 @@ export type SpotResponse = {
   likedByViewer?: boolean;
   followedByViewer?: boolean;
   favoritedByViewer?: boolean;
+  ownerPhoneVerified?: boolean;
 };
 
 export type PopularSpotResponse = SpotResponse & {
@@ -101,6 +102,7 @@ type UserDocument = {
   photo_url?: string | null;
   favorite_spot_ids?: string[];
   followed_categories?: string[];
+  phone_verified?: boolean;
 };
 
 export type FollowMutationResult = {
@@ -138,7 +140,8 @@ const toSpotResponse = (doc: FirebaseFirestore.QueryDocumentSnapshot<SpotDocumen
     ownerPhotoUrl: null,
     likes: data.likes,
     commentsCount: data.comments_count,
-    createdAt: data.created_at.toDate().toISOString()
+    createdAt: data.created_at.toDate().toISOString(),
+    ownerPhoneVerified: false
   };
 };
 
@@ -176,11 +179,13 @@ const enrichSpotsForViewer = async (spots: SpotResponse[], viewerId?: string) =>
   const ownerDocs = uniqueOwnerIds.length > 0 ? await firestore.getAll(...uniqueOwnerIds.map((id) => firestore.collection("users").doc(id))) : [];
   const ownerDisplayNameMap = new Map<string, string | null>();
   const ownerPhotoUrlMap = new Map<string, string | null>();
+  const ownerPhoneVerifiedMap = new Map<string, boolean>();
   ownerDocs.forEach((doc) => {
     if (doc.exists) {
       const data = doc.data() as UserDocument;
       ownerDisplayNameMap.set(doc.id, typeof data.display_name === "string" ? data.display_name : null);
       ownerPhotoUrlMap.set(doc.id, typeof data.photo_url === "string" ? data.photo_url : null);
+      ownerPhoneVerifiedMap.set(doc.id, Boolean(data.phone_verified));
     }
   });
 
@@ -190,7 +195,10 @@ const enrichSpotsForViewer = async (spots: SpotResponse[], viewerId?: string) =>
     followedByViewer: viewerId ? followedOwnerIds.has(spot.ownerId) : spot.followedByViewer,
     favoritedByViewer: viewerId ? favoriteSpotIds.has(spot.id) : spot.favoritedByViewer,
     ownerDisplayName: ownerDisplayNameMap.get(spot.ownerId) ?? spot.ownerDisplayName ?? null,
-    ownerPhotoUrl: ownerPhotoUrlMap.get(spot.ownerId) ?? spot.ownerPhotoUrl ?? null
+    ownerPhotoUrl: ownerPhotoUrlMap.get(spot.ownerId) ?? spot.ownerPhotoUrl ?? null,
+    ownerPhoneVerified: ownerPhoneVerifiedMap.has(spot.ownerId)
+      ? Boolean(ownerPhoneVerifiedMap.get(spot.ownerId))
+      : Boolean(spot.ownerPhoneVerified)
   }));
 };
 
@@ -264,7 +272,8 @@ export const createSpot = async (spot: SpotInput) => {
     ownerPhotoUrl: null,
     likes: 0,
     commentsCount: 0,
-    createdAt: now.toDate().toISOString()
+    createdAt: now.toDate().toISOString(),
+    ownerPhoneVerified: false
   } satisfies SpotResponse;
 };
 

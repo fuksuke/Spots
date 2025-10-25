@@ -26,6 +26,7 @@ export type Spot = {
   favoritedByViewer?: boolean;
   popularityScore?: number;
   popularityRank?: number;
+  ownerPhoneVerified?: boolean;
 };
 
 export type Coordinates = {
@@ -100,6 +101,8 @@ export type UserProfile = {
   isVerified: boolean;
   isSponsor: boolean;
   stripeCustomerId: string | null;
+  phoneVerified: boolean;
+  phoneVerifiedAt: string | null;
 };
 
 export type ReviewLog = {

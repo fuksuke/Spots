@@ -12,7 +12,7 @@ import {
   unlikeSpot,
   fetchPopularSpotsFromLeaderboard
 } from "../services/firestoreService.js";
-import { SchedulingRuleError } from "../services/posterProfileService.js";
+import { PhoneVerificationRequiredError, SchedulingRuleError } from "../services/posterProfileService.js";
 import { extractUidFromAuthorization, InvalidAuthTokenError } from "../utils/auth.js";
 
 import { enforceRealtimeSpotWindow } from "./scheduledSpotsController.js";
@@ -104,6 +104,12 @@ export const createSpotHandler = async (req: Request, res: Response, next: NextF
     const spot = await createSpot({ ...payload, ownerId: uid });
     res.status(201).json(spot);
   } catch (error) {
+    if (error instanceof PhoneVerificationRequiredError) {
+      return res.status(412).json({ message: error.message, code: "PHONE_VERIFICATION_REQUIRED" });
+    }
+    if (error instanceof SchedulingRuleError) {
+      return res.status(400).json({ message: error.message });
+    }
     next(error);
   }
 };

@@ -1294,6 +1294,8 @@ function App() {
       canPostLongTerm={canPostLongTerm}
       canPostRecurring={canPostRecurring}
       headerActions={spotCreateHeaderActions}
+      profile={userProfile ?? null}
+      onProfileRefresh={scheduleProfileRefresh}
     />
   );
 

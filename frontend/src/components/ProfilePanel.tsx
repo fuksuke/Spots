@@ -295,6 +295,9 @@ export const ProfilePanel = ({
           Tier: {profile.posterTier.toUpperCase()} / フォロワー {profile.followersCount.toLocaleString("ja-JP")}
         </p>
         {profile.isVerified && <p className="status success">公式認証済みアカウント</p>}
+        <p className={`status ${profile.phoneVerified ? "success" : "error"}`.trim()}>
+          {profile.phoneVerified ? "✅ SMS認証済み" : "SMS認証未完了 — 投稿前に本人確認を完了してください"}
+        </p>
       </div>
       </div>
 

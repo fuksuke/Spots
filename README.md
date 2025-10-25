@@ -82,6 +82,7 @@
 
 ## 運用メモ
 - 必須環境変数: Firebase Web APIキー群、Firebase Admin 認証情報、Mapboxトークン、Sentry DSN, Stripe APIキー/Price ID/Webhook Secret, GA4/Mixpanelトークン（任意）
+  - 新規: SMS認証ハッシュ用の `PHONE_HASH_SECRET`
 - Billingアラート送付先: `BILLING_ALERT_RECIPIENT_UIDS` or `firebase functions:config:set alerts.billing_recipient_uids=...`
 - 支援窓口: `support@shibuya-livemap.local`（UI内リンクあり）、Billing FAQ (`/billing-faq.html`)
 - Secretsはローカル `.env` と Functions Config の二重管理を避け、Vault等からデプロイスクリプトで注入する運用を想定
