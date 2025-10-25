@@ -12,9 +12,9 @@ import { SearchOverlay } from "./components/SearchOverlay";
 import { InAppNotification, InAppNotifications } from "./components/InAppNotifications";
 import { PopularSpotsPanel } from "./components/PopularSpotsPanel";
 import { PromotionBanner } from "./components/PromotionBanner";
-import { SpotForm } from "./components/SpotForm";
 import { AdminDashboard } from "./components/AdminDashboard";
 import { AccountPanel } from "./components/AccountPanel";
+import { SpotCreatePage } from "./components/SpotCreatePage";
 import { trackEvent, trackError, trackPageView } from "./lib/analytics";
 import { setSentryUser } from "./lib/sentry";
 import { useSpotFeed } from "./hooks/useSpotFeed";
@@ -60,6 +60,10 @@ const CATEGORY_CONFIG: Record<CategoryKey, CategoryConfig> = {
 const INITIAL_CATEGORY_KEYS: CategoryKey[] = ["top", "gourmet", "entertainment", "sports", "coupon", "live"];
 const CATEGORY_DISPLAY_ORDER: CategoryKey[] = [...INITIAL_CATEGORY_KEYS, "art", "family", "nightlife", "shopping"];
 const CATEGORY_STORAGE_KEY = "category-tabs:v1";
+type AppRoute = "main" | "create-spot";
+const CREATE_ROUTE_PATH = "/create";
+
+const resolveRouteFromPath = (path: string): AppRoute => (path === CREATE_ROUTE_PATH ? "create-spot" : "main");
 
 const isCategoryKey = (value: unknown): value is CategoryKey =>
   typeof value === "string" && CATEGORY_DISPLAY_ORDER.includes(value as CategoryKey);
@@ -191,9 +195,13 @@ function App() {
       return [];
     }
   });
+  const initialRoute = useMemo(() => {
+    if (typeof window === "undefined") return "main";
+    return resolveRouteFromPath(window.location.pathname);
+  }, []);
+  const [appRoute, setAppRoute] = useState<AppRoute>(initialRoute);
   const [isAuthModalOpen, setAuthModalOpen] = useState(false);
   const [isAccountPanelOpen, setAccountPanelOpen] = useState(false);
-  const [isSpotDrawerOpen, setSpotDrawerOpen] = useState(false);
   const [selectedLocation, setSelectedLocation] = useState<Coordinates | null>(null);
   const [focusCoordinates, setFocusCoordinates] = useState<Coordinates | null>(null);
   const [authToken, setAuthToken] = useState("");
@@ -226,6 +234,39 @@ function App() {
       setAppMessage(null);
       toastTimeoutRef.current = null;
     }, 2800);
+  }, []);
+
+  const navigateToRoute = useCallback(
+    (route: AppRoute, { replace = false }: { replace?: boolean } = {}) => {
+      if (typeof window === "undefined") {
+        setAppRoute(route);
+        return;
+      }
+      const targetPath = route === "create-spot" ? CREATE_ROUTE_PATH : "/";
+      const currentPath = window.location.pathname;
+      if (currentPath === targetPath) {
+        setAppRoute(route);
+        return;
+      }
+      if (replace) {
+        window.history.replaceState({ route: targetPath }, "", targetPath);
+      } else {
+        window.history.pushState({ route: targetPath }, "", targetPath);
+      }
+      setAppRoute(route);
+    },
+    []
+  );
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const handlePopState = () => {
+      setAppRoute(resolveRouteFromPath(window.location.pathname));
+    };
+    window.addEventListener("popstate", handlePopState);
+    return () => {
+      window.removeEventListener("popstate", handlePopState);
+    };
   }, []);
 
   useEffect(() => {
@@ -603,8 +644,8 @@ function App() {
 
   const handleSpotAction = useCallback(() => {
     if (!requireAuth()) return;
-    setSpotDrawerOpen(true);
-  }, [requireAuth]);
+    navigateToRoute("create-spot");
+  }, [requireAuth, navigateToRoute]);
 
   const handleModeToggle = useCallback(() => {
     setViewMode((prev) => (prev === "map" ? "list" : "map"));
@@ -617,12 +658,13 @@ function App() {
 
   const handleSelectPage = useCallback(
     (page: PageMode) => {
+      navigateToRoute("main");
       setPageMode(page);
       if (page === "home") {
         setViewMode((prev) => prev);
       }
     },
-    []
+    [navigateToRoute]
   );
 
   const handleLoginClick = useCallback(() => {
@@ -739,15 +781,20 @@ function App() {
         },
         { revalidate: false }
       );
-      setSpotDrawerOpen(false);
       setSelectedLocation(null);
       setActiveSpot(normalizedSpot);
       setFocusCoordinates({ lat: normalizedSpot.lat, lng: normalizedSpot.lng });
       setViewMode("map");
+      navigateToRoute("main");
       void mutateSpots();
     },
-    [currentUser, mutateSpots]
+    [currentUser, mutateSpots, navigateToRoute]
   );
+
+  const handleSpotCreateClose = useCallback(() => {
+    navigateToRoute("main");
+    setSelectedLocation(null);
+  }, [navigateToRoute]);
 
   const handleShareSpot = useCallback(
     async (spot: Spot) => {
@@ -813,6 +860,7 @@ function App() {
   );
 
   const handleLogoClick = useCallback(() => {
+    navigateToRoute("main");
     setActiveCategoryKey("top");
     setCategoryFilter("all");
     setSearchValue("");
@@ -821,7 +869,7 @@ function App() {
     setViewMode("map");
     setPageMode("home");
     triggerMessage("渋谷周辺の最新イベントへ戻りました");
-  }, [triggerMessage]);
+  }, [navigateToRoute, triggerMessage]);
 
   const handleLanguageClick = useCallback(() => {
     triggerMessage("多言語対応は近日公開予定です");
@@ -1100,6 +1148,17 @@ function App() {
     return spots.filter((spot) => spot.ownerId === currentUser.uid).length;
   }, [currentUser, spots]);
 
+  const canPostLongTerm = useMemo(() => {
+    const tier = userProfile?.posterTier;
+    if (!tier) return false;
+    return tier === "tier_a" || tier === "tier_b";
+  }, [userProfile?.posterTier]);
+
+  const canPostRecurring = useMemo(() => {
+    const tier = userProfile?.posterTier;
+    return tier === "tier_a";
+  }, [userProfile?.posterTier]);
+
   useEffect(() => {
     if (typeof window !== "undefined") {
       window.localStorage.setItem("ui-language", language);
@@ -1108,8 +1167,17 @@ function App() {
 
   const isHomePage = pageMode === "home";
   const isMapHomeView = isHomePage && viewMode === "map";
+  const spotCreateHeaderActions = currentUser ? (
+    <button type="button" className="button secondary" onClick={handleAccountPanelOpen}>
+      アカウント
+    </button>
+  ) : (
+    <button type="button" className="button primary" onClick={handleLoginClick}>
+      ログイン
+    </button>
+  );
 
-  return (
+  const mainLayout = (
     <div className="app-shell">
       <SidebarNav
         currentUser={currentUser}
@@ -1212,6 +1280,26 @@ function App() {
           onAdminClick={handleAdminClick}
         />
       </div>
+    </div>
+  );
+
+  const spotCreateLayout = (
+    <SpotCreatePage
+      selectedLocation={selectedLocation}
+      onSelectLocation={handleSelectLocation}
+      onLocationReset={handleLocationReset}
+      onCreated={handleSpotCreated}
+      onCancel={handleSpotCreateClose}
+      authToken={authToken}
+      canPostLongTerm={canPostLongTerm}
+      canPostRecurring={canPostRecurring}
+      headerActions={spotCreateHeaderActions}
+    />
+  );
+
+  return (
+    <>
+      {appRoute === "create-spot" ? spotCreateLayout : mainLayout}
 
       <div className={`floating-panel admin-panel ${isAdminPanelOpen ? "open" : ""}`.trim()} role="dialog" aria-hidden={!isAdminPanelOpen}>
         <div className="floating-scrim" aria-hidden="true" onClick={() => setAdminPanelOpen(false)} />
@@ -1403,18 +1491,6 @@ function App() {
         </div>
       </div>
 
-      <div className={`spot-drawer ${isSpotDrawerOpen ? "open" : ""}`.trim()} role="dialog" aria-hidden={!isSpotDrawerOpen}>
-        <div className="drawer-scrim" aria-hidden="true" onClick={() => setSpotDrawerOpen(false)} />
-        <div className="drawer-body">
-          <SpotForm
-            selectedLocation={selectedLocation}
-            onLocationReset={handleLocationReset}
-            onCreated={handleSpotCreated}
-            authToken={authToken}
-          />
-        </div>
-      </div>
-
       <SpotDetailSheet
         spot={activeSpot}
         isOpen={Boolean(activeSpot)}
@@ -1452,7 +1528,7 @@ function App() {
       />
 
       {appMessage ? <div className="app-toast">{appMessage}</div> : null}
-    </div>
+    </>
   );
 }
 

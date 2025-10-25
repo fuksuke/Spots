@@ -523,17 +523,10 @@ button {
 
 
 .account-card-content {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(0, 260px);
-  gap: 2rem;
-  align-items: start;
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
 }
-
-.account-main {
-  flex: 1;
-  min-width: 0;
-}
-
 
 .account-header-actions {
   display: inline-flex;
@@ -541,41 +534,84 @@ button {
   gap: 0.5rem;
 }
 
-.account-settings-panel {
-  max-width: 0;
-  overflow: hidden;
-  transform: translateX(24px);
-  opacity: 0;
-  transition: opacity 0.25s ease, max-width 0.25s ease, padding 0.25s ease;
-  background: rgba(148, 163, 184, 0.16);
-  border-radius: 20px;
-  padding: 0;
-  backdrop-filter: blur(10px);
-  pointer-events: none;
+.account-card-content.view-settings,
+.account-card-content.view-edit {
+  gap: 1rem;
 }
 
-.account-settings-panel.open {
-  max-width: min(320px, 40vw);
-  opacity: 1;
-  padding: 1.5rem;
-  pointer-events: auto;
+.account-settings-view {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
 }
 
-.account-settings-panel .settings-header {
+.account-settings-header {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  margin-bottom: 1.25rem;
 }
 
-.account-settings-panel .settings-toggle,
-.account-settings-panel .button {
-  width: 100%;
+.account-settings-header h2 {
+  margin: 0;
+  font-size: 1.2rem;
+  color: #0f172a;
 }
 
-.account-settings-panel .button {
-  justify-content: center;
-  border: 1px solid rgba(148, 163, 184, 0.4);
+.account-settings-body {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+}
+
+.account-settings-body .button {
+  align-self: flex-start;
+}
+
+.settings-toggle {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  font-size: 0.9rem;
+}
+
+.settings-toggle .toggle {
+  position: relative;
+  width: 52px;
+  height: 28px;
+  border-radius: 999px;
+  border: none;
+  background: rgba(148, 163, 184, 0.4);
+  padding: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: flex-start;
+  transition: background-color 0.2s ease;
+}
+
+.settings-toggle .toggle::after {
+  content: "";
+  width: 23px;
+  height: 23px;
+  border-radius: 50%;
+  background: #ffffff;
+  box-shadow: 0 2px 6px rgba(15, 23, 42, 0.2);
+  margin-left: 3px;
+  transition: transform 0.2s ease;
+}
+
+.settings-toggle .toggle.on {
+  background: linear-gradient(135deg, #2563eb, #0ea5e9);
+  justify-content: flex-end;
+}
+
+.settings-toggle .toggle.on::after {
+  transform: translateX(-3px);
+}
+
+.settings-toggle .toggle:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
 }
 
 .account-avatar {
@@ -723,6 +759,450 @@ button {
   box-shadow: 0 15px 35px rgba(15, 23, 42, 0.08);
 }
 
+.form-row {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 1rem;
+}
+
+@media (min-width: 640px) {
+  .form-row {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+.location-preview {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.6rem;
+  padding: 0.6rem 0.8rem;
+  border-radius: 0.8rem;
+  background: rgba(148, 163, 184, 0.18);
+  font-size: 0.85rem;
+}
+
+.spot-wizard {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+  background: #ffffff;
+  border-radius: 20px;
+  padding: 1.75rem;
+  box-shadow: 0 18px 40px rgba(15, 23, 42, 0.12);
+}
+
+.spot-create-page {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  background: #f1f5f9;
+}
+
+.spot-create-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 1.25rem 2rem;
+  background: rgba(255, 255, 255, 0.92);
+  border-bottom: 1px solid rgba(148, 163, 184, 0.25);
+  backdrop-filter: blur(10px);
+  position: sticky;
+  top: 0;
+  z-index: 10;
+}
+
+.spot-create-header-left {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.spot-create-header h1 {
+  margin: 0;
+  font-size: 1.5rem;
+  color: #0f172a;
+}
+
+.spot-create-header-actions {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.spot-create-main {
+  flex: 1;
+  display: flex;
+  justify-content: center;
+  padding: 2rem;
+  overflow-y: auto;
+}
+
+.spot-create-content {
+  width: min(760px, 100%);
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+@media (max-width: 768px) {
+  .spot-create-header {
+    padding: 1rem 1.25rem;
+  }
+
+  .spot-create-header h1 {
+    font-size: 1.25rem;
+  }
+
+  .spot-create-main {
+    padding: 1.25rem;
+  }
+}
+
+.spot-cancel-overlay {
+  position: fixed;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(15, 23, 42, 0.35);
+  backdrop-filter: blur(2px);
+  z-index: 40;
+}
+
+.spot-cancel-dialog {
+  width: min(360px, 90vw);
+  background: #ffffff;
+  border-radius: 18px;
+  padding: 1.75rem;
+  box-shadow: 0 20px 45px rgba(15, 23, 42, 0.18);
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.spot-cancel-dialog h2 {
+  margin: 0;
+  font-size: 1.1rem;
+  color: #0f172a;
+}
+
+.spot-cancel-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.75rem;
+}
+
+.spot-wizard-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 1rem;
+}
+
+.spot-wizard-header h2 {
+  margin: 0;
+  font-size: 1.35rem;
+  color: #0f172a;
+}
+
+.spot-wizard-subtitle {
+  margin: 0.35rem 0 0;
+  font-size: 0.85rem;
+  color: rgba(71, 85, 105, 0.85);
+}
+
+.spot-step-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.35rem 0.8rem;
+  border-radius: 999px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: rgba(30, 41, 59, 0.8);
+  background: rgba(148, 163, 184, 0.18);
+}
+
+.spot-stepper {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+}
+
+.spot-stepper-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: rgba(148, 163, 184, 0.45);
+  transition: background-color 0.2s ease, transform 0.2s ease;
+}
+
+.spot-stepper-dot.active {
+  background: linear-gradient(135deg, #2563eb, #0ea5e9);
+  transform: scale(1.1);
+}
+
+.spot-step-container {
+  min-height: 320px;
+  display: flex;
+}
+
+.spot-step {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  width: 100%;
+}
+
+.spot-step-hint {
+  margin: 0;
+  font-size: 0.8rem;
+  color: rgba(100, 116, 139, 0.9);
+}
+
+.spot-map-wrapper {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.spot-map-shell {
+  position: relative;
+  border-radius: 16px;
+  overflow: hidden;
+  border: 1px solid rgba(148, 163, 184, 0.3);
+  background: #f1f5f9;
+  height: 320px;
+}
+
+.spot-map-shell .map-container {
+  min-height: 100%;
+  height: 100%;
+}
+
+.spot-map-crosshair {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  border: 2px dashed rgba(59, 130, 246, 0.4);
+  transform: translate(-50%, -50%);
+  pointer-events: none;
+}
+
+.spot-map-crosshair::before,
+.spot-map-crosshair::after {
+  content: "";
+  position: absolute;
+  background: rgba(59, 130, 246, 0.55);
+}
+
+.spot-map-crosshair::before {
+  width: 18px;
+  height: 2px;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+}
+
+.spot-map-crosshair::after {
+  width: 2px;
+  height: 18px;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+}
+
+.spot-map-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.spot-chip {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.35rem 0.9rem;
+  border-radius: 999px;
+  border: 1px solid rgba(148, 163, 184, 0.45);
+  background: #ffffff;
+  font-size: 0.8rem;
+  color: rgba(15, 23, 42, 0.75);
+  transition: background-color 0.2s ease, color 0.2s ease, border-color 0.2s ease;
+}
+
+.spot-chip:hover {
+  border-color: rgba(59, 130, 246, 0.5);
+  background: rgba(59, 130, 246, 0.12);
+}
+
+.spot-chip.subtle {
+  border-style: dashed;
+  color: rgba(71, 85, 105, 0.8);
+}
+
+.spot-chip:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.spot-map-summary {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  font-size: 0.9rem;
+  color: rgba(30, 41, 59, 0.9);
+}
+
+.spot-map-coords {
+  margin: 0;
+  font-weight: 600;
+}
+
+.spot-plan-cards {
+  display: grid;
+  gap: 1rem;
+}
+
+@media (min-width: 560px) {
+  .spot-plan-cards {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+.spot-plan-card {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 0.55rem;
+  text-align: left;
+  border-radius: 14px;
+  padding: 1rem 1.1rem;
+  border: 1px solid rgba(148, 163, 184, 0.4);
+  background: #ffffff;
+  color: rgba(15, 23, 42, 0.9);
+  cursor: pointer;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease, transform 0.2s ease;
+}
+
+.spot-plan-card:hover {
+  border-color: rgba(59, 130, 246, 0.5);
+  transform: translateY(-2px);
+}
+
+.spot-plan-card.selected {
+  border-color: rgba(37, 99, 235, 0.9);
+  box-shadow: 0 18px 40px rgba(37, 99, 235, 0.18);
+}
+
+.spot-plan-card.locked {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.spot-plan-lock {
+  position: absolute;
+  top: -12px;
+  right: -12px;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  border: 1px solid rgba(148, 163, 184, 0.35);
+  background: #ffffff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.95rem;
+}
+
+.spot-plan-badge {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  padding: 0.2rem 0.6rem;
+  border-radius: 999px;
+  font-size: 0.7rem;
+  border: 1px solid rgba(148, 163, 184, 0.45);
+  background: rgba(148, 163, 184, 0.12);
+}
+
+.spot-plan-title {
+  font-weight: 600;
+  font-size: 1rem;
+}
+
+.spot-plan-desc {
+  font-size: 0.85rem;
+  color: rgba(71, 85, 105, 0.85);
+}
+
+.spot-plan-note {
+  font-size: 0.75rem;
+  color: rgba(185, 28, 28, 0.85);
+}
+
+.spot-plan-summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding: 0.75rem 1rem;
+  border-radius: 0.9rem;
+  background: rgba(59, 130, 246, 0.08);
+}
+
+.spot-plan-summary-label {
+  font-size: 0.75rem;
+  color: rgba(30, 64, 175, 0.9);
+  letter-spacing: 0.02em;
+}
+
+.spot-plan-summary-value {
+  font-weight: 600;
+  color: #1d4ed8;
+}
+
+.spot-status {
+  margin: 0;
+  padding: 0.65rem 0.9rem;
+  border-radius: 0.75rem;
+  font-size: 0.85rem;
+  background: rgba(148, 163, 184, 0.18);
+  color: rgba(15, 23, 42, 0.85);
+}
+
+.spot-status.success {
+  background: rgba(34, 197, 94, 0.18);
+  color: #047857;
+}
+
+.spot-status.error {
+  background: rgba(248, 113, 113, 0.18);
+  color: #b91c1c;
+}
+
+.spot-status-list {
+  margin: 0;
+  padding-left: 1.1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  font-size: 0.85rem;
+  color: #b91c1c;
+}
+
+.spot-wizard-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
 .form-group span {
   font-size: 0.9rem;
   font-weight: 600;
@@ -784,6 +1264,16 @@ select.input:focus {
   background: transparent;
   border: 1px solid rgba(148, 163, 184, 0.35);
   color: rgba(15, 23, 42, 0.85);
+}
+
+.button.danger {
+  background: rgba(248, 113, 113, 0.16);
+  color: #b91c1c;
+  border: 1px solid rgba(248, 113, 113, 0.35);
+}
+
+.button.danger:hover {
+  background: rgba(248, 113, 113, 0.25);
 }
 
 .button:hover {
@@ -931,7 +1421,7 @@ select.input:focus {
   display: none;
   align-items: center;
   justify-content: space-between;
-  padding: 0.3rem 1rem;
+  padding: 0.4rem 1rem;
   background: #ffffff;
   border-bottom: 1px solid rgba(148, 163, 184, 0.2);
   position: sticky;
@@ -952,7 +1442,7 @@ select.input:focus {
 }
 
 .header-logo-image {
-  height: 36px;
+  height: 40px;
   width: auto;
 }
 
@@ -969,8 +1459,8 @@ select.input:focus {
 }
 
 .header-account-button {
-  width: 40px;
-  height: 40px;
+  width: 48px;
+  height: 48px;
 }
 
 .header-account-button img {
@@ -985,8 +1475,8 @@ select.input:focus {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 36px;
-  height: 36px;
+  width: 44px;
+  height: 44px;
   border-radius: 50%;
   background: rgba(148, 163, 184, 0.16);
   transition: background-color 0.2s ease;
@@ -1026,12 +1516,17 @@ select.input:focus {
   gap: 0.4rem;
 }
 
+.language-select .language-icon svg {
+  width: 24px;
+  height: 24px;
+}
+
 .language-select select {
-  padding: 0.4rem 0.9rem;
+  padding: 0.6rem 0.9rem;
   border-radius: 999px;
   border: 1px solid rgba(148, 163, 184, 0.3);
   background: rgba(255, 255, 255, 0.85);
-  font-size: 0.85rem;
+  font-size: 0.87rem;
 }
 
 /* Category tabs ------------------------------------------- */
@@ -1058,7 +1553,7 @@ select.input:focus {
   flex-wrap: nowrap;
   gap: 0.2rem;
   overflow-x: auto;
-  padding: 0.6rem 0;
+  padding: 0.3rem 0;
   scrollbar-width: none;
 }
 
@@ -1070,12 +1565,12 @@ select.input:focus {
   display: inline-flex;
   align-items: center;
   gap: 0.4rem;
-  height: 28px;
-  padding: 0 0.85rem;
+  height: 38px;
+  padding: 0 1.15rem;
   border-radius: 999px;
   border: 1px solid rgba(148, 163, 184, 0.35);
   background: transparent;
-  font-size: 0.8rem;
+  font-size: 0.95rem;
   font-weight: 600;
   flex-shrink: 0;
 }
@@ -1094,7 +1589,7 @@ select.input:focus {
   --tab-color: rgba(59, 130, 246, 0.7);
   border-radius: 0;
   padding: 0.45rem 1.4rem 0.35rem;
-  font-size: 0.85rem;
+  font-size: 0.95rem;
   font-weight: 600;
   color: rgba(30, 41, 59, 0.75);
   border: none;
@@ -1372,17 +1867,7 @@ select.input:focus {
   }
 
   .account-card-content {
-    grid-template-columns: minmax(0, 1fr);
-  }
-
-  .account-settings-panel {
-    max-width: 0;
-    transform: translateY(16px);
-  }
-
-  .account-settings-panel.open {
-    max-width: 100%;
-    padding: 1.25rem;
+    gap: 1.25rem;
   }
 
   .spot-detail-sheet .sheet-body {

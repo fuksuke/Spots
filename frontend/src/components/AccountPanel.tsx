@@ -19,7 +19,7 @@ export type AccountPanelProps = {
   onProfileRefresh?: () => Promise<void> | void;
 };
 
-type AccountView = "summary" | "edit";
+type AccountView = "summary" | "settings" | "edit";
 
 const normalizeWebsite = (value: string) => {
   const trimmed = value.trim();
@@ -44,7 +44,6 @@ export const AccountPanel = ({
   onProfileRefresh
 }: AccountPanelProps) => {
   const [activeView, setActiveView] = useState<AccountView>("summary");
-  const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [isPrivateAccount, setIsPrivateAccount] = useState(Boolean(profile?.isPrivateAccount));
   const [isTogglingPrivate, setIsTogglingPrivate] = useState(false);
   const [settingsMessage, setSettingsMessage] = useState<string | null>(null);
@@ -84,7 +83,6 @@ export const AccountPanel = ({
   useEffect(() => {
     if (!isOpen) {
       setActiveView("summary");
-      setIsSettingsOpen(false);
       setIsLogoutConfirmOpen(false);
       setEditPhotoFile(null);
       if (editPhotoPreview) {
@@ -112,8 +110,14 @@ export const AccountPanel = ({
     }
   }, [activeView, profile?.displayName, profile?.bio, profile?.websiteUrl, user?.displayName, editPhotoPreview]);
 
-  const handleSettingsToggle = () => {
-    setIsSettingsOpen((current) => !current);
+  const openSettingsView = () => {
+    setActiveView("settings");
+    setSettingsError(null);
+    setSettingsMessage(null);
+  };
+
+  const closeSettingsView = () => {
+    setActiveView("summary");
     setSettingsError(null);
     setSettingsMessage(null);
   };
@@ -147,7 +151,7 @@ export const AccountPanel = ({
       await onLogout();
     } finally {
       setIsLogoutConfirmOpen(false);
-      setIsSettingsOpen(false);
+      closeSettingsView();
       onClose();
     }
   };
@@ -157,7 +161,6 @@ export const AccountPanel = ({
   };
 
   const openEditView = () => {
-    setIsSettingsOpen(false);
     setActiveView("edit");
   };
 
@@ -314,6 +317,34 @@ export const AccountPanel = ({
     </>
   );
 
+  const renderSettingsView = () => (
+    <div className="account-settings-view">
+      <header className="account-settings-header">
+        <h2>設定</h2>
+      </header>
+      <div className="account-settings-body">
+        <label className="settings-toggle">
+          <span>プライベートアカウント</span>
+          <button
+            type="button"
+            className={`toggle ${isPrivateAccount ? "on" : "off"}`.trim()}
+            onClick={handlePrivateToggleClick}
+            disabled={isTogglingPrivate}
+            aria-pressed={isPrivateAccount}
+            aria-label="プライベートアカウントの切り替え"
+          >
+            <span className="sr-only">{isPrivateAccount ? "オン" : "オフ"}</span>
+          </button>
+        </label>
+        {settingsMessage ? <p className="status success">{settingsMessage}</p> : null}
+        {settingsError ? <p className="status error">{settingsError}</p> : null}
+        <button type="button" className="button danger" onClick={handleLogoutClick}>
+          ログアウト
+        </button>
+      </div>
+    </div>
+  );
+
   const renderEditView = () => {
     const preview = editPhotoPreview ?? avatarUrl ?? null;
     return (
@@ -370,49 +401,26 @@ export const AccountPanel = ({
           <button
             type="button"
             className="text-button"
-            onClick={activeView === "edit" ? closeEditView : onClose}
+            onClick={
+              activeView === "edit" ? closeEditView : activeView === "settings" ? closeSettingsView : onClose
+            }
           >
             ← 戻る
           </button>
           <div className="account-header-actions">
             {activeView === "summary" ? (
-              <button
-                type="button"
-                className={`icon-button ${isSettingsOpen ? "active" : ""}`.trim()}
-                aria-label="設定"
-                onClick={handleSettingsToggle}
-              >
+              <button type="button" className="icon-button" aria-label="設定" onClick={openSettingsView}>
                 <Icon name="gear" label="設定" />
               </button>
             ) : null}
           </div>
         </header>
-        <div className="account-card-content">
-          <div className="account-main">
-            {activeView === "summary" ? renderSummaryView() : renderEditView()}
-          </div>
-          <aside className={`account-settings-panel ${isSettingsOpen ? "open" : ""}`.trim()} aria-hidden={!isSettingsOpen}>
-            <header className="settings-header">
-              <h3>設定</h3>
-              <button type="button" className="icon-button" aria-label="閉じる" onClick={handleSettingsToggle}>
-                ✕
-              </button>
-            </header>
-            <label className="settings-toggle">
-              <input
-                type="checkbox"
-                checked={isPrivateAccount}
-                onChange={handlePrivateToggleClick}
-                disabled={isTogglingPrivate}
-              />
-              <span>プライベートアカウント</span>
-            </label>
-            {settingsMessage ? <p className="status success">{settingsMessage}</p> : null}
-            {settingsError ? <p className="status error">{settingsError}</p> : null}
-            <button type="button" className="button secondary" onClick={handleLogoutClick}>
-              ログアウト
-            </button>
-          </aside>
+        <div className={`account-card-content view-${activeView}`}>
+          {activeView === "summary"
+            ? renderSummaryView()
+            : activeView === "settings"
+            ? renderSettingsView()
+            : renderEditView()}
         </div>
       </section>
 
