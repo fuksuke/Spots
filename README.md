@@ -1,91 +1,107 @@
-# Spots プロジェクトサマリー（更新: 2025-02-XX）
+# Spots プロジェクトサマリー（更新: 2025-10-30）
 
-## 開発ステータス
-- Private Alpha（渋谷ローカルテスター対象）
-- npm workspaces構成（frontend / backend / firebase/functions）
-- フロント: React 18 + Vite + TypeScript + Mapbox GL + Firebase Web SDK + SWR
-- バックエンド: Express + Firebase Admin SDK + Stripe SDK + Zod を Firebase Functions にデプロイ
-- インフラ: Firestore / Storage / Stripe Billing / Sentry（asia-northeast1）
+## 現況まとめ
+- Stage: Private Alpha (渋谷ローカルテスター向け)。投稿・ソーシャル・課金・審査ラインは通しで動作。
+- Map/検索UX: Mapbox GL の単層ピン表示とカテゴリ/マップ↔リスト切替は稼働。LOD/タイル/API最適化は未着手で、`spots_map_ui_perf_spec v0.3` が次の主戦場。
+- オペレーション: Firebase Functions で予約投稿処理/ランキング/Stripe Webhook/Quota リセットを運用、Firestore 通知と In-app トーストで利用者アラートを補完。
+- 安全性: 投稿・予約は SMS 本人確認必須。認証モーダル/phone_hash 保存/Functions との同期を実装済み。
+- 既知ギャップ: 行きたい通知/通報・信頼スコア・高度検索・距離/料金メタデータ・地図パフォーマンスなどは仕様書の範囲に届いておらず、今後の開発対象。
+
+## スペック準拠状況
+### `spots_plan_v0.1.md`
+- ✅ 投稿・いいね・コメント（画像付）・フォロー/フォローフィード・お気に入り・カテゴリフィルタ・検索オーバーレイ・予約告知（quota/Tier/審査）・管理者ダッシュボード・Stripe課金・Firestore通知を実装。
+- ⚠️ 行きたい通知はUIモックのみ、通報ワークフロー/信頼スコア/広告アルゴリズム/アドバンスドサーチ（距離・価格など）は未着手。
+- ⚠️ コンテンツ露出ロジックは単純な likes/comments + recency。score リフレッシュアルゴリズムや新規投稿優遇は今後設計。
+
+### `sms_verification_spec.md`
+- ✅ PhoneVerificationModal（国選択/フォーマット/再送制御）＋ Firebase Phone Auth + `/api/profile/verify-phone` で phone_hash 保存、`PhoneVerificationRequiredError` を投稿/予約 API に組み込み済み。
+- ✅ プロフィールには phoneVerified / verifiedAt / バッジ表示を反映。
+- 🔜 Twilio Lookup 等の回線種別判定・運用Runbook・アラート設計は未整備。
+
+### `spots_map_ui_perf_spec_v0.2/v0.3`
+- 🟡 現状は GeoJSON circle layer + 一括描画のみ。タイルAPI・DOM300ガード・Markerプーリング・Auto-Degrade・Tap-to-Grow の実装は未着手。
+- 🔜 次フェーズで backend タイルエンドポイント、前述の LOD 切替、低性能端末モード、FPS/初期描画計測を整備する。
+
+### `event_data_spec_v0.1.md`
+- ✅ 詳細シート/リストビューではタイトル・カテゴリ・説明・時間帯・画像・統計を表示し、CTA・コメント導線を提供。
+- ⚠️ 地図の吹き出しは最小データ（タイトル/カテゴリ）だけで、簡易表示/Tap-to-Grow/距離・徒歩時間/料金表示は未導入。
+- ⚠️ pricing・distance・verifiedバッジの共通データ整備が未完了。メタ情報は Firestore モデル/レスポンス拡張が必要。
 
 ## 実装済み機能ハイライト
-- **地図と探索**: Mapbox地図表示、カテゴリタブ、Map/Listビュー切替、履歴付き検索オーバーレイ、トレンドビュー（人気ランキング＋プロモーション）
-- **投稿と告知運用**: Spot投稿フォーム（位置選択・画像アップロード・バリデーション）、Tier/クォータ対応の予約告知作成、`processScheduledSpots` による審査済み公開と Promotion 連携
-- **ソーシャル & 通知**: いいね・お気に入り・フォロー・コメント（画像添付・ページング・Like）、フォロー中投稿フィード、Firestore通知購読 + ローカル通知
-- **管理オペレーション**: 管理者ダッシュボード（フィルタ・テンプレ適用・レビュー履歴・CSVエクスポート）、審査テンプレ管理、Promotion下書き
-- **課金とクォータ**: Stripe Checkout / Portal エンドポイント、Webhook冪等ストアとプラン反映、Firestore通知と運用アラート、クォータ自動リセット
-- **可観測性 & 分析**: Sentry 初期化/ユーザー設定（フロント・バック・Functions）、GA4/Mixpanelラッパ、Stripe/Scheduled処理のログとアラート補足
+- Map & Discovery: Mapbox GL ベースの地図描画、カテゴリタブ、マップ/リスト切替、検索オーバーレイ（履歴付きクライアントフィルタ）、人気ランキング・プロモーション枠。
+- Posting & Scheduling: 3ステップ投稿フロー（地図位置選択/プラン選択/詳細入力）、画像アップロード、Tier別プラン制御、Firebase Functions 経由の予約告知公開/Promotion反映。
+- Social & Community: いいね・お気に入り・フォロー、コメントスレッド（ページング・画像添付・Like）、フォロー中フィード、投稿者バッジ表示。
+- Notifications & Analytics: Firestore 通知購読 + In-app トースト、Sentry 初期化、GA4/Mixpanel ラッパ、Stripe/Functions イベントのログ連携。
+- Admin & Billing: 審査ダッシュボード（フィルタ・検索・テンプレ適用）、審査ログ、Stripe Checkout/Portal、Webhook冪等ストア、クォータリセットとアラート下地。
 
-## 進行中・未実装トピック
-- 検索APIやサジェストは未接続（検索オーバーレイはローカルフィルタのみ）
-- テスト自動化は最小限（Vitestでサービス層一部）で、E2E/統合テストは未整備
-- レスポンシブ最適化・アクセシビリティ改善（フォーカス管理/コントラスト/スクリーンリーダー）は追加対応が必要
-- GA4/Mixpanelトークン設定とイベント命名規約の確定、ダッシュボード整備が未完
-- Stripe Webhook / 定期バッチのステージング検証と運用Runbook更新が継続タスク
-- Secrets・環境変数は `.env.example` と Functions Config の同期運用が未確立（Vault管理前提）
+## 優先課題と開発計画
+- Map UI performance v0.3: タイルAPIとクラスタリング層を backend に追加し、フロントで LOD/Marker プール/Auto-Degrade/Tap-to-Grow を実装。FPS・初期描画計測と低性能端末フォールバックを導入。
+- Search & Discovery 拡張: 検索バックエンド（候補: Algolia/Firestore range）と Suggestion API を用意し、検索オーバーレイをネットワーク駆動に更新。距離・開催時刻ソートを提供。
+- Event データのリッチ化: 距離/ETA/料金/verified バッジ/プレミアム表示を Firestore モデル・API・UI 全体に拡張し、`event_data_spec` の 4 段階表示を揃える。
+- Safety & Trust: 通報フロー、虚偽投稿ペナルティ、trust_score 集計とランキングアルゴリズムの再設計、通知条件の細分化。
+- QA & Ops: Vitest カバレッジ拡張、Supertest で API 統合テスト、Playwright シナリオ、CI/CD ワークフロー、負荷試験（Map/Functions/Billing）の自動化と Runbook 整備。
 
 ## 技術構成
-- **Frontend**: React, Vite, TypeScript, Mapbox GL, SWR, Firebase Auth/Firestore/Storage SDK, Sentry React
-- **Backend**: Node.js + Express, Firebase Admin, Stripe, Zod, Vitest、`@shibuya/backend` としてビルド
-- **Functions**: Firebase Functions (`api`, `stripeWebhook`, `processScheduledSpots`, `refreshPopularSpots`, `tidyPromotions`, `resetPosterQuotas`)
-- **データストア**: Firestore（スポット/予約/通知/ランキング/課金イベント/ソーシャル関係）、Firebase Storage（画像）
-- **外部サービス**: Stripe Billing、Mapbox、Sentry、（任意）GA4 / Mixpanel
+- **Frontend**: React 18 + Vite + TypeScript, Mapbox GL JS, SWR, Firebase Auth/Firestore/Storage SDK, Sentry (browser), libphonenumber-js, Stripe.js。
+- **Backend**: Node.js + Express, Firebase Admin SDK, Firestore, Stripe SDK, Zod, Vitest、`@shibuya/backend` として Functions へバンドル。
+- **Cloud Functions**: `api`, `stripeWebhook`, `processScheduledSpots`, `refreshPopularSpots`, `tidyPromotions`, `resetPosterQuotas`（asia-northeast1）。
+- **インフラ**: Firebase Auth / Firestore / Storage, Stripe Billing, Mapbox, Sentry, (オプション) GA4 / Mixpanel。
 
 ## 主要データモデル
-- `users/{uid}`: poster_tier, promotion_quota, followers_count, favorite_spot_ids, followed_user_ids, flags, stripe_customer_id, metadata
-- `spots/{spotId}`: title, description, category, lat/lng, start_time, end_time, owner_id, likes, comments_count, created_at, image_url
-- `scheduled_spots/{id}`: publish_at, start/end_time, announcement_type, status, review_notes, owner_id, image_url, created_at
-- `promotions/{id}` / `leaderboards/popular_spots/entries/{spotId}`: Promotionスケジュール、公開中スポットへの紐付け、優先度、ランキングスコア
-- `notifications/{id}`: user_id, title, body, category (`billing`/`moderation`/`system`), metadata, priority, read, created_at
-- `stripe_webhook_events/{eventId}`: status, type, attempts, processedAt, lastError といったWebhook冪等管理
+- `users/{uid}`: poster_tier, promotion_quota, followers_count, engagement_score, favorite_spot_ids, followed_user_ids, phone_verified, phone_hash, stripe_customer_id, flags。
+- `spots/{spotId}`: title, description, category, lat/lng, start_time, end_time, owner_id, image_url, likes, comments_count, created_at。
+- `scheduled_spots/{id}`: publish_at, start_time, end_time, announcement_type, status, review_notes, owner_id, image_url, created_at。
+- `promotions/{id}` & `leaderboards/popular_spots/entries/{spotId}`: Promotion設定、ランキングスコア、優先度。
+- `notifications/{id}`: user_id, title/body, metadata(spotId等), category, priority, read, created_at。
+- `stripe_webhook_events/{eventId}`: type, status, attempts, processed_at, last_error（冪等管理）。
 
 ## API サマリー（抜粋）
 | Method | Path | 説明 |
 | --- | --- | --- |
 | GET | /api/health | ヘルスチェック |
-| GET | /api/spots | スポット一覧（カテゴリ・フォローフィルタ対応） |
-| POST | /api/spots | スポット投稿（Firebase IDトークン必須） |
-| GET | /api/spots/:id | スポット詳細取得 |
+| GET | /api/spots | スポット一覧（カテゴリ/フォロー絞り込み、ローカル検索連携） |
+| POST | /api/spots | スポット投稿（SMS認証必須、画像URL対応） |
+| GET | /api/spots/popular | 人気ランキング取得 |
+| GET | /api/spots/:id | スポット詳細 |
 | GET/POST | /api/spots/:id/comments | コメント取得・投稿 |
-| POST | /api/like_spot / /api/unlike_spot | いいね／解除 |
-| POST | /api/favorite_spot / /api/unfavorite_spot | お気に入り登録／解除 |
-| POST | /api/follow_user / /api/unfollow_user | ユーザーフォロー操作 |
-| GET | /api/followed_posts | フォロー中ユーザーの投稿フィード |
-| GET | /api/profile | ログインユーザーのプロフィール取得 |
-| PUT | /api/profile | プロフィール更新（表示名/アイコン/カテゴリ） |
+| POST | /api/like_spot / /api/unlike_spot | いいね操作 |
+| POST | /api/favorite_spot / /api/unfavorite_spot | お気に入り操作 |
+| POST | /api/follow_user / /api/unfollow_user | ユーザーフォロー |
+| GET | /api/followed_posts | フォロー中投稿フィード |
+| GET/PUT | /api/profile | プロフィール取得・更新 |
+| POST | /api/profile/verify-phone | SMS認証結果反映 |
 | POST | /api/billing/create_checkout_session | Stripe Checkout セッション作成 |
-| POST | /api/billing/create_portal_session | Stripe Customer Portal セッション作成 |
-| GET/POST | /api/scheduled_spots... | 予約告知 CRUD（ユーザー自身） |
-| GET/POST | /api/admin/scheduled_spots... | 管理者審査・テンプレ・ログ取得（`admin` クレーム必須） |
-| GET | /api/promotions | 公開中 Promotion 取得 |
+| POST | /api/billing/create_portal_session | Stripe Portal セッション作成 |
+| GET/POST | /api/scheduled_spots... | 予約告知 CRUD |
+| GET/POST | /api/admin/scheduled_spots... | 管理者審査/テンプレ/ログ |
 
 ## バッチ / 自動処理
 | Function | トリガー | 役割 |
 | --- | --- | --- |
-| `processScheduledSpots` | 5分毎 | 承認済み予約告知を `spots` へ公開し Promotion を有効化 |
+| `processScheduledSpots` | 5分毎 | 承認済み予約告知を `spots` に公開し Promotion を有効化 |
 | `refreshPopularSpots` | 15分毎 | `leaderboards/popular_spots` を再計算 |
-| `tidyPromotions` | 24時間毎 | 期限切れ Promotion の失効処理 |
+| `tidyPromotions` | 24時間毎 | 期限切れ Promotion を失効処理 |
 | `resetPosterQuotas` | 月次 (0 3 1 * *) | Poster Tier に応じたクォータ再配布 |
 | `stripeWebhook` | HTTPS | Stripeイベント冪等処理（プラン反映・通知） |
 | `api` | HTTPS | Express アプリ全エンドポイント（asia-northeast1） |
 
 ## 開発フロー
-- `npm install`（ルートで依存関係を一括インストール）
-- フロント: `npm run dev --workspace frontend`（`frontend/.env` に Mapbox・Firebase 設定を用意）
-- バックエンド: `npm run dev --workspace backend` でローカルAPI（要 `backend/.env` に Firebase Admin/Stripe鍵）
-- Functions: `npm run build --workspace backend` 後、`firebase/functions` で `npm run serve` or `firebase emulators:start --only functions`
-- 本番ビルド: `npm run build --workspaces`
+- `npm install`（ルートで Workspaces 依存を一括インストール）
+- Frontend: `npm run dev --workspace frontend`（`frontend/.env` に Firebase / Mapbox / Sentry / Analytics 設定）
+- Backend API: `npm run dev --workspace backend`（`backend/.env` に Firebase Admin, Stripe, PHONE_HASH_SECRET）
+- Functions: `npm run build --workspace backend` 後 `npm run serve --workspace firebase-functions` or `firebase emulators:start --only functions`
+- ビルド: `npm run build --workspaces`
 
 ## テスト / 品質
-- `npm run test --workspace backend` で Vitest 実行（`scheduledSpotService` レビュー処理のユニットテスト）
-- 静的解析: `npm run lint --workspaces`（ESLint + Prettier 設定）
-- 今後: API統合テスト（Supertest）、E2E（Playwright）、CI/CD（GitHub Actions）整備が必要
+- `npm run test --workspace backend` (Vitest) — Firestore サービス・スケジュール規則のユニットテスト。
+- `npm run lint --workspaces` — ESLint + Prettier。
+- 🔜 API 統合テスト (Supertest)、E2E (Playwright)、Map負荷計測、CI/CD パイプラインを整備予定。
 
 ## 運用メモ
-- 必須環境変数: Firebase Web APIキー群、Firebase Admin 認証情報、Mapboxトークン、Sentry DSN, Stripe APIキー/Price ID/Webhook Secret, GA4/Mixpanelトークン（任意）
-  - 新規: SMS認証ハッシュ用の `PHONE_HASH_SECRET`
+- 必須環境変数: Firebase Web API Keys, Firebase Admin 認証情報, Mapbox Token, Sentry DSN, Stripe API/Price/Webhook Secret, `PHONE_HASH_SECRET`, GA4/Mixpanel（任意）。
 - Billingアラート送付先: `BILLING_ALERT_RECIPIENT_UIDS` or `firebase functions:config:set alerts.billing_recipient_uids=...`
-- 支援窓口: `support@shibuya-livemap.local`（UI内リンクあり）、Billing FAQ (`/billing-faq.html`)
-- Secretsはローカル `.env` と Functions Config の二重管理を避け、Vault等からデプロイスクリプトで注入する運用を想定
+- サポート窓口: `support@shibuya-livemap.local`（UIリンクあり）、Billing FAQ (`/billing-faq.html`)
+- Secretsはローカル `.env` と Functions Config を同期させ、Vault 等からデプロイスクリプトで注入する運用を想定。
 
 ## 参考ドキュメント
 - [要件定義書](docs/requirements.md)
@@ -94,3 +110,7 @@
 - [Development Plan](docs/development-plan.md)
 - [Monetisation Roadmap](docs/monetisation-roadmap.md)
 - [Architecture Overview](docs/architecture.md)
+- [Spots Plan v0.1](spots_plan_v0.1.md)
+- [SMS Verification Spec](sms_verification_spec.md)
+- [Spots Map UI Perf Spec v0.3](spots_map_ui_perf_spec_v0.3.md)
+- [Event Data Spec v0.1](event_data_spec_v0.1.md)

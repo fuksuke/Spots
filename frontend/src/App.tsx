@@ -531,6 +531,11 @@ function App() {
     return spots.filter((spot) => spot.category === categoryFilter);
   }, [spots, categoryFilter]);
 
+  const activeTileCategories = useMemo<SpotCategory[] | undefined>(() => {
+    if (categoryFilter === "all") return undefined;
+    return [categoryFilter];
+  }, [categoryFilter]);
+
   const currentSearch = useMemo(() => {
     const raw = (isSearchOverlayOpen ? searchInput : searchValue) ?? "";
     return raw.trim().toLowerCase();
@@ -1228,6 +1233,8 @@ function App() {
                 onSelectLocation={handleSelectLocation}
                 focusCoordinates={focusCoordinates}
                 onSpotClick={handleMapSpotClick}
+                tileCategories={activeTileCategories}
+                authToken={authToken}
               />
             ) : (
               <SpotListView

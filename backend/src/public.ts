@@ -9,3 +9,5 @@ export { getTierConfig, getDefaultQuotaForTier } from "./constants/billing.js";
 export { resetPromotionQuotas } from "./services/quotaService.js";
 export type { QuotaResetResult } from "./services/quotaService.js";
 export { captureSentryException, isSentryEnabled } from "./monitoring/sentry.js";
+export { getMapTile, clearMapTileCache } from "./services/mapTileService.js";
+export type { MapTileResponse, MapTileLayer, MapTileFeature } from "./services/mapTileService.js";

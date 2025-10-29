@@ -5,6 +5,7 @@ import { sentryErrorHandler, sentryRequestHandler } from "./monitoring/sentry.js
 
 import authRouter from "./routes/auth.js";
 import billingRouter from "./routes/billing.js";
+import mapTilesRouter from "./routes/mapTiles.js";
 import profileRouter from "./routes/profile.js";
 import promotionsRouter from "./routes/promotions.js";
 import scheduledSpotsRouter from "./routes/scheduledSpots.js";
@@ -37,6 +38,7 @@ export const createApp = () => {
   app.use("/api", scheduledSpotsRouter);
   app.use("/api", promotionsRouter);
   app.use("/api", billingRouter);
+  app.use("/api", mapTilesRouter);
   app.use("/api/spots", spotsRouter);
 
   app.use(sentryErrorHandler());

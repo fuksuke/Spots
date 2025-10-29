@@ -13,7 +13,7 @@ import {
   PiMapPinArea,
   PiMusicNoteFill,
   PiPlus,
-  PiScrollLight,
+  PiArticle,
   PiListBullets,
   PiGear,
   PiUser
@@ -28,7 +28,7 @@ const ICONS = {
   home: PiHouse,
   pin: PiGlobeHemisphereEastDuotone,
   music: PiMusicNoteFill,
-  list: PiScrollLight,
+  list: PiArticle,
   menu: PiListBullets,
   calendar: PiCalendarDots,
   camera: PiCameraPlus,

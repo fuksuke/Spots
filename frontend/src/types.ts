@@ -76,6 +76,51 @@ export type FollowedUser = {
   photoUrl: string | null;
 };
 
+export type MapTileLayer = "cluster" | "pulse" | "balloon";
+
+export type MapTileFeature = {
+  id: string;
+  type: MapTileLayer | "cluster";
+  geometry: {
+    lat: number;
+    lng: number;
+  };
+  count?: number;
+  popularity?: number;
+  premium?: boolean;
+  status?: "upcoming" | "live" | "ended";
+  spot?: {
+    title: string;
+    category: SpotCategory;
+    startTime: string;
+    endTime: string;
+    ownerId: string;
+    ownerPhoneVerified?: boolean;
+    likes?: number;
+    commentsCount?: number;
+    promotion?: {
+      id: string;
+      priority: number;
+    } | null;
+  };
+};
+
+export type MapTileResponse = {
+  z: number;
+  x: number;
+  y: number;
+  generatedAt: number;
+  nextSyncAt: number;
+  domBudget: number;
+  features: MapTileFeature[];
+};
+
+export type TileCoordinate = {
+  z: number;
+  x: number;
+  y: number;
+};
+
 export type UserProfile = {
   uid: string;
   email: string | null;
