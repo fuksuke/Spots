@@ -123,7 +123,9 @@ type TileResponse = {
 
 ## フロントエンド統合メモ
 - `frontend/src/hooks/useMapTiles.ts` が可視範囲タイルセットのフェッチと統合を担当。150ms デバウンス＋Abort 制御、並列取得に対応。
+- `fetchMapTile` が差分 (`diffs`) を適用してキャッシュを更新しつつ `console.debug("mapTileFetch")` で fetch 時間とキャッシュヒット状態をログ。
 - `frontend/src/lib/mapTileCache.ts` でメモリ + IndexedDB キャッシュを提供。`mapTileCache.clear()` をブラウザコンソールから呼べばクライアントキャッシュをリセット可能。
 - `MapView` はビューポート周辺のタイルをまとめて取得し、クラスタ/パルス/バルーンの LOD レイヤーを自動切替。クライアント側でも DOM 上限 (300) を守るためにスライス処理・段階的デグレードを行う。
+- DOM 300 を超えた場合は自動的に canvas フォールバックへ切り替え、クラスター/プレミアムのみ Mapbox レイヤに残し、通常スポットは canvas で描画して FPS を維持。
 - カテゴリフィルタは `tileCategories` プロップに `SpotCategory[]` を渡すことで適用。複数カテゴリ指定時はカンマ連結されて送信される。
 - ローカル検証: `npm run dev --workspace frontend` → マップ表示でパン/ズームし、Chrome DevTools の Network タブで `/api/map/tiles/...` を確認。IndexedDB の `spots-map-tiles/tiles` にキャッシュが保存される。

@@ -1,8 +1,8 @@
-# Spots プロジェクトサマリー（更新: 2025-10-30）
+# Spots プロジェクトサマリー（更新: 2025-10-30 (Latest sync)）
 
 ## 現況まとめ
 - Stage: Private Alpha (渋谷ローカルテスター向け)。投稿・ソーシャル・課金・審査ラインは通しで動作。
-- Map/検索UX: Mapbox GL の単層ピン表示とカテゴリ/マップ↔リスト切替は稼働。LOD/タイル/API最適化は未着手で、`spots_map_ui_perf_spec v0.3` が次の主戦場。
+- Map/検索UX: タイルベースの LOD 切替と DOM300 制御は導入済み。DOM 超過時は canvas フォールバックへ退避し、プレミアム投稿は優先表示。Tap-to-Grow や WebGL 点群など v0.3 の演出系は未実装。
 - オペレーション: Firebase Functions で予約投稿処理/ランキング/Stripe Webhook/Quota リセットを運用、Firestore 通知と In-app トーストで利用者アラートを補完。
 - 安全性: 投稿・予約は SMS 本人確認必須。認証モーダル/phone_hash 保存/Functions との同期を実装済み。
 - 既知ギャップ: 行きたい通知/通報・信頼スコア・高度検索・距離/料金メタデータ・地図パフォーマンスなどは仕様書の範囲に届いておらず、今後の開発対象。
@@ -25,10 +25,12 @@
 ### `event_data_spec_v0.1.md`
 - ✅ 詳細シート/リストビューではタイトル・カテゴリ・説明・時間帯・画像・統計を表示し、CTA・コメント導線を提供。
 - ⚠️ 地図の吹き出しは最小データ（タイトル/カテゴリ）だけで、簡易表示/Tap-to-Grow/距離・徒歩時間/料金表示は未導入。
+- ✅ リストビューは価格・Verified バッジ・開始までの残り時間などを表示するカードレイアウトに刷新（距離系は今後対応）。
 - ⚠️ pricing・distance・verifiedバッジの共通データ整備が未完了。メタ情報は Firestore モデル/レスポンス拡張が必要。
 
 ## 実装済み機能ハイライト
 - Map & Discovery: Mapbox GL ベースの地図描画、カテゴリタブ、マップ/リスト切替、検索オーバーレイ（履歴付きクライアントフィルタ）、人気ランキング・プロモーション枠。
+- List View: ソート（開始時間/人気/価格/新着）とフィルタ（無料・Verified・当日・室内/屋外）を追加し、価格・場所・バッジなど `event_data_spec` に沿ったカード表示へ刷新。
 - Posting & Scheduling: 3ステップ投稿フロー（地図位置選択/プラン選択/詳細入力）、画像アップロード、Tier別プラン制御、Firebase Functions 経由の予約告知公開/Promotion反映。
 - Social & Community: いいね・お気に入り・フォロー、コメントスレッド（ページング・画像添付・Like）、フォロー中フィード、投稿者バッジ表示。
 - Notifications & Analytics: Firestore 通知購読 + In-app トースト、Sentry 初期化、GA4/Mixpanel ラッパ、Stripe/Functions イベントのログ連携。
@@ -114,3 +116,6 @@
 - [SMS Verification Spec](sms_verification_spec.md)
 - [Spots Map UI Perf Spec v0.3](spots_map_ui_perf_spec_v0.3.md)
 - [Event Data Spec v0.1](event_data_spec_v0.1.md)
+
+## 開発時メモ
+- 簡易モック: `VITE_USE_MOCK_TILES=true npm run dev --workspace frontend` でローカルの `mocks/` JSON を返すよう切替可能。マップ＆リストビューのUI検証に利用。

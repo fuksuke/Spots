@@ -1,5 +1,27 @@
-import type { MapTileLayer, MapTileResponse, SpotCategory, TileCoordinate } from "../types";
+import type {
+  MapTileDiff,
+  MapTileFeature,
+  MapTileLayer,
+  MapTileResponse,
+  SpotCategory,
+  TileCoordinate
+} from "../types";
 import { mapTileCache } from "./mapTileCache";
+import { mockMapTile } from "../mockData";
+
+const coordinateKey = ({ z, x, y }: TileCoordinate) => `${z}/${x}/${y}`;
+
+const applyDiffs = (previous: MapTileResponse, diffs: MapTileDiff[]): MapTileFeature[] => {
+  const featureMap = new Map(previous.features?.map((feature) => [feature.id, feature]) ?? []);
+  diffs.forEach((diff) => {
+    if (diff.op === "upsert" && diff.feature) {
+      featureMap.set(diff.id, diff.feature);
+    } else if (diff.op === "delete") {
+      featureMap.delete(diff.id);
+    }
+  });
+  return Array.from(featureMap.values());
+};
 
 export type FetchMapTileOptions = {
   layer?: MapTileLayer;
@@ -7,6 +29,7 @@ export type FetchMapTileOptions = {
   premiumOnly?: boolean;
   authToken?: string;
   since?: number;
+  previous?: MapTileResponse;
   signal?: AbortSignal;
 };
 
@@ -19,11 +42,18 @@ export const fetchMapTile = async (
   coordinate: TileCoordinate,
   options: FetchMapTileOptions = {}
 ): Promise<MapTileResponse> => {
-  const { layer, categories, premiumOnly, since, authToken, signal } = options;
+  const { layer, categories, premiumOnly, authToken, signal, previous } = options;
+  const since = options.since ?? previous?.generatedAt;
 
-  const cached = await mapTileCache.get(coordinate, since);
-  if (cached) {
-    return cached;
+  if (import.meta.env.VITE_USE_MOCK_TILES === 'true') {
+    return {
+      ...mockMapTile,
+      z: coordinate.z,
+      x: coordinate.x,
+      y: coordinate.y,
+      generatedAt: mockMapTile.generatedAt ?? Date.now(),
+      nextSyncAt: mockMapTile.nextSyncAt ?? Date.now() + 60_000
+    } as MapTileResponse;
   }
 
   const params = new URLSearchParams();
@@ -38,6 +68,7 @@ export const fetchMapTile = async (
   }
 
   const requestPath = `/api/map/tiles/${coordinate.z}/${coordinate.x}/${coordinate.y}${params.size ? `?${params.toString()}` : ""}`;
+  const startedAt = typeof performance !== "undefined" ? performance.now() : undefined;
 
   const response = await fetch(requestPath, {
     method: "GET",
@@ -49,7 +80,30 @@ export const fetchMapTile = async (
     throw new Error(`Failed to fetch map tile (${response.status})`);
   }
 
-  const payload = (await response.json()) as MapTileResponse;
-  await mapTileCache.set(coordinate, payload);
-  return payload;
+  const payload = (await response.json()) as MapTileResponse & { diffs?: MapTileDiff[] };
+  const { diffs, ...rest } = payload;
+
+  let features = rest.features ?? previous?.features ?? [];
+  if (diffs && previous) {
+    features = applyDiffs(previous, diffs);
+  }
+
+  const resolved: MapTileResponse = {
+    ...rest,
+    features
+  };
+
+  await mapTileCache.set(coordinate, resolved);
+
+  if (startedAt !== undefined && typeof console !== "undefined" && typeof console.debug === "function") {
+    const duration = Math.round(performance.now() - startedAt);
+    console.debug("mapTileFetch", {
+      tile: coordinateKey(coordinate),
+      duration,
+      diff: Boolean(diffs),
+      cached: Boolean(previous)
+    });
+  }
+
+  return resolved;
 };

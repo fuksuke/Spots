@@ -5,6 +5,13 @@ export type PageMode = "home" | "trending";
 export type ScheduledSpotStatus = "pending" | "approved" | "published" | "rejected" | "cancelled";
 export type AnnouncementType = "short_term_notice" | "long_term_campaign";
 
+export type SpotPricing = {
+  label?: string;
+  amount?: number;
+  currency?: string;
+  isFree: boolean;
+};
+
 export type Spot = {
   id: string;
   title: string;
@@ -20,6 +27,10 @@ export type Spot = {
   ownerId: string;
   ownerDisplayName?: string | null;
   ownerPhotoUrl?: string | null;
+  locationName?: string | null;
+  pricing?: SpotPricing | null;
+  isIndoor?: boolean | null;
+  viewCount?: number;
   createdAt: string;
   likedByViewer?: boolean;
   followedByViewer?: boolean;
@@ -169,4 +180,10 @@ export type ReviewTemplate = {
   defaultNotes: string;
   notificationHint: string;
   priority: "standard" | "high";
+};
+
+export type MapTileDiff = {
+  id: string;
+  op: "upsert" | "delete";
+  feature?: MapTileFeature;
 };

@@ -1,6 +1,8 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import mapboxgl, { Map as MapboxMap } from "mapbox-gl";
 import * as tilebelt from "@mapbox/tilebelt";
+import styled from 'styled-components';
+import RBush from "rbush";
 import type { Feature, FeatureCollection, Point } from "geojson";
 import "mapbox-gl/dist/mapbox-gl.css";
 
@@ -35,6 +37,14 @@ const EMPTY_GEOJSON: FeatureCollection<Point, FeatureProperties> = {
 const clampZoom = (zoom: number) => Math.max(MIN_ZOOM, Math.min(MAX_ZOOM, Math.floor(zoom)));
 
 const GLOBAL_DOM_BUDGET = 300;
+
+type PremiumEntry = {
+  minX: number;
+  minY: number;
+  maxX: number;
+  maxY: number;
+  feature: MapTileFeature;
+};
 
 const deriveLayerForZoom = (zoom: number): MapTileLayer => {
   const clamped = clampZoom(zoom);
@@ -108,6 +118,7 @@ const buildFeatureCollection = (tiles: MapTileResponse[]): FeatureCollection<Poi
 
   const clusterFeatures: MapTileFeature[] = [];
   const spotFeatures: MapTileFeature[] = [];
+  const premiumFeatures: MapTileFeature[] = [];
 
   tiles.forEach((tile) => {
     tile.features?.forEach((feature) => {
@@ -115,6 +126,9 @@ const buildFeatureCollection = (tiles: MapTileResponse[]): FeatureCollection<Poi
         clusterFeatures.push(feature);
       } else {
         spotFeatures.push(feature);
+        if (feature.premium) {
+          premiumFeatures.push(feature);
+        }
       }
     });
   });
@@ -127,6 +141,17 @@ const buildFeatureCollection = (tiles: MapTileResponse[]): FeatureCollection<Poi
     }
   });
 
+  const premiumTree = new RBush<PremiumEntry>();
+  premiumFeatures.forEach((feature) => {
+    premiumTree.insert({
+      minX: feature.geometry.lng,
+      minY: feature.geometry.lat,
+      maxX: feature.geometry.lng,
+      maxY: feature.geometry.lat,
+      feature
+    });
+  });
+
   const spotMap = new Map<string, MapTileFeature>();
   spotFeatures.forEach((feature) => {
     if (!spotMap.has(feature.id)) {
@@ -134,7 +159,17 @@ const buildFeatureCollection = (tiles: MapTileResponse[]): FeatureCollection<Poi
     }
   });
 
-  const limitedSpotFeatures = Array.from(spotMap.values()).slice(0, GLOBAL_DOM_BUDGET);
+  const premiumSpots = new Map<string, MapTileFeature>();
+  premiumTree.all().forEach((entry) => {
+    if (!premiumSpots.has(entry.feature.id)) {
+      premiumSpots.set(entry.feature.id, entry.feature);
+    }
+  });
+
+  const remainingBudget = Math.max(0, GLOBAL_DOM_BUDGET - premiumSpots.size);
+  const regularSpots = Array.from(spotMap.values()).filter((feature) => !feature.premium);
+  const limitedRegular = regularSpots.slice(0, remainingBudget);
+  const limitedSpotFeatures = [...premiumSpots.values(), ...limitedRegular];
 
   const features: Array<Feature<Point, FeatureProperties>> = [];
 
@@ -187,7 +222,6 @@ const ensureMapLayers = (map: MapboxMap) => {
       data: EMPTY_GEOJSON
     });
   }
-
   if (!map.getLayer(LAYER_CLUSTER)) {
     map.addLayer({
       id: LAYER_CLUSTER,
@@ -300,6 +334,26 @@ type FeatureProperties = {
   popularity?: number;
 };
 
+const MapOuter = styled.div`
+  position: relative;
+  width: 100%;
+  height: 100%;
+`;
+
+const MapRoot = styled.div`
+  width: 100%;
+  height: 100%;
+`;
+
+const MapCanvas = styled.canvas`
+  position: absolute;
+  top: 0;
+  left: 0;
+  pointer-events: none;
+  width: 100%;
+  height: 100%;
+`;
+
 export const MapView = ({
   initialView,
   spots: legacySpots = [],
@@ -318,21 +372,28 @@ export const MapView = ({
   const mapRef = useRef<MapboxMap | null>(null);
   const selectionMarkerRef = useRef<mapboxgl.Marker | null>(null);
   const resizeObserverRef = useRef<ResizeObserver | null>(null);
+  const canvasRef = useRef<HTMLCanvasElement | null>(null);
+  const canvasContextRef = useRef<CanvasRenderingContext2D | null>(null);
 
+  const [fallbackSpots, setFallbackSpots] = useState<MapTileFeature[]>([]);
+  const [renderMode, setRenderMode] = useState<MapTileLayer | 'canvas'>('balloon');
   const [tileCoordinates, setTileCoordinates] = useState<TileCoordinate[]>([]);
   const [activeLayer, setActiveLayer] = useState<MapTileLayer | undefined>(tileLayer);
 
-  const categoriesKey = useMemo(() => (tileCategories ? tileCategories.join(",") : ""), [tileCategories]);
+  const isLayerOverridden = tileLayer !== undefined;
+
+  const categoriesKey = useMemo(() => (tileCategories ? tileCategories.join(',') : ''), [tileCategories]);
 
   useEffect(() => {
-    if (tileLayer !== undefined) {
+    if (isLayerOverridden && tileLayer !== undefined) {
       setActiveLayer(tileLayer);
+      setRenderMode(tileLayer);
     }
-  }, [tileLayer]);
+  }, [isLayerOverridden, tileLayer]);
 
   const { tiles, error: tilesError } = useMapTiles({
     coordinates: tileCoordinates,
-    layer: tileLayer !== undefined ? tileLayer : activeLayer,
+    layer: isLayerOverridden && tileLayer ? tileLayer : activeLayer,
     categories: tileCategories,
     premiumOnly: tilePremiumOnly,
     authToken,
@@ -341,39 +402,63 @@ export const MapView = ({
 
   useEffect(() => {
     if (tilesError) {
-      console.warn("Failed to load map tiles", tilesError);
+      console.warn('Failed to load map tiles', tilesError);
     }
   }, [tilesError]);
 
-  const isLayerOverridden = tileLayer !== undefined;
-
   useEffect(() => {
-    if (isLayerOverridden && tileLayer !== undefined) {
-      setActiveLayer(tileLayer);
-    }
-  }, [isLayerOverridden, tileLayer]);
-
-  useEffect(() => {
-    if (isLayerOverridden) return;
     const map = mapRef.current;
     if (!map || tiles.length === 0) return;
 
+    if (isLayerOverridden) {
+      setRenderMode(tileLayer ?? 'balloon');
+      return;
+    }
+
+    const baseLayer = deriveLayerForZoom(map.getZoom());
+    let nextLayer: MapTileLayer = baseLayer;
+
     const nonClusterCount = tiles.reduce((sum, tile) => {
       if (!Array.isArray(tile.features)) return sum;
-      return sum + tile.features.filter((feature) => feature.type !== "cluster").length;
+      return sum + tile.features.filter((feature) => feature.type !== 'cluster').length;
     }, 0);
 
     if (nonClusterCount > GLOBAL_DOM_BUDGET) {
-      setActiveLayer((current) => {
-        if (current === "balloon") return "pulse";
-        if (current === "pulse") return "cluster";
-        return current;
-      });
+      if (nextLayer === 'balloon') {
+        nextLayer = 'pulse';
+      } else if (nextLayer === 'pulse') {
+        nextLayer = 'cluster';
+      }
+
+      if (nextLayer === 'cluster') {
+        setActiveLayer('cluster');
+        setRenderMode('canvas');
+        return;
+      }
     }
-  }, [tiles, isLayerOverridden]);
+
+    setActiveLayer(nextLayer);
+    setRenderMode(nextLayer);
+  }, [tiles, isLayerOverridden, tileLayer]);
+
+  useEffect(() => {
+    if (renderMode !== 'canvas') {
+      setFallbackSpots([]);
+      return;
+    }
+
+    const unique = new Map<string, MapTileFeature>();
+    tiles.forEach((tile) => {
+      (tile.features ?? []).forEach((feature) => {
+        if (feature.type !== 'cluster' && !feature.premium) {
+          unique.set(feature.id, feature);
+        }
+      });
+    });
+    setFallbackSpots(Array.from(unique.values()));
+  }, [renderMode, tiles]);
 
   const featureCollection = useMemo(() => buildFeatureCollection(tiles), [tiles]);
-
   const syncContainerSize = useCallback(() => {
     const container = mapContainerRef.current;
     if (!container) return false;
@@ -505,8 +590,57 @@ export const MapView = ({
     const source = map.getSource(TILE_SOURCE_ID) as mapboxgl.GeoJSONSource | undefined;
     if (!source) return;
 
-    source.setData(featureCollection as FeatureCollection<Point>);
-  }, [featureCollection]);
+    const data =
+      renderMode === 'canvas'
+        ? {
+            type: 'FeatureCollection' as const,
+            features: featureCollection.features.filter((feature) => {
+              const type = feature.properties?.featureType;
+              return type === 'cluster' || feature.properties?.premium === 1;
+            })
+          }
+        : featureCollection;
+
+    source.setData(data as FeatureCollection<Point>);
+  }, [featureCollection, renderMode]);
+
+
+useEffect(() => {
+  const map = mapRef.current;
+  const canvas = canvasRef.current;
+  const context = canvasContextRef.current;
+  if (!map || !canvas || !context) return;
+
+  const draw = () => {
+    context.clearRect(0, 0, canvas.width, canvas.height);
+    if (renderMode !== 'canvas' || fallbackSpots.length === 0) return;
+
+    context.fillStyle = 'rgba(59, 130, 246, 0.7)';
+    context.strokeStyle = 'rgba(15, 23, 42, 0.8)';
+    context.lineWidth = 1;
+
+    fallbackSpots.forEach((feature) => {
+      const point = map.project([feature.geometry.lng, feature.geometry.lat]);
+      context.beginPath();
+      context.arc(point.x, point.y, feature.premium ? 6 : 4, 0, Math.PI * 2);
+      context.fill();
+      context.stroke();
+    });
+  };
+
+  draw();
+  map.on('move', draw);
+  map.on('moveend', draw);
+  map.on('zoom', draw);
+  map.on('zoomend', draw);
+
+  return () => {
+    map.off('move', draw);
+    map.off('moveend', draw);
+    map.off('zoom', draw);
+    map.off('zoomend', draw);
+  };
+}, [renderMode, fallbackSpots]);
 
   useEffect(() => {
     const map = mapRef.current;
@@ -622,5 +756,35 @@ export const MapView = ({
     });
   }, [focusCoordinates]);
 
-  return <div className="map-container" ref={mapContainerRef} role="presentation" />;
+  useEffect(() => {
+    const map = mapRef.current;
+    const canvas = canvasRef.current;
+    if (!map || !canvas) return;
+
+    const context = canvas.getContext('2d');
+    if (!context) return;
+    canvasContextRef.current = context;
+
+    const updateCanvasSize = () => {
+      const { width, height } = map.getCanvas();
+      canvas.width = width;
+      canvas.height = height;
+      canvas.style.width = `${width}px`;
+      canvas.style.height = `${height}px`;
+    };
+
+    updateCanvasSize();
+    map.on('resize', updateCanvasSize);
+
+    return () => {
+      map.off('resize', updateCanvasSize);
+    };
+  }, []);
+
+  return (
+    <MapOuter role="presentation">
+      <MapRoot ref={mapContainerRef} />
+      <MapCanvas ref={canvasRef} aria-hidden="true" />
+    </MapOuter>
+  );
 };
