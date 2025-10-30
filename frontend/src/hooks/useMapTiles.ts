@@ -3,7 +3,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import type { MapTileLayer, MapTileResponse, SpotCategory, TileCoordinate } from "../types";
 import { fetchMapTile } from "../lib/mapTileApi";
 import { mapTileCache } from "../lib/mapTileCache";
-import { mockMapTile } from "../mockData";
+import { buildMockTileResponses } from "../mockData";
 
 const DEFAULT_DEBOUNCE_MS = 150;
 
@@ -79,7 +79,12 @@ export const useMapTiles = ({
       setError(null);
 
       if (useMockTiles) {
-        setTiles([mockMapTile as MapTileResponse]);
+        const mockTiles = buildMockTileResponses(sortedCoordinates, {
+          layer,
+          categories,
+          premiumOnly
+        });
+        setTiles(mockTiles);
         setIsLoading(false);
         return;
       }

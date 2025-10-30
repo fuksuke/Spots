@@ -1,7 +1,7 @@
 import { useMemo, useState } from "react";
 
 import type { Spot } from "../types";
-import { mockSpotList } from "../mockData";
+import { mockSpots } from "../mockData";
 
 const formatCountdown = (startTime: string) => {
   const start = new Date(startTime).getTime();
@@ -55,7 +55,7 @@ type SpotListViewProps = {
 
 export const SpotListView = ({ spots, isLoading, error, onSpotSelect }: SpotListViewProps) => {
   const useMock = import.meta.env.VITE_USE_MOCK_TILES === 'true';
-  const listData = useMock ? (mockSpotList as Spot[]) : spots;
+  const listData = useMock ? mockSpots : spots;
   const loadingState = useMock ? false : isLoading;
   const errorState = useMock ? null : error;
   const [sortKey, setSortKey] = useState<SortKey>("startTime");

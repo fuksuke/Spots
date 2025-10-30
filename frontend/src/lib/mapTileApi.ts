@@ -7,7 +7,7 @@ import type {
   TileCoordinate
 } from "../types";
 import { mapTileCache } from "./mapTileCache";
-import { mockMapTile } from "../mockData";
+import { buildMockTileResponse } from "../mockData";
 
 const coordinateKey = ({ z, x, y }: TileCoordinate) => `${z}/${x}/${y}`;
 
@@ -46,14 +46,11 @@ export const fetchMapTile = async (
   const since = options.since ?? previous?.generatedAt;
 
   if (import.meta.env.VITE_USE_MOCK_TILES === 'true') {
-    return {
-      ...mockMapTile,
-      z: coordinate.z,
-      x: coordinate.x,
-      y: coordinate.y,
-      generatedAt: mockMapTile.generatedAt ?? Date.now(),
-      nextSyncAt: mockMapTile.nextSyncAt ?? Date.now() + 60_000
-    } as MapTileResponse;
+    return buildMockTileResponse(coordinate, {
+      layer,
+      categories,
+      premiumOnly
+    });
   }
 
   const params = new URLSearchParams();

@@ -2,7 +2,6 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import mapboxgl, { Map as MapboxMap } from "mapbox-gl";
 import * as tilebelt from "@mapbox/tilebelt";
 import styled from 'styled-components';
-import RBush from "rbush";
 import type { Feature, FeatureCollection, Point } from "geojson";
 import "mapbox-gl/dist/mapbox-gl.css";
 
@@ -37,19 +36,14 @@ const EMPTY_GEOJSON: FeatureCollection<Point, FeatureProperties> = {
 const clampZoom = (zoom: number) => Math.max(MIN_ZOOM, Math.min(MAX_ZOOM, Math.floor(zoom)));
 
 const GLOBAL_DOM_BUDGET = 300;
-
-type PremiumEntry = {
-  minX: number;
-  minY: number;
-  maxX: number;
-  maxY: number;
-  feature: MapTileFeature;
-};
+const GRID_MAX_ZOOM = 11;
+const PULSE_DENSITY_THRESHOLD = Math.floor(GLOBAL_DOM_BUDGET * 0.6);
+const CLUSTER_DENSITY_THRESHOLD = Math.floor(GLOBAL_DOM_BUDGET * 0.75);
 
 const deriveLayerForZoom = (zoom: number): MapTileLayer => {
   const clamped = clampZoom(zoom);
-  if (clamped <= 8) return "cluster";
-  if (clamped <= 12) return "pulse";
+  if (clamped <= GRID_MAX_ZOOM) return "cluster";
+  if (clamped <= 13) return "pulse";
   return "balloon";
 };
 
@@ -118,7 +112,6 @@ const buildFeatureCollection = (tiles: MapTileResponse[]): FeatureCollection<Poi
 
   const clusterFeatures: MapTileFeature[] = [];
   const spotFeatures: MapTileFeature[] = [];
-  const premiumFeatures: MapTileFeature[] = [];
 
   tiles.forEach((tile) => {
     tile.features?.forEach((feature) => {
@@ -126,9 +119,6 @@ const buildFeatureCollection = (tiles: MapTileResponse[]): FeatureCollection<Poi
         clusterFeatures.push(feature);
       } else {
         spotFeatures.push(feature);
-        if (feature.premium) {
-          premiumFeatures.push(feature);
-        }
       }
     });
   });
@@ -141,17 +131,6 @@ const buildFeatureCollection = (tiles: MapTileResponse[]): FeatureCollection<Poi
     }
   });
 
-  const premiumTree = new RBush<PremiumEntry>();
-  premiumFeatures.forEach((feature) => {
-    premiumTree.insert({
-      minX: feature.geometry.lng,
-      minY: feature.geometry.lat,
-      maxX: feature.geometry.lng,
-      maxY: feature.geometry.lat,
-      feature
-    });
-  });
-
   const spotMap = new Map<string, MapTileFeature>();
   spotFeatures.forEach((feature) => {
     if (!spotMap.has(feature.id)) {
@@ -159,17 +138,13 @@ const buildFeatureCollection = (tiles: MapTileResponse[]): FeatureCollection<Poi
     }
   });
 
-  const premiumSpots = new Map<string, MapTileFeature>();
-  premiumTree.all().forEach((entry) => {
-    if (!premiumSpots.has(entry.feature.id)) {
-      premiumSpots.set(entry.feature.id, entry.feature);
-    }
-  });
+  const premiumSpots = Array.from(spotFeatures).filter((feature) => feature.premium);
+  const premiumSet = new Set(premiumSpots.map((feature) => feature.id));
 
-  const remainingBudget = Math.max(0, GLOBAL_DOM_BUDGET - premiumSpots.size);
-  const regularSpots = Array.from(spotMap.values()).filter((feature) => !feature.premium);
+  const remainingBudget = Math.max(0, GLOBAL_DOM_BUDGET - premiumSpots.length);
+  const regularSpots = Array.from(spotMap.values()).filter((feature) => !premiumSet.has(feature.id));
   const limitedRegular = regularSpots.slice(0, remainingBudget);
-  const limitedSpotFeatures = [...premiumSpots.values(), ...limitedRegular];
+  const limitedSpotFeatures = [...premiumSpots.map((feature) => spotMap.get(feature.id)!).filter(Boolean), ...limitedRegular];
 
   const features: Array<Feature<Point, FeatureProperties>> = [];
 
@@ -194,7 +169,7 @@ const buildFeatureCollection = (tiles: MapTileResponse[]): FeatureCollection<Poi
       spotId: feature.id,
       title: feature.spot?.title ?? "",
       category: feature.spot?.category,
-      premium: feature.premium ? 1 : 0,
+      premium: Boolean(feature.premium),
       status: feature.status,
       popularity: feature.popularity ?? 0
     };
@@ -257,7 +232,15 @@ const ensureMapLayers = (map: MapboxMap) => {
       id: LAYER_PULSE,
       type: "circle",
       source: TILE_SOURCE_ID,
-      filter: ["==", ["get", "featureType"], "pulse"],
+      filter: [
+        "match",
+        ["get", "featureType"],
+        "pulse",
+        true,
+        "balloon",
+        true,
+        false
+      ],
       paint: {
         "circle-color": [
           "match",
@@ -274,10 +257,46 @@ const ensureMapLayers = (map: MapboxMap) => {
           CATEGORY_COLORS.sports,
           "#6366f1"
         ],
-        "circle-radius": ["case", ["get", "premium"], 12, 9],
-        "circle-stroke-width": 1.5,
-        "circle-stroke-color": "#0f172a",
-        "circle-opacity": 0.85
+        "circle-radius": [
+          "interpolate",
+          ["exponential", 1.6],
+          ["zoom"],
+          8,
+          0,
+          9.2,
+          2.6,
+          10.5,
+          4.8,
+          12.5,
+          7.5
+        ],
+        "circle-stroke-width": [
+          "interpolate",
+          ["exponential", 1.6],
+          ["zoom"],
+          8,
+          0,
+          9.2,
+          0.45,
+          10.5,
+          0.7,
+          12.5,
+          1.15
+        ],
+        "circle-stroke-color": "#ffffff",
+        "circle-opacity": [
+          "interpolate",
+          ["linear"],
+          ["zoom"],
+          8,
+          0,
+          9.2,
+          0.16,
+          10.5,
+          0.65,
+          12.5,
+          0.88
+        ]
       }
     });
   }
@@ -293,8 +312,8 @@ const ensureMapLayers = (map: MapboxMap) => {
         "text-anchor": "top",
         "text-offset": [0, 1.1],
         "text-size": 12,
-        "icon-image": ["case", ["get", "premium"], "marker-15", "circle-15"],
-        "icon-size": ["case", ["get", "premium"], 1.1, 0.9],
+        "icon-image": ["case", ["boolean", ["get", "premium"], false], "marker-15", "circle-15"],
+        "icon-size": ["case", ["boolean", ["get", "premium"], false], 1.1, 0.9],
         "icon-allow-overlap": true
       },
       paint: {
@@ -329,7 +348,7 @@ type FeatureProperties = {
   title?: string;
   category?: SpotCategory;
   count?: number;
-  premium?: number;
+  premium?: boolean;
   status?: "upcoming" | "live" | "ended";
   popularity?: number;
 };
@@ -415,7 +434,8 @@ export const MapView = ({
       return;
     }
 
-    const baseLayer = deriveLayerForZoom(map.getZoom());
+    const zoom = map.getZoom();
+    const baseLayer = deriveLayerForZoom(zoom);
     let nextLayer: MapTileLayer = baseLayer;
 
     const nonClusterCount = tiles.reduce((sum, tile) => {
@@ -423,18 +443,22 @@ export const MapView = ({
       return sum + tile.features.filter((feature) => feature.type !== 'cluster').length;
     }, 0);
 
-    if (nonClusterCount > GLOBAL_DOM_BUDGET) {
-      if (nextLayer === 'balloon') {
-        nextLayer = 'pulse';
-      } else if (nextLayer === 'pulse') {
-        nextLayer = 'cluster';
-      }
+    if (nextLayer === 'balloon' && (nonClusterCount > PULSE_DENSITY_THRESHOLD || zoom < 10.5)) {
+      nextLayer = 'pulse';
+    }
 
-      if (nextLayer === 'cluster') {
-        setActiveLayer('cluster');
+    if (nextLayer === 'pulse' && (nonClusterCount > CLUSTER_DENSITY_THRESHOLD || zoom <= GRID_MAX_ZOOM + 0.2)) {
+      nextLayer = 'cluster';
+    }
+
+    if (nextLayer === 'cluster') {
+      setActiveLayer('cluster');
+      if (nonClusterCount > GLOBAL_DOM_BUDGET) {
         setRenderMode('canvas');
-        return;
+      } else {
+        setRenderMode('cluster');
       }
+      return;
     }
 
     setActiveLayer(nextLayer);
@@ -596,7 +620,7 @@ export const MapView = ({
             type: 'FeatureCollection' as const,
             features: featureCollection.features.filter((feature) => {
               const type = feature.properties?.featureType;
-              return type === 'cluster' || feature.properties?.premium === 1;
+              return type === 'cluster' || feature.properties?.premium === true;
             })
           }
         : featureCollection;
@@ -788,3 +812,5 @@ useEffect(() => {
     </MapOuter>
   );
 };
+
+export default MapView;

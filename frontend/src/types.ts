@@ -15,12 +15,15 @@ export type SpotPricing = {
 export type Spot = {
   id: string;
   title: string;
+  summary?: string;
+  speechBubble?: string;
   description: string;
   category: SpotCategory;
   lat: number;
   lng: number;
   startTime: string;
   endTime: string;
+  durationMinutes?: number;
   imageUrl?: string | null;
   likes: number;
   commentsCount: number;
@@ -28,16 +31,24 @@ export type Spot = {
   ownerDisplayName?: string | null;
   ownerPhotoUrl?: string | null;
   locationName?: string | null;
+  distanceMeters?: number;
   pricing?: SpotPricing | null;
   isIndoor?: boolean | null;
   viewCount?: number;
   createdAt: string;
+  status?: "upcoming" | "live" | "ended";
+  defaultMapLayer?: MapTileLayer;
+  premium?: boolean;
   likedByViewer?: boolean;
   followedByViewer?: boolean;
   favoritedByViewer?: boolean;
   popularityScore?: number;
   popularityRank?: number;
   ownerPhoneVerified?: boolean;
+  promotion?: {
+    id: string;
+    priority: number;
+  } | null;
 };
 
 export type Coordinates = {
@@ -102,6 +113,8 @@ export type MapTileFeature = {
   status?: "upcoming" | "live" | "ended";
   spot?: {
     title: string;
+    speechBubble?: string;
+    summary?: string;
     category: SpotCategory;
     startTime: string;
     endTime: string;
