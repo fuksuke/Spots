@@ -36,9 +36,11 @@ const EMPTY_GEOJSON: FeatureCollection<Point, FeatureProperties> = {
 const clampZoom = (zoom: number) => Math.max(MIN_ZOOM, Math.min(MAX_ZOOM, Math.floor(zoom)));
 
 const GLOBAL_DOM_BUDGET = 300;
-const GRID_MAX_ZOOM = 11;
+const GRID_MAX_ZOOM = 9;
 const PULSE_DENSITY_THRESHOLD = Math.floor(GLOBAL_DOM_BUDGET * 0.6);
 const CLUSTER_DENSITY_THRESHOLD = Math.floor(GLOBAL_DOM_BUDGET * 0.75);
+const MAX_CALLOUT_VISIBLE = 36;
+const MAX_CALLOUT_PREMIUM = 18;
 
 const deriveLayerForZoom = (zoom: number): MapTileLayer => {
   const clamped = clampZoom(zoom);
@@ -105,9 +107,23 @@ const CATEGORY_COLORS: Record<SpotCategory, string> = {
   sports: "#3b82f6"
 };
 
-const buildFeatureCollection = (tiles: MapTileResponse[]): FeatureCollection<Point, FeatureProperties> => {
+type RenderingData = {
+  featureCollection: FeatureCollection<Point, FeatureProperties>;
+  calloutCandidates: MapTileFeature[];
+  nonClusterCount: number;
+  premiumCount: number;
+  spotFeatures: MapTileFeature[];
+};
+
+const buildRenderingData = (tiles: MapTileResponse[]): RenderingData => {
   if (!tiles || tiles.length === 0) {
-    return EMPTY_GEOJSON;
+    return {
+      featureCollection: EMPTY_GEOJSON,
+      calloutCandidates: [],
+      nonClusterCount: 0,
+      premiumCount: 0,
+      spotFeatures: []
+    };
   }
 
   const clusterFeatures: MapTileFeature[] = [];
@@ -117,11 +133,27 @@ const buildFeatureCollection = (tiles: MapTileResponse[]): FeatureCollection<Poi
     tile.features?.forEach((feature) => {
       if (feature.type === "cluster") {
         clusterFeatures.push(feature);
-      } else {
+      } else if (feature.id) {
         spotFeatures.push(feature);
       }
     });
   });
+
+  const uniqueSpotMap = new Map<string, MapTileFeature>();
+  spotFeatures.forEach((feature) => {
+    if (!uniqueSpotMap.has(feature.id)) {
+      uniqueSpotMap.set(feature.id, feature);
+    }
+  });
+
+  const uniqueSpots = Array.from(uniqueSpotMap.values());
+  const premiumSpots = uniqueSpots.filter((feature) => Boolean(feature.premium));
+  const premiumSet = new Set(premiumSpots.map((feature) => feature.id));
+  const regularSpots = uniqueSpots.filter((feature) => !premiumSet.has(feature.id));
+
+  const remainingBudget = Math.max(0, GLOBAL_DOM_BUDGET - premiumSpots.length);
+  const limitedRegular = regularSpots.slice(0, remainingBudget);
+  const limitedSpotFeatures = [...premiumSpots, ...limitedRegular];
 
   const clusterMap = new Map<string, MapTileFeature>();
   clusterFeatures.forEach((feature) => {
@@ -130,21 +162,6 @@ const buildFeatureCollection = (tiles: MapTileResponse[]): FeatureCollection<Poi
       clusterMap.set(clusterId, feature);
     }
   });
-
-  const spotMap = new Map<string, MapTileFeature>();
-  spotFeatures.forEach((feature) => {
-    if (!spotMap.has(feature.id)) {
-      spotMap.set(feature.id, feature);
-    }
-  });
-
-  const premiumSpots = Array.from(spotFeatures).filter((feature) => feature.premium);
-  const premiumSet = new Set(premiumSpots.map((feature) => feature.id));
-
-  const remainingBudget = Math.max(0, GLOBAL_DOM_BUDGET - premiumSpots.length);
-  const regularSpots = Array.from(spotMap.values()).filter((feature) => !premiumSet.has(feature.id));
-  const limitedRegular = regularSpots.slice(0, remainingBudget);
-  const limitedSpotFeatures = [...premiumSpots.map((feature) => spotMap.get(feature.id)!).filter(Boolean), ...limitedRegular];
 
   const features: Array<Feature<Point, FeatureProperties>> = [];
 
@@ -163,32 +180,180 @@ const buildFeatureCollection = (tiles: MapTileResponse[]): FeatureCollection<Poi
     });
   });
 
-  for (const feature of limitedSpotFeatures) {
-    const properties: FeatureProperties = {
-      featureType: feature.type,
-      spotId: feature.id,
-      title: feature.spot?.title ?? "",
-      category: feature.spot?.category,
-      premium: Boolean(feature.premium),
-      status: feature.status,
-      popularity: feature.popularity ?? 0
-    };
-
+  limitedSpotFeatures.forEach((feature) => {
     features.push({
       type: "Feature",
       geometry: {
         type: "Point",
         coordinates: [feature.geometry.lng, feature.geometry.lat]
       },
-      properties
+      properties: {
+        featureType: feature.type,
+        spotId: feature.id,
+        title: feature.spot?.title ?? "",
+        category: feature.spot?.category,
+        premium: Boolean(feature.premium),
+        status: feature.status,
+        popularity: feature.popularity ?? 0
+      }
+    });
+  });
+
+  const calloutCandidates = limitedSpotFeatures.filter((feature) => feature.type === "balloon");
+
+  return {
+    featureCollection: {
+      type: "FeatureCollection",
+      features
+    },
+    calloutCandidates,
+    nonClusterCount: uniqueSpots.length,
+    premiumCount: premiumSpots.length,
+    spotFeatures: uniqueSpots
+  };
+};
+
+type CalloutEntry = {
+  marker: mapboxgl.Marker;
+  update: (feature: MapTileFeature) => void;
+  destroy: () => void;
+};
+
+const STATUS_LABELS: Record<NonNullable<MapTileFeature['status']>, string> = {
+  live: "開催中",
+  upcoming: "まもなく",
+  ended: "終了"
+};
+
+const createCalloutDom = (
+  feature: MapTileFeature,
+  handleSelect: (spotId: string) => void
+): { element: HTMLDivElement; update: (next: MapTileFeature) => void; destroy: () => void } => {
+  const wrapper = document.createElement('div');
+  wrapper.className = 'map-callout';
+  wrapper.dataset.spotId = feature.id;
+  wrapper.setAttribute('role', 'button');
+  wrapper.tabIndex = 0;
+
+  const bubble = document.createElement('div');
+  bubble.className = 'map-callout__bubble';
+  bubble.tabIndex = -1;
+
+  const accent = document.createElement('span');
+  accent.className = 'map-callout__accent';
+
+  const text = document.createElement('span');
+  text.className = 'map-callout__text';
+
+  const status = document.createElement('span');
+  status.className = 'map-callout__status';
+
+  bubble.append(accent, text, status);
+  wrapper.appendChild(bubble);
+
+  const update = (next: MapTileFeature) => {
+    wrapper.dataset.spotId = next.id;
+    wrapper.classList.toggle('map-callout--premium', Boolean(next.premium));
+
+    const category = next.spot?.category;
+    const color = category ? CATEGORY_COLORS[category] ?? '#6366f1' : '#6366f1';
+    accent.style.backgroundColor = color;
+
+    const bubbleText = next.spot?.speechBubble || next.spot?.summary || next.spot?.title || 'スポット';
+    text.textContent = bubbleText;
+
+    const label = next.status ? STATUS_LABELS[next.status] ?? '' : '';
+    if (label) {
+      status.textContent = label;
+      status.style.display = 'inline-flex';
+    } else {
+      status.textContent = '';
+      status.style.display = 'none';
+    }
+  };
+
+  const handleActivate = (event: Event) => {
+    event.preventDefault();
+    event.stopPropagation();
+    const spotId = wrapper.dataset.spotId;
+    if (spotId) {
+      handleSelect(spotId);
+    }
+  };
+
+  const handleKeyDown = (event: KeyboardEvent) => {
+    if (event.key === 'Enter' || event.key === ' ') {
+      handleActivate(event);
+    }
+  };
+
+  wrapper.addEventListener('click', handleActivate);
+  wrapper.addEventListener('keydown', handleKeyDown);
+
+  update(feature);
+
+  const destroy = () => {
+    wrapper.removeEventListener('click', handleActivate);
+    wrapper.removeEventListener('keydown', handleKeyDown);
+  };
+
+  return { element: wrapper, update, destroy };
+};
+
+class SpotCalloutManager {
+  private map: MapboxMap;
+  private entries = new Map<string, CalloutEntry>();
+  private onSelect: (spotId: string) => void;
+
+  constructor(map: MapboxMap, onSelect: (spotId: string) => void) {
+    this.map = map;
+    this.onSelect = onSelect;
+  }
+
+  updateSelectHandler(onSelect: (spotId: string) => void) {
+    this.onSelect = onSelect;
+  }
+
+  sync(features: MapTileFeature[]) {
+    const activeIds = new Set(features.map((feature) => feature.id));
+
+    this.entries.forEach((entry, spotId) => {
+      if (!activeIds.has(spotId)) {
+        entry.marker.remove();
+        entry.destroy();
+        this.entries.delete(spotId);
+      }
+    });
+
+    features.forEach((feature) => {
+      const existing = this.entries.get(feature.id);
+      if (existing) {
+        existing.update(feature);
+        existing.marker.setLngLat([feature.geometry.lng, feature.geometry.lat]);
+        return;
+      }
+
+      const { element, update, destroy } = createCalloutDom(feature, (spotId) => this.onSelect(spotId));
+      const marker = new mapboxgl.Marker({ element, anchor: 'bottom' })
+        .setLngLat([feature.geometry.lng, feature.geometry.lat])
+        .addTo(this.map);
+
+      this.entries.set(feature.id, { marker, update, destroy });
     });
   }
 
-  return {
-    type: "FeatureCollection",
-    features
-  };
-};
+  clear() {
+    this.entries.forEach((entry) => {
+      entry.marker.remove();
+      entry.destroy();
+    });
+    this.entries.clear();
+  }
+
+  destroy() {
+    this.clear();
+  }
+}
 
 const ensureMapLayers = (map: MapboxMap) => {
   if (!map.getSource(TILE_SOURCE_ID)) {
@@ -393,6 +558,8 @@ export const MapView = ({
   const resizeObserverRef = useRef<ResizeObserver | null>(null);
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const canvasContextRef = useRef<CanvasRenderingContext2D | null>(null);
+  const calloutManagerRef = useRef<SpotCalloutManager | null>(null);
+  const onSpotClickRef = useRef<MapViewProps['onSpotClick']>(onSpotClick);
 
   const [fallbackSpots, setFallbackSpots] = useState<MapTileFeature[]>([]);
   const [renderMode, setRenderMode] = useState<MapTileLayer | 'canvas'>('balloon');
@@ -419,11 +586,20 @@ export const MapView = ({
     enabled: tileCoordinates.length > 0
   });
 
+
   useEffect(() => {
     if (tilesError) {
       console.warn('Failed to load map tiles', tilesError);
     }
   }, [tilesError]);
+
+  const renderingData = useMemo(() => buildRenderingData(tiles), [tiles]);
+  const featureCollection = renderingData.featureCollection;
+  const calloutCandidates = renderingData.calloutCandidates;
+
+  useEffect(() => {
+    onSpotClickRef.current = onSpotClick;
+  }, [onSpotClick]);
 
   useEffect(() => {
     const map = mapRef.current;
@@ -438,10 +614,7 @@ export const MapView = ({
     const baseLayer = deriveLayerForZoom(zoom);
     let nextLayer: MapTileLayer = baseLayer;
 
-    const nonClusterCount = tiles.reduce((sum, tile) => {
-      if (!Array.isArray(tile.features)) return sum;
-      return sum + tile.features.filter((feature) => feature.type !== 'cluster').length;
-    }, 0);
+    const nonClusterCount = renderingData.nonClusterCount;
 
     if (nextLayer === 'balloon' && (nonClusterCount > PULSE_DENSITY_THRESHOLD || zoom < 10.5)) {
       nextLayer = 'pulse';
@@ -463,7 +636,7 @@ export const MapView = ({
 
     setActiveLayer(nextLayer);
     setRenderMode(nextLayer);
-  }, [tiles, isLayerOverridden, tileLayer]);
+  }, [tiles, renderingData.nonClusterCount, isLayerOverridden, tileLayer]);
 
   useEffect(() => {
     if (renderMode !== 'canvas') {
@@ -471,18 +644,10 @@ export const MapView = ({
       return;
     }
 
-    const unique = new Map<string, MapTileFeature>();
-    tiles.forEach((tile) => {
-      (tile.features ?? []).forEach((feature) => {
-        if (feature.type !== 'cluster' && !feature.premium) {
-          unique.set(feature.id, feature);
-        }
-      });
-    });
-    setFallbackSpots(Array.from(unique.values()));
-  }, [renderMode, tiles]);
+    const nonPremium = renderingData.spotFeatures.filter((feature) => !feature.premium);
+    setFallbackSpots(nonPremium);
+  }, [renderMode, renderingData.spotFeatures]);
 
-  const featureCollection = useMemo(() => buildFeatureCollection(tiles), [tiles]);
   const syncContainerSize = useCallback(() => {
     const container = mapContainerRef.current;
     if (!container) return false;
@@ -517,6 +682,12 @@ export const MapView = ({
 
       map.addControl(new mapboxgl.NavigationControl(), "top-right");
       mapRef.current = map;
+      calloutManagerRef.current = new SpotCalloutManager(map, (spotId) => {
+        const handler = onSpotClickRef.current;
+        if (handler) {
+          handler(spotId);
+        }
+      });
 
       if (typeof ResizeObserver !== "undefined") {
         const observer = new ResizeObserver(() => {
@@ -560,6 +731,10 @@ export const MapView = ({
       if (selectionMarkerRef.current) {
         selectionMarkerRef.current.remove();
         selectionMarkerRef.current = null;
+      }
+      if (calloutManagerRef.current) {
+        calloutManagerRef.current.destroy();
+        calloutManagerRef.current = null;
       }
       if (resizeObserverRef.current) {
         resizeObserverRef.current.disconnect();
@@ -694,6 +869,39 @@ useEffect(() => {
     const map = mapRef.current;
     if (!map) return;
 
+    if (!calloutManagerRef.current) {
+      calloutManagerRef.current = new SpotCalloutManager(map, (spotId) => {
+        const handler = onSpotClickRef.current;
+        if (handler) {
+          handler(spotId);
+        }
+      });
+    }
+
+    const manager = calloutManagerRef.current;
+
+    if (renderMode === 'balloon' && calloutCandidates.length > 0) {
+      const premium = calloutCandidates.filter((feature) => feature.premium);
+      const regular = calloutCandidates.filter((feature) => !feature.premium);
+      const limitedPremium = premium.slice(0, MAX_CALLOUT_PREMIUM);
+      const remainingSlots = Math.max(0, MAX_CALLOUT_VISIBLE - limitedPremium.length);
+      const limitedRegular = remainingSlots > 0 ? regular.slice(0, remainingSlots) : [];
+      manager.sync([...limitedPremium, ...limitedRegular]);
+    } else {
+      manager.clear();
+    }
+
+    return () => {
+      if (renderMode !== 'balloon') {
+        manager.clear();
+      }
+    };
+  }, [renderMode, calloutCandidates]);
+
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map) return;
+
     const handleSpotClick = (event: mapboxgl.MapLayerMouseEvent) => {
       event.preventDefault();
       const spotId = event.features?.[0]?.properties?.spotId as string | undefined;
@@ -734,15 +942,21 @@ useEffect(() => {
   }, [onSpotClick, onSelectLocation]);
 
   useEffect(() => {
-    const map = mapRef.current;
-    if (!map || !mapContainerRef.current) return;
+    if (!mapContainerRef.current) return;
 
     const handleResize = () => {
-      syncContainerSize();
-      map.resize();
+      const mapInstance = mapRef.current;
+      const hasSize = syncContainerSize();
+      if (!mapInstance || !hasSize) return;
+
+      const canvas = mapInstance.getCanvas?.();
+      if (!canvas) return;
+
+      mapInstance.resize();
     };
 
     window.addEventListener("resize", handleResize);
+    handleResize();
     return () => {
       window.removeEventListener("resize", handleResize);
     };

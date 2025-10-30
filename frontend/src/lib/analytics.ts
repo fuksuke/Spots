@@ -3,6 +3,8 @@ import { captureSentryException, isSentryEnabled } from "./sentry";
 const isBrowser = typeof window !== "undefined";
 
 const MIXPANEL_TOKEN = import.meta.env.VITE_MIXPANEL_TOKEN;
+const MIXPANEL_SCRIPT_ID = "mixpanel";
+const MIXPANEL_SCRIPT_URL = "https://cdn.jsdelivr.net/npm/mixpanel-browser@latest/build/mixpanel.min.js";
 const GA4_MEASUREMENT_ID = import.meta.env.VITE_GA_MEASUREMENT_ID;
 
 export type AnalyticsPayload = Record<string, unknown>;
@@ -31,6 +33,17 @@ const loadScriptOnce = (id: string, src: string) => {
   document.head.appendChild(script);
 };
 
+const pendingMixpanelEvents: Array<{ event: string; payload: AnalyticsPayload }> = [];
+
+const flushMixpanelQueue = () => {
+  if (!isBrowser) return;
+  if (!window.mixpanel?.track) return;
+  while (pendingMixpanelEvents.length > 0) {
+    const { event, payload } = pendingMixpanelEvents.shift()!;
+    window.mixpanel.track(event, payload);
+  }
+};
+
 const initGA = () => {
   if (!isBrowser || !GA4_MEASUREMENT_ID) return;
   if (typeof window.gtag === "function") return;
@@ -48,8 +61,6 @@ const initMixpanel = () => {
   if (!isBrowser || !MIXPANEL_TOKEN) return;
   if (window.mixpanel?.__loaded) return;
 
-  loadScriptOnce("mixpanel", "https://cdn.mxpnl.com/libs/mixpanel-2-latest.min.js");
-
   const initialize = () => {
     if (!window.mixpanel || typeof window.mixpanel.init !== "function") {
       return false;
@@ -58,13 +69,33 @@ const initMixpanel = () => {
       debug: process.env.NODE_ENV !== "production"
     });
     window.mixpanel.__loaded = true;
+    flushMixpanelQueue();
     return true;
   };
 
-    // Attempt immediate init; if library not yet ready, retry shortly.
-  if (!initialize()) {
-    setTimeout(initialize, 1000);
+  if (initialize()) return;
+
+  const existingScript = document.getElementById(MIXPANEL_SCRIPT_ID);
+  if (existingScript instanceof HTMLScriptElement) {
+    existingScript.addEventListener("load", () => {
+      initialize();
+    }, { once: true });
+    return;
   }
+
+  const script = document.createElement("script");
+  script.id = MIXPANEL_SCRIPT_ID;
+  script.async = true;
+  script.src = MIXPANEL_SCRIPT_URL;
+  script.addEventListener("load", () => {
+    initialize();
+  }, { once: true });
+  script.addEventListener("error", () => {
+    if (process.env.NODE_ENV !== "production") {
+      console.warn("[analytics] Failed to load Mixpanel script from CDN");
+    }
+  }, { once: true });
+  document.head.appendChild(script);
 };
 
 const dispatchToAdapters = (eventName: string, payload: AnalyticsPayload) => {
@@ -81,6 +112,8 @@ const dispatchToAdapters = (eventName: string, payload: AnalyticsPayload) => {
 
   if (window.mixpanel?.track) {
     window.mixpanel.track(eventName, payload);
+  } else {
+    pendingMixpanelEvents.push({ event: eventName, payload });
   }
 
   if (process.env.NODE_ENV !== "production") {

@@ -90,6 +90,83 @@ button {
   min-height: 0;
 }
 
+/* Map callouts --------------------------------------------------------- */
+.map-callout {
+  position: relative;
+  transform: translateY(-10px);
+  pointer-events: auto;
+  display: inline-flex;
+}
+
+.map-callout__bubble {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.45rem 0.85rem;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.96);
+  border: 1px solid rgba(148, 163, 184, 0.35);
+  box-shadow: 0 12px 24px rgba(15, 23, 42, 0.18);
+  color: #0f172a;
+  font-size: 0.78rem;
+  font-weight: 600;
+  cursor: pointer;
+  outline: none;
+  transition: transform 120ms ease, box-shadow 120ms ease;
+}
+
+.map-callout__bubble::after {
+  content: "";
+  position: absolute;
+  left: 50%;
+  bottom: -9px;
+  transform: translateX(-50%);
+  width: 0;
+  height: 0;
+  border-width: 8px;
+  border-style: solid;
+  border-color: rgba(255, 255, 255, 0.96) transparent transparent transparent;
+  filter: drop-shadow(0 4px 6px rgba(15, 23, 42, 0.18));
+}
+
+.map-callout__bubble:focus-visible {
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.32), 0 12px 24px rgba(15, 23, 42, 0.22);
+}
+
+.map-callout__accent {
+  width: 12px;
+  height: 12px;
+  border-radius: 999px;
+  flex-shrink: 0;
+}
+
+.map-callout__text {
+  max-width: 200px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.map-callout__status {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 0.45rem;
+  border-radius: 999px;
+  background: rgba(59, 130, 246, 0.12);
+  color: #1d4ed8;
+  font-size: 0.65rem;
+  font-weight: 600;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+}
+
+.map-callout--premium .map-callout__bubble {
+  border-color: rgba(234, 179, 8, 0.55);
+  box-shadow: 0 14px 26px rgba(202, 138, 4, 0.32);
+}
+
 .category-spacer {
   height: 0;
 }
