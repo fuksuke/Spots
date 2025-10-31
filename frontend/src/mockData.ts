@@ -82,6 +82,7 @@ const createSpotFeature = (spot: Spot, layer: MapTileLayer): MapTileResponse["fe
       startTime: spot.startTime,
       endTime: spot.endTime,
       ownerId: spot.ownerId,
+      ownerDisplayName: spot.ownerDisplayName ?? spot.ownerId,
       ownerPhoneVerified: spot.ownerPhoneVerified,
       likes: spot.likes,
       commentsCount: spot.commentsCount,

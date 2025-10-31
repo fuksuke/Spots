@@ -119,6 +119,7 @@ export type MapTileFeature = {
     startTime: string;
     endTime: string;
     ownerId: string;
+    ownerDisplayName?: string | null;
     ownerPhoneVerified?: boolean;
     likes?: number;
     commentsCount?: number;

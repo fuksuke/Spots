@@ -45,7 +45,7 @@ const MAX_CALLOUT_PREMIUM = 18;
 const deriveLayerForZoom = (zoom: number): MapTileLayer => {
   const clamped = clampZoom(zoom);
   if (clamped <= GRID_MAX_ZOOM) return "cluster";
-  if (clamped <= 13) return "pulse";
+  if (clamped <= 12) return "pulse";
   return "balloon";
 };
 
@@ -128,12 +128,17 @@ const buildRenderingData = (tiles: MapTileResponse[]): RenderingData => {
 
   const clusterFeatures: MapTileFeature[] = [];
   const spotFeatures: MapTileFeature[] = [];
+  const now = Date.now();
 
   tiles.forEach((tile) => {
     tile.features?.forEach((feature) => {
       if (feature.type === "cluster") {
         clusterFeatures.push(feature);
       } else if (feature.id) {
+        const endTime = parseLocalTimestamp(feature.spot?.endTime);
+        if (endTime !== null && endTime <= now) {
+          return;
+        }
         spotFeatures.push(feature);
       }
     });
@@ -190,7 +195,8 @@ const buildRenderingData = (tiles: MapTileResponse[]): RenderingData => {
       properties: {
         featureType: feature.type,
         spotId: feature.id,
-        title: feature.spot?.title ?? "",
+        title:
+          feature.spot?.ownerDisplayName ?? feature.spot?.title ?? feature.spot?.ownerId ?? "",
         category: feature.spot?.category,
         premium: Boolean(feature.premium),
         status: feature.status,
@@ -222,10 +228,109 @@ type CalloutEntry = {
   height: number;
 };
 
-const STATUS_LABELS: Record<NonNullable<MapTileFeature['status']>, string> = {
-  live: "開催中",
-  upcoming: "まもなく",
-  ended: "終了"
+const parseLocalTimestamp = (value?: string) => {
+  if (!value) return null;
+  const match = value.match(/^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})/);
+  if (!match) return null;
+  const [, year, month, day, hour, minute] = match;
+  const date = new Date(
+    Number(year),
+    Number(month) - 1,
+    Number(day),
+    Number(hour),
+    Number(minute)
+  );
+  return Number.isNaN(date.getTime()) ? null : date.getTime();
+};
+
+const extractTimeLabel = (value?: string) => {
+  const timestamp = parseLocalTimestamp(value);
+  if (timestamp === null) return null;
+  const date = new Date(timestamp);
+  const hours = `${date.getHours()}`.padStart(2, '0');
+  const minutes = `${date.getMinutes()}`.padStart(2, '0');
+  return `${hours}:${minutes}`;
+};
+
+const buildStatusLabel = (feature: MapTileFeature): string => {
+  const status = feature.status;
+  const spot = feature.spot;
+  if (!status || !spot) {
+    return '';
+  }
+
+  const startTimestamp = parseLocalTimestamp(spot.startTime);
+  const endTimestamp = parseLocalTimestamp(spot.endTime);
+  const startLabel = startTimestamp !== null ? extractTimeLabel(spot.startTime) : null;
+  const endLabel = endTimestamp !== null ? extractTimeLabel(spot.endTime) : null;
+
+  const rangeLabel = (() => {
+    if (startLabel && endLabel) {
+      return `${startLabel}~${endLabel}`;
+    }
+    if (startLabel) {
+      return `${startLabel}~`;
+    }
+    if (endLabel) {
+      return `~${endLabel}`;
+    }
+    return null;
+  })();
+
+  if (rangeLabel) {
+    return rangeLabel;
+  }
+
+  if (status === 'live') {
+    return '開催中';
+  }
+
+  if (status === 'upcoming') {
+    return 'まもなく';
+  }
+
+  if (status === 'ended') {
+    return '終了';
+  }
+
+  return '';
+};
+
+type LampState = 'idle' | 'live' | 'warning' | 'off';
+
+const deriveLampState = (feature: MapTileFeature): LampState => {
+  const spot = feature.spot;
+  if (!spot) {
+    return 'idle';
+  }
+
+  const start = parseLocalTimestamp(spot.startTime);
+  const end = parseLocalTimestamp(spot.endTime);
+  const now = Date.now();
+
+  if (start !== null && end !== null && now >= start && now <= end) {
+    const remainingMs = end - now;
+    if (remainingMs <= 30 * 60 * 1000) {
+      return 'warning';
+    }
+    return 'live';
+  }
+
+  if (start !== null && now < start) {
+    return 'idle';
+  }
+
+  if (end !== null && now > end) {
+    return 'off';
+  }
+
+  if (feature.status === 'live') {
+    return 'live';
+  }
+  if (feature.status === 'ended') {
+    return 'off';
+  }
+  return 'idle';
 };
 
 const createCalloutDom = (
@@ -246,8 +351,8 @@ const createCalloutDom = (
   bubble.className = 'map-callout__bubble';
   bubble.tabIndex = -1;
 
-  const accent = document.createElement('span');
-  accent.className = 'map-callout__accent';
+  const lamp = document.createElement('span');
+  lamp.className = 'map-callout__lamp';
 
   const text = document.createElement('span');
   text.className = 'map-callout__text';
@@ -258,21 +363,26 @@ const createCalloutDom = (
   const tail = document.createElement('span');
   tail.className = 'map-callout__tail';
 
-  bubble.append(accent, text, status);
+  bubble.append(lamp, text, status);
   wrapper.append(bubble, tail);
 
   const update = (next: MapTileFeature) => {
     wrapper.dataset.spotId = next.id;
     wrapper.classList.toggle('map-callout--premium', Boolean(next.premium));
 
-    const category = next.spot?.category;
-    const color = category ? CATEGORY_COLORS[category] ?? '#6366f1' : '#6366f1';
-    accent.style.backgroundColor = color;
+    const lampState = deriveLampState(next);
+    lamp.dataset.state = lampState;
 
-    const bubbleText = next.spot?.speechBubble || next.spot?.summary || next.spot?.title || 'スポット';
+    const bubbleText =
+      next.spot?.speechBubble ||
+      next.spot?.summary ||
+      next.spot?.title ||
+      next.spot?.ownerDisplayName ||
+      next.spot?.ownerId ||
+      'スポット';
     text.textContent = bubbleText;
 
-    const label = next.status ? STATUS_LABELS[next.status] ?? '' : '';
+    const label = buildStatusLabel(next);
     if (label) {
       status.textContent = label;
       status.style.display = 'inline-flex';
