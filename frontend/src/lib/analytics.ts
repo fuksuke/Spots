@@ -94,6 +94,14 @@ const initMixpanel = () => {
     if (process.env.NODE_ENV !== "production") {
       console.warn("[analytics] Failed to load Mixpanel script from CDN");
     }
+    window.mixpanel = {
+      track: () => {
+        flushMixpanelQueue();
+      },
+      init: () => undefined,
+      __loaded: true
+    };
+    flushMixpanelQueue();
   }, { once: true });
   document.head.appendChild(script);
 };

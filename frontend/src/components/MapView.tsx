@@ -519,10 +519,7 @@ const ensureMapLayers = (map: MapboxMap) => {
         "text-field": ["get", "title"],
         "text-anchor": "top",
         "text-offset": [0, 1.1],
-        "text-size": 12,
-        "icon-image": ["case", ["boolean", ["get", "premium"], false], "marker-15", "circle-15"],
-        "icon-size": ["case", ["boolean", ["get", "premium"], false], 1.1, 0.9],
-        "icon-allow-overlap": true
+        "text-size": 12
       },
       paint: {
         "text-color": "#111827",
@@ -740,6 +737,17 @@ export const MapView = ({
         map.resize();
       });
 
+      const calloutLayer = document.createElement('div');
+      calloutLayer.className = 'map-callout-layer';
+      map.getCanvasContainer().appendChild(calloutLayer);
+      calloutLayerRef.current = calloutLayer;
+      calloutManagerRef.current = new SpotCalloutManager(map, calloutLayer, (spotId: string) => {
+        const handler = onSpotClickRef.current;
+        if (handler) {
+          handler(spotId);
+        }
+      });
+
       const handleLoad = () => {
         ensureMapLayers(map);
         setTileCoordinates(getVisibleTiles(map));
@@ -788,26 +796,6 @@ export const MapView = ({
       }
     };
   }, [initialView, syncContainerSize, isLayerOverridden]);
-
-  useEffect(() => {
-    const map = mapRef.current;
-    if (!map) return;
-    if (calloutLayerRef.current) return;
-
-    const layer = document.createElement('div');
-    layer.className = 'map-callout-layer';
-    map.getCanvasContainer().appendChild(layer);
-    calloutLayerRef.current = layer;
-
-    return () => {
-      if (calloutLayerRef.current === layer) {
-        if (layer.parentNode) {
-          layer.parentNode.removeChild(layer);
-        }
-        calloutLayerRef.current = null;
-      }
-    };
-  }, []);
 
   useEffect(() => {
     const map = mapRef.current;
@@ -953,19 +941,17 @@ export const MapView = ({
 
   useEffect(() => {
     const map = mapRef.current;
-    const container = calloutLayerRef.current;
-    if (!map || !container) return;
-
-    if (!calloutManagerRef.current) {
-      calloutManagerRef.current = new SpotCalloutManager(map, container, (spotId) => {
-        const handler = onSpotClickRef.current;
-        if (handler) {
-          handler(spotId);
-        }
-      });
-    }
+    if (!map) return;
 
     const manager = calloutManagerRef.current;
+    if (!manager) return;
+
+    manager.updateSelectHandler((spotId) => {
+      const handler = onSpotClickRef.current;
+      if (handler) {
+        handler(spotId);
+      }
+    });
 
     if (renderMode === 'balloon' && calloutCandidates.length > 0) {
       const premium = calloutCandidates.filter((feature) => feature.premium);
@@ -978,16 +964,24 @@ export const MapView = ({
       manager.clear();
     }
 
-    const handleRender = () => {
+    const handleRelayout = () => {
       manager.repositionAll();
     };
 
-    map.on('render', handleRender);
-    map.on('resize', handleRender);
+    manager.repositionAll();
+
+    map.on('move', handleRelayout);
+    map.on('zoom', handleRelayout);
+    map.on('rotate', handleRelayout);
+    map.on('pitch', handleRelayout);
+    map.on('resize', handleRelayout);
 
     return () => {
-      map.off('render', handleRender);
-      map.off('resize', handleRender);
+      map.off('move', handleRelayout);
+      map.off('zoom', handleRelayout);
+      map.off('rotate', handleRelayout);
+      map.off('pitch', handleRelayout);
+      map.off('resize', handleRelayout);
       if (renderMode !== 'balloon') {
         manager.clear();
       }

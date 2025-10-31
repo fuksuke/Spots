@@ -281,8 +281,12 @@ function App() {
     };
   }, []);
 
+  const hasTrackedInitialPageViewRef = useRef(false);
+
   useEffect(() => {
     if (typeof window === "undefined") return;
+    if (hasTrackedInitialPageViewRef.current) return;
+    hasTrackedInitialPageViewRef.current = true;
     trackPageView(window.location.pathname + window.location.search);
   }, []);
 
@@ -399,6 +403,8 @@ function App() {
       },
       (error) => {
         console.warn("通知の購読に失敗しました", error);
+        setNotifications((current) => current.filter((notification) => notification.source === "local"));
+        unsubscribe();
       }
     );
 
