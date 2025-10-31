@@ -3,22 +3,6 @@ import { useMemo, useState } from "react";
 import type { Spot } from "../types";
 import { mockSpots } from "../mockData";
 
-const formatCountdown = (startTime: string) => {
-  const start = new Date(startTime).getTime();
-  const now = Date.now();
-  if (Number.isNaN(start)) return "開始時刻未設定";
-  const diffMinutes = Math.round((start - now) / (60 * 1000));
-  if (diffMinutes <= 0) return "まもなく開始";
-  if (diffMinutes < 60) return `開始まで${diffMinutes}分`;
-  const hours = Math.floor(diffMinutes / 60);
-  const minutes = diffMinutes % 60;
-  if (hours >= 24) {
-    const days = Math.floor(hours / 24);
-    return `開始まで${days}日${hours % 24}時間`;
-  }
-  return `開始まで${hours}時間${minutes}分`;
-};
-
 const formatLocation = (spot: Spot) => {
   if (spot.locationName && spot.locationName.trim()) {
     return spot.locationName;
@@ -35,6 +19,32 @@ const formatPrice = (spot: Spot) => {
     return `${currency}${pricing.amount.toLocaleString()}`;
   }
   return pricing.label ?? "有料";
+};
+
+
+const formatEventSchedule = (startTime: string, endTime?: string | null) => {
+  const start = new Date(startTime);
+  if (Number.isNaN(start.getTime())) {
+    return "日程未設定";
+  }
+
+  const end = endTime ? new Date(endTime) : null;
+  const hasValidEnd = end && !Number.isNaN(end.getTime());
+
+  const formatDate = (date: Date) =>
+    date.toLocaleDateString("ja-JP", { month: "2-digit", day: "2-digit" });
+
+  const formatTime = (date: Date) =>
+    date.toLocaleTimeString("ja-JP", { hour: "2-digit", minute: "2-digit", hour12: false });
+
+  let label = `${formatDate(start)} ${formatTime(start)}`;
+
+  if (hasValidEnd && end) {
+    const sameDay = formatDate(start) === formatDate(end);
+    label += sameDay ? `~${formatTime(end)}` : `~${formatDate(end)} ${formatTime(end)}`;
+  }
+
+  return label;
 };
 
 const formatPopularity = (spot: Spot) => {
@@ -57,7 +67,8 @@ type SpotListViewProps = {
 
 export const SpotListView = ({ spots, isLoading, error, onSpotSelect }: SpotListViewProps) => {
   const useMock = import.meta.env.VITE_USE_MOCK_TILES === 'true';
-  const listData = useMock ? mockSpots : spots;
+  const baseData = spots.length > 0 ? spots : mockSpots;
+  const listData = useMock ? baseData : spots;
   const loadingState = useMock ? false : isLoading;
   const errorState = useMock ? null : error;
   const [sortKey, setSortKey] = useState<SortKey>("startTime");
@@ -116,7 +127,7 @@ export const SpotListView = ({ spots, isLoading, error, onSpotSelect }: SpotList
       <div className="spot-list" role="list" aria-label="イベントリスト">
         {sortedSpots.map((spot) => {
           const image = spot.imageUrl;
-          const nowLabel = formatCountdown(spot.startTime);
+          const scheduleLabel = formatEventSchedule(spot.startTime, spot.endTime ?? null);
           const { likes, views } = formatPopularity(spot);
           return (
             <article
@@ -149,8 +160,8 @@ export const SpotListView = ({ spots, isLoading, error, onSpotSelect }: SpotList
                 <p className="spot-card-description">{spot.description}</p>
                 <dl className="spot-card-meta">
                   <div>
-                    <dt>開始まで</dt>
-                    <dd>{nowLabel}</dd>
+                    <dt>開催時間</dt>
+                    <dd>{scheduleLabel}</dd>
                   </div>
                   <div>
                     <dt>場所</dt>

@@ -23,6 +23,7 @@ import { useProfile } from "./hooks/useProfile";
 import { usePopularSpots } from "./hooks/usePopularSpots";
 import { usePromotions } from "./hooks/usePromotions";
 import { auth, db } from "./lib/firebase";
+import { mockSpots } from "./mockData";
 import { Coordinates, Spot, SpotCategory, ViewMode, PageMode } from "./types";
 
 const AuthPanel = lazy(() => import("./components/AuthPanel").then((module) => ({ default: module.AuthPanel })));
@@ -551,7 +552,17 @@ function App() {
 
   const { promotions, isLoading: isLoadingPromotions, error: promotionsError } = usePromotions();
 
-  const spots = useMemo(() => spotData ?? [], [spotData]);
+  const useMockTiles = import.meta.env.VITE_USE_MOCK_TILES === "true";
+
+  const spots = useMemo(() => {
+    if (useMockTiles) {
+      if (Array.isArray(spotData) && spotData && spotData.length > 0) {
+        return spotData;
+      }
+      return mockSpots;
+    }
+    return spotData ?? [];
+  }, [spotData, useMockTiles]);
 
   const filteredByCategory = useMemo(() => {
     if (categoryFilter === "all") return spots;
