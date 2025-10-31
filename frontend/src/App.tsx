@@ -2,6 +2,7 @@ import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } fro
 import { onAuthStateChanged, signOut, User } from "firebase/auth";
 import { collection, doc, limit, onSnapshot, orderBy, query, updateDoc, where } from "firebase/firestore";
 import { MapView } from "./components/MapView";
+import type { MapViewProps } from "./components/MapView";
 import { SidebarNav } from "./components/SidebarNav";
 import { HeaderBar } from "./components/HeaderBar";
 import { ActionBar } from "./components/ActionBar";
@@ -64,6 +65,12 @@ type AppRoute = "main" | "create-spot";
 const CREATE_ROUTE_PATH = "/create";
 
 const resolveRouteFromPath = (path: string): AppRoute => (path === CREATE_ROUTE_PATH ? "create-spot" : "main");
+
+const DEFAULT_HOME_VIEW: MapViewProps['initialView'] = {
+  longitude: 139.7016,
+  latitude: 35.6595,
+  zoom: 14
+};
 
 const isCategoryKey = (value: unknown): value is CategoryKey =>
   typeof value === "string" && CATEGORY_DISPLAY_ORDER.includes(value as CategoryKey);
@@ -1233,7 +1240,7 @@ function App() {
           <div className={`content-area ${viewMode}`.trim()}>
             {viewMode === "map" ? (
               <MapView
-                initialView={{ longitude: 139.7016, latitude: 35.6595, zoom: 14 }}
+                initialView={DEFAULT_HOME_VIEW}
                 spots={displaySpots}
                 selectedLocation={selectedLocation}
                 onSelectLocation={handleSelectLocation}

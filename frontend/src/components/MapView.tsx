@@ -594,6 +594,7 @@ export const MapView = ({
 
   const mapContainerRef = useRef<HTMLDivElement | null>(null);
   const mapRef = useRef<MapboxMap | null>(null);
+  const initialViewRef = useRef(initialView);
   const selectionMarkerRef = useRef<mapboxgl.Marker | null>(null);
   const resizeObserverRef = useRef<ResizeObserver | null>(null);
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
@@ -601,6 +602,8 @@ export const MapView = ({
   const calloutManagerRef = useRef<SpotCalloutManager | null>(null);
   const calloutLayerRef = useRef<HTMLDivElement | null>(null);
   const onSpotClickRef = useRef<MapViewProps['onSpotClick']>(onSpotClick);
+
+  const { longitude: initialLongitude, latitude: initialLatitude, zoom: initialZoom } = initialView;
 
   const [fallbackSpots, setFallbackSpots] = useState<MapTileFeature[]>([]);
   const [renderMode, setRenderMode] = useState<MapTileLayer | 'canvas'>('balloon');
@@ -610,6 +613,14 @@ export const MapView = ({
   const isLayerOverridden = tileLayer !== undefined;
 
   const categoriesKey = useMemo(() => (tileCategories ? tileCategories.join(',') : ''), [tileCategories]);
+
+  useEffect(() => {
+    initialViewRef.current = {
+      longitude: initialLongitude,
+      latitude: initialLatitude,
+      zoom: initialZoom
+    };
+  }, [initialLatitude, initialLongitude, initialZoom]);
 
   useEffect(() => {
     if (isLayerOverridden && tileLayer !== undefined) {
@@ -714,11 +725,13 @@ export const MapView = ({
         return;
       }
 
+      const view = initialViewRef.current;
+
       const map = new mapboxgl.Map({
         container,
         style: "mapbox://styles/mapbox/streets-v12",
-        center: [initialView.longitude, initialView.latitude],
-        zoom: initialView.zoom,
+        center: [view.longitude, view.latitude],
+        zoom: view.zoom,
         projection: "mercator"
       });
 
@@ -795,7 +808,24 @@ export const MapView = ({
         calloutLayerRef.current = null;
       }
     };
-  }, [initialView, syncContainerSize, isLayerOverridden]);
+  }, [syncContainerSize, isLayerOverridden]);
+
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map) return;
+
+    const currentCenter = map.getCenter();
+    const currentZoom = map.getZoom();
+
+    const centerChanged =
+      Math.abs(currentCenter.lng - initialLongitude) > 0.000001 ||
+      Math.abs(currentCenter.lat - initialLatitude) > 0.000001;
+    const zoomChanged = Math.abs(currentZoom - initialZoom) > 0.000001;
+
+    if (centerChanged || zoomChanged) {
+      map.jumpTo({ center: [initialLongitude, initialLatitude], zoom: initialZoom });
+    }
+  }, [initialLatitude, initialLongitude, initialZoom]);
 
   useEffect(() => {
     const map = mapRef.current;
