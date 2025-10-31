@@ -214,9 +214,12 @@ const buildRenderingData = (tiles: MapTileResponse[]): RenderingData => {
 };
 
 type CalloutEntry = {
-  marker: mapboxgl.Marker;
+  element: HTMLDivElement;
   update: (feature: MapTileFeature) => void;
   destroy: () => void;
+  lngLat: [number, number];
+  width: number;
+  height: number;
 };
 
 const STATUS_LABELS: Record<NonNullable<MapTileFeature['status']>, string> = {
@@ -234,6 +237,10 @@ const createCalloutDom = (
   wrapper.dataset.spotId = feature.id;
   wrapper.setAttribute('role', 'button');
   wrapper.tabIndex = 0;
+  wrapper.style.position = 'absolute';
+  wrapper.style.left = '0';
+  wrapper.style.top = '0';
+  wrapper.style.transformOrigin = 'top left';
 
   const bubble = document.createElement('div');
   bubble.className = 'map-callout__bubble';
@@ -248,8 +255,11 @@ const createCalloutDom = (
   const status = document.createElement('span');
   status.className = 'map-callout__status';
 
+  const tail = document.createElement('span');
+  tail.className = 'map-callout__tail';
+
   bubble.append(accent, text, status);
-  wrapper.appendChild(bubble);
+  wrapper.append(bubble, tail);
 
   const update = (next: MapTileFeature) => {
     wrapper.dataset.spotId = next.id;
@@ -302,11 +312,13 @@ const createCalloutDom = (
 
 class SpotCalloutManager {
   private map: MapboxMap;
+  private container: HTMLDivElement;
   private entries = new Map<string, CalloutEntry>();
   private onSelect: (spotId: string) => void;
 
-  constructor(map: MapboxMap, onSelect: (spotId: string) => void) {
+  constructor(map: MapboxMap, container: HTMLDivElement, onSelect: (spotId: string) => void) {
     this.map = map;
+    this.container = container;
     this.onSelect = onSelect;
   }
 
@@ -314,12 +326,31 @@ class SpotCalloutManager {
     this.onSelect = onSelect;
   }
 
+  private measure(entry: CalloutEntry) {
+    const rect = entry.element.getBoundingClientRect();
+    entry.width = rect.width;
+    entry.height = rect.height;
+  }
+
+  private position(entry: CalloutEntry) {
+    const point = this.map.project(entry.lngLat);
+    const x = point.x - entry.width / 2;
+    const y = point.y - entry.height;
+    entry.element.style.transform = `translate(${x}px, ${y}px)`;
+  }
+
+  repositionAll() {
+    this.entries.forEach((entry) => {
+      this.position(entry);
+    });
+  }
+
   sync(features: MapTileFeature[]) {
     const activeIds = new Set(features.map((feature) => feature.id));
 
     this.entries.forEach((entry, spotId) => {
       if (!activeIds.has(spotId)) {
-        entry.marker.remove();
+        entry.element.remove();
         entry.destroy();
         this.entries.delete(spotId);
       }
@@ -329,22 +360,34 @@ class SpotCalloutManager {
       const existing = this.entries.get(feature.id);
       if (existing) {
         existing.update(feature);
-        existing.marker.setLngLat([feature.geometry.lng, feature.geometry.lat]);
+        existing.lngLat = [feature.geometry.lng, feature.geometry.lat];
+        this.measure(existing);
+        this.position(existing);
         return;
       }
 
       const { element, update, destroy } = createCalloutDom(feature, (spotId) => this.onSelect(spotId));
-      const marker = new mapboxgl.Marker({ element, anchor: 'bottom' })
-        .setLngLat([feature.geometry.lng, feature.geometry.lat])
-        .addTo(this.map);
+      this.container.appendChild(element);
 
-      this.entries.set(feature.id, { marker, update, destroy });
+      const entry: CalloutEntry = {
+        element,
+        update,
+        destroy,
+        lngLat: [feature.geometry.lng, feature.geometry.lat],
+        width: 0,
+        height: 0
+      };
+
+      this.measure(entry);
+      this.position(entry);
+
+      this.entries.set(feature.id, entry);
     });
   }
 
   clear() {
     this.entries.forEach((entry) => {
-      entry.marker.remove();
+      entry.element.remove();
       entry.destroy();
     });
     this.entries.clear();
@@ -559,6 +602,7 @@ export const MapView = ({
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const canvasContextRef = useRef<CanvasRenderingContext2D | null>(null);
   const calloutManagerRef = useRef<SpotCalloutManager | null>(null);
+  const calloutLayerRef = useRef<HTMLDivElement | null>(null);
   const onSpotClickRef = useRef<MapViewProps['onSpotClick']>(onSpotClick);
 
   const [fallbackSpots, setFallbackSpots] = useState<MapTileFeature[]>([]);
@@ -677,17 +721,12 @@ export const MapView = ({
         container,
         style: "mapbox://styles/mapbox/streets-v12",
         center: [initialView.longitude, initialView.latitude],
-        zoom: initialView.zoom
+        zoom: initialView.zoom,
+        projection: "mercator"
       });
 
       map.addControl(new mapboxgl.NavigationControl(), "top-right");
       mapRef.current = map;
-      calloutManagerRef.current = new SpotCalloutManager(map, (spotId) => {
-        const handler = onSpotClickRef.current;
-        if (handler) {
-          handler(spotId);
-        }
-      });
 
       if (typeof ResizeObserver !== "undefined") {
         const observer = new ResizeObserver(() => {
@@ -740,8 +779,35 @@ export const MapView = ({
         resizeObserverRef.current.disconnect();
         resizeObserverRef.current = null;
       }
+      if (calloutLayerRef.current) {
+        const container = calloutLayerRef.current;
+        if (container.parentNode) {
+          container.parentNode.removeChild(container);
+        }
+        calloutLayerRef.current = null;
+      }
     };
   }, [initialView, syncContainerSize, isLayerOverridden]);
+
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map) return;
+    if (calloutLayerRef.current) return;
+
+    const layer = document.createElement('div');
+    layer.className = 'map-callout-layer';
+    map.getCanvasContainer().appendChild(layer);
+    calloutLayerRef.current = layer;
+
+    return () => {
+      if (calloutLayerRef.current === layer) {
+        if (layer.parentNode) {
+          layer.parentNode.removeChild(layer);
+        }
+        calloutLayerRef.current = null;
+      }
+    };
+  }, []);
 
   useEffect(() => {
     const map = mapRef.current;
@@ -804,18 +870,36 @@ export const MapView = ({
   }, [featureCollection, renderMode]);
 
 
-useEffect(() => {
-  const map = mapRef.current;
-  const canvas = canvasRef.current;
-  const context = canvasContextRef.current;
-  if (!map || !canvas || !context) return;
+  useEffect(() => {
+    const map = mapRef.current;
+    const canvas = canvasRef.current;
+    const context = canvasContextRef.current;
+    if (!map || !canvas || !context) return;
 
-  const draw = () => {
-    context.clearRect(0, 0, canvas.width, canvas.height);
-    if (renderMode !== 'canvas' || fallbackSpots.length === 0) return;
+    const resizeCanvas = () => {
+      const dpr = window.devicePixelRatio || 1;
+      const mapCanvas = map.getCanvas();
+      const { width, height } = mapCanvas;
 
-    context.fillStyle = 'rgba(59, 130, 246, 0.7)';
-    context.strokeStyle = 'rgba(15, 23, 42, 0.8)';
+      if (canvas.width !== width * dpr || canvas.height !== height * dpr) {
+        canvas.width = width * dpr;
+        canvas.height = height * dpr;
+        canvas.style.width = `${width}px`;
+        canvas.style.height = `${height}px`;
+        context.setTransform(1, 0, 0, 1, 0, 0);
+        context.scale(dpr, dpr);
+      }
+    };
+
+    resizeCanvas();
+
+    const draw = () => {
+      resizeCanvas();
+      context.clearRect(0, 0, canvas.width, canvas.height);
+      if (renderMode !== 'canvas' || fallbackSpots.length === 0) return;
+
+      context.fillStyle = 'rgba(59, 130, 246, 0.7)';
+      context.strokeStyle = 'rgba(15, 23, 42, 0.8)';
     context.lineWidth = 1;
 
     fallbackSpots.forEach((feature) => {
@@ -827,19 +911,21 @@ useEffect(() => {
     });
   };
 
-  draw();
-  map.on('move', draw);
-  map.on('moveend', draw);
-  map.on('zoom', draw);
-  map.on('zoomend', draw);
+    draw();
+    map.on('move', draw);
+    map.on('moveend', draw);
+    map.on('zoom', draw);
+    map.on('zoomend', draw);
+    map.on('resize', draw);
 
-  return () => {
-    map.off('move', draw);
-    map.off('moveend', draw);
-    map.off('zoom', draw);
-    map.off('zoomend', draw);
-  };
-}, [renderMode, fallbackSpots]);
+    return () => {
+      map.off('move', draw);
+      map.off('moveend', draw);
+      map.off('zoom', draw);
+      map.off('zoomend', draw);
+      map.off('resize', draw);
+    };
+  }, [renderMode, fallbackSpots]);
 
   useEffect(() => {
     const map = mapRef.current;
@@ -867,10 +953,11 @@ useEffect(() => {
 
   useEffect(() => {
     const map = mapRef.current;
-    if (!map) return;
+    const container = calloutLayerRef.current;
+    if (!map || !container) return;
 
     if (!calloutManagerRef.current) {
-      calloutManagerRef.current = new SpotCalloutManager(map, (spotId) => {
+      calloutManagerRef.current = new SpotCalloutManager(map, container, (spotId) => {
         const handler = onSpotClickRef.current;
         if (handler) {
           handler(spotId);
@@ -891,7 +978,16 @@ useEffect(() => {
       manager.clear();
     }
 
+    const handleRender = () => {
+      manager.repositionAll();
+    };
+
+    map.on('render', handleRender);
+    map.on('resize', handleRender);
+
     return () => {
+      map.off('render', handleRender);
+      map.off('resize', handleRender);
       if (renderMode !== 'balloon') {
         manager.clear();
       }

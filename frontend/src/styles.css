@@ -93,9 +93,24 @@ button {
 /* Map callouts --------------------------------------------------------- */
 .map-callout {
   position: relative;
-  transform: translateY(-10px);
   pointer-events: auto;
   display: inline-flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.map-callout-layer {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  z-index: 2;
+}
+
+.map-callout-layer .map-callout {
+  pointer-events: auto;
 }
 
 .map-callout__bubble {
@@ -116,17 +131,12 @@ button {
   transition: transform 120ms ease, box-shadow 120ms ease;
 }
 
-.map-callout__bubble::after {
-  content: "";
-  position: absolute;
-  left: 50%;
-  bottom: -9px;
-  transform: translateX(-50%);
+.map-callout__tail {
   width: 0;
   height: 0;
-  border-width: 8px;
-  border-style: solid;
-  border-color: rgba(255, 255, 255, 0.96) transparent transparent transparent;
+  border-left: 8px solid transparent;
+  border-right: 8px solid transparent;
+  border-top: 9px solid rgba(255, 255, 255, 0.96);
   filter: drop-shadow(0 4px 6px rgba(15, 23, 42, 0.18));
 }
 
@@ -165,6 +175,11 @@ button {
 .map-callout--premium .map-callout__bubble {
   border-color: rgba(234, 179, 8, 0.55);
   box-shadow: 0 14px 26px rgba(202, 138, 4, 0.32);
+}
+
+.map-callout--premium .map-callout__tail {
+  border-top-color: rgba(255, 252, 235, 0.96);
+  filter: drop-shadow(0 4px 6px rgba(234, 179, 8, 0.35));
 }
 
 .category-spacer {
