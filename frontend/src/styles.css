@@ -72,6 +72,12 @@ button {
   overflow-y: auto;
 }
 
+
+.content-area.list {
+  flex-direction: column;
+  padding-left: 0;
+  padding-right: 0;
+}
 .content-area.map {
   align-items: stretch;
   padding-bottom: 0;
@@ -1928,12 +1934,25 @@ select.input:focus {
   border-radius: inherit;
 }
 
+.scroll-footer {
+  display: flex;
+  justify-content: center;
+  gap: 1.25rem;
+  padding: 1.4rem 1.6rem;
+  margin-top: 2rem;
+  font-size: 0.95rem;
+  color: #475569;
+}
+
+.scroll-footer a {
+  color: inherit;
+}
+
 .spot-list {
   display: grid;
   grid-template-columns: 1fr;
-  gap: 1px;
-  background: rgba(148, 163, 184, 0.28);
-  padding: 1px;
+  border-top: 0.5px solid rgba(148, 163, 184, 0.2);
+  border-left: 0.5px solid rgba(148, 163, 184, 0.2);
   overflow: visible;
 }
 
@@ -1965,7 +1984,8 @@ select.input:focus {
   content: "";
   position: absolute;
   inset: 0;
-  border: 1px solid rgba(148, 163, 184, 0.25);
+  border-right: 0.5px solid rgba(148, 163, 184, 0.2);
+  border-bottom: 0.5px solid rgba(148, 163, 184, 0.2);
   pointer-events: none;
 }
 
@@ -2256,10 +2276,6 @@ select.input:focus {
 }
 
 /* Mobile adjustments -------------------------------------- */
-.mobile-only {
-  display: none;
-}
-
 @media (max-width: 1024px) {
   .app-shell {
     grid-template-columns: minmax(0, 1fr);
@@ -2278,12 +2294,19 @@ select.input:focus {
     padding-bottom: calc(0.55rem + env(safe-area-inset-bottom));
   }
 
-  .content-area:not(.map) {
-    padding-bottom: calc(1.5rem + var(--mobile-action-bar-height));
+  .scroll-footer {
+    display: flex;
+    justify-content: center;
+    gap: 1rem;
+    padding: 0.8rem 1.2rem;
+    margin-top: 0.75rem;
+    margin-bottom: 0;
+    font-size: 0.85rem;
+    color: #475569;
   }
 
-  .mobile-only {
-    display: flex;
+  .content-area:not(.map) {
+    padding-bottom: calc(1.5rem + var(--mobile-action-bar-height));
   }
 }
 

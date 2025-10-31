@@ -72,6 +72,21 @@ const DEFAULT_HOME_VIEW: MapViewProps['initialView'] = {
   zoom: 14
 };
 
+
+
+const BILLING_FAQ_PATH = "/billing-faq.html";
+
+const MOBILE_SCROLL_FOOTER = (
+  <footer className="app-footer scroll-footer">
+    <span>© 2025 MyApp</span>
+    <a href="#privacy">Privacy</a>
+    <a href="#terms">Terms of Use</a>
+    <a href={BILLING_FAQ_PATH} target="_blank" rel="noreferrer">
+      Billing FAQ
+    </a>
+  </footer>
+);
+
 const isCategoryKey = (value: unknown): value is CategoryKey =>
   typeof value === "string" && CATEGORY_DISPLAY_ORDER.includes(value as CategoryKey);
 
@@ -138,7 +153,6 @@ type NotificationDoc = {
 };
 
 const SUPPORT_EMAIL = "support@shibuya-livemap.local";
-const BILLING_FAQ_PATH = "/billing-faq.html";
 
 const mapCategoryKeyToSpotCategory = (key: CategoryKey): SpotCategory | "all" | null => {
   const config = CATEGORY_CONFIG[key];
@@ -1250,12 +1264,15 @@ function App() {
                 authToken={authToken}
               />
             ) : (
-              <SpotListView
-                spots={displaySpots}
-                isLoading={isLoadingSpots}
-                error={spotError}
-                onSpotSelect={handleSpotSelect}
-              />
+              <>
+                <SpotListView
+                  spots={displaySpots}
+                  isLoading={isLoadingSpots}
+                  error={spotError}
+                  onSpotSelect={handleSpotSelect}
+                />
+                {MOBILE_SCROLL_FOOTER}
+              </>
             )}
           </div>
         ) : (
@@ -1279,16 +1296,9 @@ function App() {
                 onSpotSelect={handleSpotSelect}
               />
             </div>
+            {MOBILE_SCROLL_FOOTER}
           </div>
         )}
-        <footer className="app-footer mobile-only">
-          <span>© 2025 MyApp</span>
-          <a href="#privacy">Privacy</a>
-          <a href="#terms">Terms of Use</a>
-          <a href={BILLING_FAQ_PATH} target="_blank" rel="noreferrer">
-            Billing FAQ
-          </a>
-        </footer>
         <ActionBar
           pageMode={pageMode}
           viewMode={viewMode}
