@@ -40,11 +40,13 @@ const formatPrice = (spot: Spot) => {
 const formatPopularity = (spot: Spot) => {
   const likes = spot.likes ?? 0;
   const views = spot.viewCount ?? 0;
-  return `👍 ${likes} / 👀 ${views}`;
+  return {
+    likes,
+    views
+  };
 };
 
 type SortKey = "startTime" | "popularity" | "price" | "newest";
-type IndoorFilter = "all" | "indoor" | "outdoor";
 
 type SpotListViewProps = {
   spots: Spot[];
@@ -59,33 +61,8 @@ export const SpotListView = ({ spots, isLoading, error, onSpotSelect }: SpotList
   const loadingState = useMock ? false : isLoading;
   const errorState = useMock ? null : error;
   const [sortKey, setSortKey] = useState<SortKey>("startTime");
-  const [freeOnly, setFreeOnly] = useState(false);
-  const [verifiedOnly, setVerifiedOnly] = useState(false);
-  const [happeningToday, setHappeningToday] = useState(false);
-  const [indoorFilter, setIndoorFilter] = useState<IndoorFilter>("all");
-
-  const filteredSpots = useMemo(() => {
-    const now = new Date();
-        return listData.filter((spot) => {
-      if (freeOnly && !(spot.pricing?.isFree ?? true)) return false;
-      if (verifiedOnly && !(spot.ownerPhoneVerified ?? false)) return false;
-      if (happeningToday) {
-        const start = new Date(spot.startTime);
-        if (Number.isNaN(start.getTime())) return false;
-        if (start.toDateString() !== now.toDateString()) return false;
-      }
-      if (indoorFilter !== "all") {
-        const isIndoor = spot.isIndoor;
-        if (isIndoor === undefined || isIndoor === null) return false;
-        if (indoorFilter === "indoor" && !isIndoor) return false;
-        if (indoorFilter === "outdoor" && isIndoor) return false;
-      }
-      return true;
-    });
-  }, [listData, freeOnly, verifiedOnly, happeningToday, indoorFilter]);
-
   const sortedSpots = useMemo(() => {
-    const list = [...filteredSpots];
+    const list = [...listData];
     switch (sortKey) {
       case "startTime":
         return list.sort((a, b) => new Date(a.startTime).getTime() - new Date(b.startTime).getTime());
@@ -106,7 +83,7 @@ export const SpotListView = ({ spots, isLoading, error, onSpotSelect }: SpotList
       default:
         return list;
     }
-  }, [filteredSpots, sortKey]);
+  }, [listData, sortKey]);
 
   if (loadingState) {
     return <div className="list-placeholder">イベントを読み込み中...</div>;
@@ -122,87 +99,71 @@ export const SpotListView = ({ spots, isLoading, error, onSpotSelect }: SpotList
 
   return (
     <div className="spot-list-view">
-      <div className="spot-list-toolbar" role="toolbar" aria-label="リスト操作">
-        <div className="spot-sort-control">
-          <label>
-            並び替え
+      <div className="spot-list-toolbar" role="toolbar" aria-label="並び替え">
+        <label className="spot-sort-control">
+          <span>並び替え</span>
+          <div className="sort-select">
             <select value={sortKey} onChange={(event) => setSortKey(event.target.value as SortKey)}>
               <option value="startTime">開始時間</option>
               <option value="popularity">人気順</option>
               <option value="price">価格順</option>
               <option value="newest">新着順</option>
             </select>
-          </label>
-        </div>
-        <div className="spot-filter-group">
-          <button
-            type="button"
-            className={`filter-chip ${freeOnly ? "active" : ""}`.trim()}
-            onClick={() => setFreeOnly((prev) => !prev)}
-          >
-            無料のみ
-          </button>
-          <button
-            type="button"
-            className={`filter-chip ${verifiedOnly ? "active" : ""}`.trim()}
-            onClick={() => setVerifiedOnly((prev) => !prev)}
-          >
-            Verifiedのみ
-          </button>
-          <button
-            type="button"
-            className={`filter-chip ${happeningToday ? "active" : ""}`.trim()}
-            onClick={() => setHappeningToday((prev) => !prev)}
-          >
-            今日開催
-          </button>
-          <div className="filter-select">
-            <label>
-              室内/屋外
-              <select value={indoorFilter} onChange={(event) => setIndoorFilter(event.target.value as IndoorFilter)}>
-                <option value="all">すべて</option>
-                <option value="indoor">室内</option>
-                <option value="outdoor">屋外</option>
-              </select>
-            </label>
           </div>
-        </div>
+        </label>
       </div>
 
-      <div className="spot-list" aria-label="イベントリスト">
+      <div className="spot-list" role="list" aria-label="イベントリスト">
         {sortedSpots.map((spot) => {
           const image = spot.imageUrl;
           const nowLabel = formatCountdown(spot.startTime);
+          const { likes, views } = formatPopularity(spot);
           return (
-            <article key={spot.id} className="spot-list-card" onClick={() => onSpotSelect?.(spot)}>
-              <div className="spot-card-media">
+            <article
+              key={spot.id}
+              role="listitem"
+              tabIndex={0}
+              className="spot-list-card"
+              onClick={() => onSpotSelect?.(spot)}
+              onKeyDown={(event) => {
+                if (event.key === 'Enter') {
+                  onSpotSelect?.(spot);
+                }
+              }}
+            >
+              <div className="spot-card-media" aria-hidden={Boolean(image)}>
                 {image ? (
-                  <img src={image} alt={spot.title} loading="lazy" />
+                  <img src={image} alt="" loading="lazy" />
                 ) : (
-                  <div className={`spot-card-placeholder ${spot.category}`.trim()} aria-hidden="true">
-                    {spot.category.toUpperCase()}
-                  </div>
+                  <div className={`spot-card-placeholder ${spot.category}`.trim()}>{spot.category.toUpperCase()}</div>
                 )}
               </div>
               <div className="spot-card-body">
                 <header className="spot-card-header">
-                  <h3>{spot.title}</h3>
-                  <div className="spot-card-badges">
-                    <span className="spot-badge category">#{spot.category}</span>
-                    {spot.ownerPhoneVerified ? <span className="spot-badge verified">Verified</span> : null}
+                  <h3 className="spot-card-title">{spot.title}</h3>
+                  <div className="spot-card-tags">
+                    <span className="spot-tag">#{spot.category}</span>
+                    {spot.ownerPhoneVerified ? <span className="spot-tag verified">Verified</span> : null}
                   </div>
                 </header>
                 <p className="spot-card-description">{spot.description}</p>
-                <div className="spot-card-meta">
-                  <span className="spot-meta time">{nowLabel}</span>
-                  <span className="spot-meta location">{formatLocation(spot)}</span>
-                  <span className="spot-meta price">{formatPrice(spot)}</span>
-                </div>
-                <div className="spot-card-stats">{formatPopularity(spot)}</div>
-                <div className="spot-card-actions">
-                  <button type="button" className="button subtle">
-                    詳細を見る
-                  </button>
+                <dl className="spot-card-meta">
+                  <div>
+                    <dt>開始まで</dt>
+                    <dd>{nowLabel}</dd>
+                  </div>
+                  <div>
+                    <dt>場所</dt>
+                    <dd>{formatLocation(spot)}</dd>
+                  </div>
+                  <div>
+                    <dt>料金</dt>
+                    <dd>{formatPrice(spot)}</dd>
+                  </div>
+                </dl>
+                <div className="spot-card-stats" aria-label="人気指標">
+                  <span>👍 {likes}</span>
+                  <span>👀 {views}</span>
                 </div>
               </div>
             </article>
