@@ -1,4 +1,5 @@
 import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { Navigate, Route, Routes, useLocation, useNavigate, useSearchParams } from "react-router-dom";
 import { onAuthStateChanged, signOut, User } from "firebase/auth";
 import { collection, doc, limit, onSnapshot, orderBy, query, updateDoc, where } from "firebase/firestore";
 import { MapView } from "./components/MapView";
@@ -62,10 +63,6 @@ const CATEGORY_CONFIG: Record<CategoryKey, CategoryConfig> = {
 const INITIAL_CATEGORY_KEYS: CategoryKey[] = ["top", "gourmet", "entertainment", "sports", "coupon", "live"];
 const CATEGORY_DISPLAY_ORDER: CategoryKey[] = [...INITIAL_CATEGORY_KEYS, "art", "family", "nightlife", "shopping"];
 const CATEGORY_STORAGE_KEY = "category-tabs:v1";
-type AppRoute = "main" | "create-spot";
-const CREATE_ROUTE_PATH = "/create";
-
-const resolveRouteFromPath = (path: string): AppRoute => (path === CREATE_ROUTE_PATH ? "create-spot" : "main");
 
 const DEFAULT_HOME_VIEW: MapViewProps['initialView'] = {
   longitude: 139.7016,
@@ -160,26 +157,20 @@ const mapCategoryKeyToSpotCategory = (key: CategoryKey): SpotCategory | "all" | 
   return config?.spotCategory ?? null;
 };
 
-const getCategoryKeyForSpot = (spot: Spot): CategoryKey => {
-  switch (spot.category) {
-    case "coupon":
-      return "coupon";
-    case "event":
-      return "entertainment";
-    case "sports":
-      return "sports";
-    case "cafe":
-      return "gourmet";
-    case "live":
-    default:
-      return "live";
-  }
-};
-
 function App() {
+  const navigate = useNavigate();
+  const location = useLocation();
+  const [, setSearchParams] = useSearchParams();
   const initialCategoryKeys = useMemo(() => loadStoredCategoryKeys(), []);
-  const [viewMode, setViewMode] = useState<ViewMode>("map");
-  const [pageMode, setPageMode] = useState<PageMode>("home");
+  const [viewMode, setViewMode] = useState<ViewMode>(() => {
+    if (typeof window === "undefined") return "map";
+    try {
+      const params = new URLSearchParams(window.location.search);
+      return params.get("view") === "list" ? "list" : "map";
+    } catch {
+      return "map";
+    }
+  });
   const [categoryKeys, setCategoryKeys] = useState<CategoryKey[]>(initialCategoryKeys);
   const [activeCategoryKey, setActiveCategoryKey] = useState<CategoryKey>(initialCategoryKeys[0] ?? "top");
   const [categoryFilter, setCategoryFilter] = useState<SpotCategory | "all">(
@@ -195,6 +186,25 @@ function App() {
   );
   const [isCategoryManagerOpen, setCategoryManagerOpen] = useState(false);
   const [categoryDraftKeys, setCategoryDraftKeys] = useState<CategoryKey[]>(initialCategoryKeys);
+
+  useEffect(() => {
+    const params = new URLSearchParams(location.search);
+    const nextView = params.get("view") === "list" ? "list" : "map";
+    setViewMode((current) => (current === nextView ? current : nextView));
+  }, [location.search]);
+
+  const applyViewModeToQuery = useCallback(
+    (mode: ViewMode) => {
+      const params = new URLSearchParams(location.search);
+      if (mode === "map") {
+        params.delete("view");
+      } else {
+        params.set("view", "list");
+      }
+      setSearchParams(params, { replace: false });
+    },
+    [location.search, setSearchParams]
+  );
 
   useEffect(() => {
     persistCategoryKeys(categoryKeys);
@@ -217,11 +227,6 @@ function App() {
       return [];
     }
   });
-  const initialRoute = useMemo(() => {
-    if (typeof window === "undefined") return "main";
-    return resolveRouteFromPath(window.location.pathname);
-  }, []);
-  const [appRoute, setAppRoute] = useState<AppRoute>(initialRoute);
   const [isAuthModalOpen, setAuthModalOpen] = useState(false);
   const [isAccountPanelOpen, setAccountPanelOpen] = useState(false);
   const [selectedLocation, setSelectedLocation] = useState<Coordinates | null>(null);
@@ -256,39 +261,6 @@ function App() {
       setAppMessage(null);
       toastTimeoutRef.current = null;
     }, 2800);
-  }, []);
-
-  const navigateToRoute = useCallback(
-    (route: AppRoute, { replace = false }: { replace?: boolean } = {}) => {
-      if (typeof window === "undefined") {
-        setAppRoute(route);
-        return;
-      }
-      const targetPath = route === "create-spot" ? CREATE_ROUTE_PATH : "/";
-      const currentPath = window.location.pathname;
-      if (currentPath === targetPath) {
-        setAppRoute(route);
-        return;
-      }
-      if (replace) {
-        window.history.replaceState({ route: targetPath }, "", targetPath);
-      } else {
-        window.history.pushState({ route: targetPath }, "", targetPath);
-      }
-      setAppRoute(route);
-    },
-    []
-  );
-
-  useEffect(() => {
-    if (typeof window === "undefined") return;
-    const handlePopState = () => {
-      setAppRoute(resolveRouteFromPath(window.location.pathname));
-    };
-    window.addEventListener("popstate", handlePopState);
-    return () => {
-      window.removeEventListener("popstate", handlePopState);
-    };
   }, []);
 
   useEffect(() => {
@@ -347,6 +319,15 @@ function App() {
     });
     return unsubscribe;
   }, []);
+
+  useEffect(() => {
+    const path = location.pathname.replace(/\/$/, "") || "/";
+    if (path === "/spots/new" && !currentUser) {
+      triggerMessage("スポットを投稿するにはログインしてください");
+      setAuthModalOpen(true);
+      navigate("/spots", { replace: true });
+    }
+  }, [currentUser, location.pathname, navigate, triggerMessage]);
 
   const profileState = useProfile(authToken);
 
@@ -648,23 +629,8 @@ function App() {
       if (viewMode === "list") {
         window.scrollTo({ top: 0, behavior: "smooth" });
       }
-      const derivedKey = getCategoryKeyForSpot(spot);
-      const fallbackKey = categoryKeys.includes(derivedKey)
-        ? derivedKey
-        : categoryKeys.find((key) => {
-            const mappedCategory = mapCategoryKeyToSpotCategory(key);
-            if (mappedCategory === "all" || mappedCategory === null) {
-              return false;
-            }
-            return mappedCategory === spot.category;
-          }) ?? (categoryKeys[0] ?? "top");
-      setActiveCategoryKey(fallbackKey);
-      const mapped = mapCategoryKeyToSpotCategory(fallbackKey);
-      if (mapped) {
-        setCategoryFilter(mapped);
-      }
     },
-    [viewMode, categoryKeys]
+    [viewMode]
   );
 
   const handleMapSpotClick = useCallback(
@@ -687,12 +653,13 @@ function App() {
 
   const handleSpotAction = useCallback(() => {
     if (!requireAuth()) return;
-    navigateToRoute("create-spot");
-  }, [requireAuth, navigateToRoute]);
+    navigate("/spots/new");
+  }, [navigate, requireAuth]);
 
   const handleModeToggle = useCallback(() => {
-    setViewMode((prev) => (prev === "map" ? "list" : "map"));
-  }, []);
+    const nextMode: ViewMode = viewMode === "map" ? "list" : "map";
+    applyViewModeToQuery(nextMode);
+  }, [applyViewModeToQuery, viewMode]);
 
   const handleRefreshSpots = useCallback(async () => {
     trackEvent("spot_feed_refresh", {});
@@ -701,13 +668,13 @@ function App() {
 
   const handleSelectPage = useCallback(
     (page: PageMode) => {
-      navigateToRoute("main");
-      setPageMode(page);
-      if (page === "home") {
-        setViewMode((prev) => prev);
+      if (page === "trending") {
+        navigate("/spots/trending");
+      } else {
+        navigate("/spots");
       }
     },
-    [navigateToRoute]
+    [navigate]
   );
 
   const handleLoginClick = useCallback(() => {
@@ -827,17 +794,17 @@ function App() {
       setSelectedLocation(null);
       setActiveSpot(normalizedSpot);
       setFocusCoordinates({ lat: normalizedSpot.lat, lng: normalizedSpot.lng });
-      setViewMode("map");
-      navigateToRoute("main");
+      applyViewModeToQuery("map");
+      navigate("/spots");
       void mutateSpots();
     },
-    [currentUser, mutateSpots, navigateToRoute]
+    [applyViewModeToQuery, currentUser, mutateSpots, navigate]
   );
 
   const handleSpotCreateClose = useCallback(() => {
-    navigateToRoute("main");
+    navigate("/spots");
     setSelectedLocation(null);
-  }, [navigateToRoute]);
+  }, [navigate]);
 
   const handleShareSpot = useCallback(
     async (spot: Spot) => {
@@ -877,7 +844,7 @@ function App() {
       const existing = spots.find((spot) => spot.id === promotionIdSpotId);
       if (existing) {
         handleSpotSelect(existing);
-        setPageMode("home");
+        navigate("/spots");
         return;
       }
       try {
@@ -893,26 +860,25 @@ function App() {
         }
         const spot = (await response.json()) as Spot;
         handleSpotSelect(spot);
-        setPageMode("home");
+        navigate("/spots");
       } catch (error) {
         console.warn("プロモーションからスポットを取得できませんでした", error);
         triggerMessage("イベント詳細を取得できませんでした");
       }
     },
-    [authToken, handleSpotSelect, spots, triggerMessage]
+    [authToken, handleSpotSelect, navigate, spots, triggerMessage]
   );
 
   const handleLogoClick = useCallback(() => {
-    navigateToRoute("main");
+    navigate("/spots");
     setActiveCategoryKey("top");
     setCategoryFilter("all");
     setSearchValue("");
     setSearchInput("");
     setFocusCoordinates(null);
-    setViewMode("map");
-    setPageMode("home");
+    applyViewModeToQuery("map");
     triggerMessage("渋谷周辺の最新イベントへ戻りました");
-  }, [navigateToRoute, triggerMessage]);
+  }, [applyViewModeToQuery, navigate, triggerMessage]);
 
   const handleLanguageClick = useCallback(() => {
     triggerMessage("多言語対応は近日公開予定です");
@@ -1208,7 +1174,9 @@ function App() {
     }
   }, [language]);
 
-  const isHomePage = pageMode === "home";
+  const normalizedPath = location.pathname.replace(/\/$/, "") || "/";
+  const pageMode: PageMode = normalizedPath === "/spots/trending" ? "trending" : "home";
+  const isHomePage = pageMode === "home" && normalizedPath.startsWith("/spots");
   const isMapHomeView = isHomePage && viewMode === "map";
   const spotCreateHeaderActions = currentUser ? (
     <button type="button" className="button secondary" onClick={handleAccountPanelOpen}>
@@ -1342,7 +1310,13 @@ function App() {
 
   return (
     <>
-      {appRoute === "create-spot" ? spotCreateLayout : mainLayout}
+      <Routes>
+        <Route path="/" element={<Navigate to="/spots" replace />} />
+        <Route path="/spots" element={mainLayout} />
+        <Route path="/spots/trending" element={mainLayout} />
+        <Route path="/spots/new" element={spotCreateLayout} />
+        <Route path="*" element={<Navigate to="/spots" replace />} />
+      </Routes>
 
       <div className={`floating-panel admin-panel ${isAdminPanelOpen ? "open" : ""}`.trim()} role="dialog" aria-hidden={!isAdminPanelOpen}>
         <div className="floating-scrim" aria-hidden="true" onClick={() => setAdminPanelOpen(false)} />

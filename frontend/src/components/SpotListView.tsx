@@ -129,6 +129,8 @@ export const SpotListView = ({ spots, isLoading, error, onSpotSelect }: SpotList
           const image = spot.imageUrl;
           const scheduleLabel = formatEventSchedule(spot.startTime, spot.endTime ?? null);
           const { likes, views } = formatPopularity(spot);
+          const hostLabel = spot.ownerDisplayName?.trim() || spot.ownerId || "未設定";
+
           return (
             <article
               key={spot.id}
@@ -170,6 +172,10 @@ export const SpotListView = ({ spots, isLoading, error, onSpotSelect }: SpotList
                   <div>
                     <dt>料金</dt>
                     <dd>{formatPrice(spot)}</dd>
+                  </div>
+                  <div>
+                    <dt>ホスト</dt>
+                    <dd>{hostLabel}</dd>
                   </div>
                 </dl>
                 <div className="spot-card-stats" aria-label="人気指標">

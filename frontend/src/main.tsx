@@ -5,6 +5,7 @@ import "./styles.css";
 import "mapbox-gl/dist/mapbox-gl.css";
 import mapboxgl from "mapbox-gl";
 import { initSentry } from "./lib/sentry";
+import { BrowserRouter } from "react-router-dom";
 
 mapboxgl.accessToken = import.meta.env.VITE_MAPBOX_TOKEN!;
 
@@ -12,7 +13,9 @@ initSentry();
 
 ReactDOM.createRoot(document.getElementById("root")!).render(
   <React.StrictMode>
-    <App />
+    <BrowserRouter>
+      <App />
+    </BrowserRouter>
   </React.StrictMode>
 );
 

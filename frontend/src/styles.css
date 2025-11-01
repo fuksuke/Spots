@@ -2043,10 +2043,12 @@ select.input:focus {
 }
 
 .spot-card-body {
+  position: relative;
   display: flex;
   flex-direction: column;
   gap: 0.75rem;
   flex: 1;
+  padding-bottom: 2.4rem;
 }
 
 .spot-card-header {
@@ -2122,6 +2124,9 @@ select.input:focus {
 }
 
 .spot-card-stats {
+  position: absolute;
+  right: 0;
+  bottom: 0;
   display: inline-flex;
   gap: 0.8rem;
   font-weight: 600;
@@ -2147,7 +2152,7 @@ select.input:focus {
     flex-direction: row;
     align-items: flex-start;
     gap: 0.6rem;
-    padding: 0.75rem 0.8rem;
+    padding: 0.55rem 0.8rem;
   }
 
   .spot-card-media {
@@ -2156,6 +2161,7 @@ select.input:focus {
   }
 
   .spot-card-body {
+    padding-bottom: 0.5rem;
     gap: 0.38rem;
   }
 
@@ -2167,29 +2173,37 @@ select.input:focus {
 
   .spot-card-meta div {
     flex: 0 1 calc(50% - 0.3rem);
-    gap: 0.08rem;
+    display: flex;
+    align-items: baseline;
+    gap: 0.35rem;
+  }
+
+  .spot-card-meta div dd {
+    display: inline;
   }
 
   .spot-card-meta dt {
-    font-size: 0.56rem;
+    font-size: 0.75rem;
+    white-space: nowrap;
   }
 
   .spot-card-meta dd {
-    font-size: 0.8rem;
+    font-size: 0.85rem;
   }
 
   .spot-card-description {
-    font-size: 0.8rem;
+    font-size: 0.9rem;
     -webkit-line-clamp: 1;
   }
 
   .spot-card-title {
-    font-size: 0.92rem;
+    font-size: 0.95rem;
   }
 
   .spot-card-stats {
+    bottom: 0.2rem;
     gap: 0.3rem;
-    font-size: 0.78rem;
+    font-size: 0.88rem;
   }
 }
 
