@@ -658,10 +658,17 @@ function App() {
     navigate("/spots/new");
   }, [navigate, requireAuth]);
 
+  const goToMapViewRef = useRef<() => Promise<void>>(() => Promise.resolve());
+  const goToMapView = useCallback(() => goToMapViewRef.current(), []);
+
   const handleModeToggle = useCallback(() => {
-    const nextMode: ViewMode = viewMode === "map" ? "list" : "map";
-    applyViewModeToQuery(nextMode);
-  }, [applyViewModeToQuery, viewMode]);
+    if (viewMode === "map") {
+      applyViewModeToQuery("list");
+      return;
+    }
+
+    void goToMapView();
+  }, [applyViewModeToQuery, goToMapView, viewMode]);
 
   const handleRefreshSpots = useCallback(async () => {
     trackEvent("spot_feed_refresh", {});
@@ -796,11 +803,13 @@ function App() {
       setSelectedLocation(null);
       setActiveSpot(normalizedSpot);
       setFocusCoordinates({ lat: normalizedSpot.lat, lng: normalizedSpot.lng });
-      applyViewModeToQuery("map");
-      navigate("/spots");
+      void (async () => {
+        await goToMapView();
+        navigate("/spots");
+      })();
       void mutateSpots();
     },
-    [applyViewModeToQuery, currentUser, mutateSpots, navigate]
+    [currentUser, goToMapView, mutateSpots, navigate]
   );
 
   const handleSpotCreateClose = useCallback(() => {
@@ -878,9 +887,9 @@ function App() {
     setSearchValue("");
     setSearchInput("");
     setFocusCoordinates(null);
-    applyViewModeToQuery("map");
+    void goToMapView();
     triggerMessage("渋谷周辺の最新イベントへ戻りました");
-  }, [applyViewModeToQuery, navigate, triggerMessage]);
+  }, [goToMapView, navigate, triggerMessage]);
 
   const handleLanguageClick = useCallback(() => {
     triggerMessage("多言語対応は近日公開予定です");
@@ -1180,6 +1189,7 @@ function App() {
   const pageMode: PageMode = normalizedPath === "/spots/trending" ? "trending" : "home";
   const isHomePage = pageMode === "home" && normalizedPath.startsWith("/spots");
   const isMapHomeView = isHomePage && viewMode === "map";
+  const isListModeActive = isHomePage && viewMode === "list";
   const homeMainAriaLabel = viewMode === "map" ? "スポットマップ" : "スポット一覧";
   const spotCreateHeaderActions = currentUser ? (
     <button type="button" className="button secondary" onClick={handleAccountPanelOpen}>
@@ -1191,10 +1201,120 @@ function App() {
     </button>
   );
 
-  useLayoutMetrics(layoutRootRef, {
+  const [isListHeaderHidden, setListHeaderHidden] = useState(false);
+  const mainRef = useRef<HTMLElement | null>(null);
+
+  const refreshLayoutMetrics = useLayoutMetrics(layoutRootRef, {
     dependencies: [isHomePage, viewMode, isMapHomeView]
   });
 
+  const exitListMode = useCallback(() => {
+    document.body.classList.remove("mode-list");
+    const mainEl = mainRef.current;
+    if (mainEl) {
+      mainEl.style.overflow = "";
+      mainEl.style.blockSize = "";
+      mainEl.style.minBlockSize = "";
+    }
+    setListHeaderHidden(false);
+    refreshLayoutMetrics();
+    window.dispatchEvent(new Event("resize"));
+  }, [refreshLayoutMetrics]);
+
+  useEffect(() => {
+    goToMapViewRef.current = async () => {
+      exitListMode();
+      applyViewModeToQuery("map");
+      if (typeof window !== "undefined") {
+        const amount = Math.min((window.innerHeight || 0) * 0.25, 120);
+        requestAnimationFrame(() => {
+          window.scrollBy({ top: -amount, behavior: "auto" });
+          window.setTimeout(() => {
+            window.scrollBy({ top: amount, behavior: "auto" });
+            refreshLayoutMetrics();
+            window.dispatchEvent(new Event("resize"));
+          }, 120);
+        });
+      }
+    };
+  }, [applyViewModeToQuery, exitListMode, refreshLayoutMetrics]);
+
+  useEffect(() => {
+    const mainEl = mainRef.current;
+
+    if (!isHomePage) {
+      document.body.classList.remove("mode-list");
+      if (mainEl) {
+        mainEl.style.overflow = "";
+        mainEl.style.blockSize = "";
+        mainEl.style.minBlockSize = "";
+      }
+      return () => {
+        document.body.classList.remove("mode-list");
+      };
+    }
+
+    if (viewMode === "list") {
+      document.body.classList.add("mode-list");
+      if (mainEl) {
+        mainEl.style.overflow = "visible";
+        mainEl.style.blockSize = "auto";
+        mainEl.style.minBlockSize = "auto";
+      }
+    } else {
+      document.body.classList.remove("mode-list");
+      if (mainEl) {
+        mainEl.style.overflow = "";
+        mainEl.style.blockSize = "";
+        mainEl.style.minBlockSize = "";
+      }
+    }
+
+    return () => {
+      if (viewMode === "list") {
+        document.body.classList.remove("mode-list");
+      }
+    };
+  }, [isHomePage, viewMode]);
+
+  useEffect(() => {
+    if (!isListModeActive) {
+      setListHeaderHidden(false);
+      return;
+    }
+
+    let lastScrollY = typeof window !== 'undefined' ? window.scrollY : 0;
+    let ticking = false;
+
+    const update = () => {
+      ticking = false;
+      const currentY = window.scrollY;
+      const delta = currentY - lastScrollY;
+
+      if (currentY <= 24) {
+        setListHeaderHidden(false);
+      } else if (delta > 6) {
+        setListHeaderHidden(true);
+      } else if (delta < -6) {
+        setListHeaderHidden(false);
+      }
+
+      lastScrollY = currentY;
+    };
+
+    const handleScroll = () => {
+      if (!ticking) {
+        ticking = true;
+        window.requestAnimationFrame(update);
+      }
+    };
+
+    window.addEventListener('scroll', handleScroll, { passive: true });
+
+    return () => {
+      window.removeEventListener('scroll', handleScroll);
+    };
+  }, [isListModeActive]);
   const mainLayout = (
     <div className="app-shell">
       <SidebarNav
@@ -1214,7 +1334,17 @@ function App() {
         showAdminButton={hasAdminClaim}
         onAdminClick={handleAdminClick}
       />
-      <div ref={layoutRootRef} className={`layout-column ${isMapHomeView ? "map-view" : ""}`.trim()}>
+      <div
+        ref={layoutRootRef}
+        className={[
+          "layout-column",
+          isMapHomeView ? "map-view" : "",
+          isListModeActive ? "list-mode" : "",
+          isListModeActive && isListHeaderHidden ? "list-header-hidden" : ""
+        ]
+          .filter(Boolean)
+          .join(" ")}
+      >
         <HeaderBar
           currentUser={currentUser}
           notificationsCount={notificationsCount}
@@ -1237,7 +1367,11 @@ function App() {
           <div className="category-spacer" aria-hidden="true" />
         )}
         {isHomePage ? (
-          <main className={`app-main content-area ${viewMode}`.trim()} aria-label={homeMainAriaLabel}>
+          <main
+            ref={mainRef}
+            className={`app-main content-area ${viewMode}`.trim()}
+            aria-label={homeMainAriaLabel}
+          >
             {viewMode === "map" ? (
               <MapView
                 initialView={DEFAULT_HOME_VIEW}

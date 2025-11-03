@@ -1,4 +1,4 @@
-import { MutableRefObject, useEffect, useRef } from "react";
+import { MutableRefObject, useCallback, useEffect, useRef } from "react";
 
 type UseLayoutMetricsOptions = {
   dependencies?: ReadonlyArray<unknown>;
@@ -22,6 +22,9 @@ export const useLayoutMetrics = (
   { dependencies = [] }: UseLayoutMetricsOptions = {}
 ) => {
   const baselineViewportRef = useRef<number | null>(null);
+  const refreshRef = useRef<() => void>(() => {
+    /* noop */
+  });
 
   useEffect(() => {
     const root = rootRef.current;
@@ -83,6 +86,10 @@ export const useLayoutMetrics = (
 
     updateMetrics();
 
+     refreshRef.current = () => {
+      updateMetrics();
+    };
+
     if (typeof ResizeObserver !== "undefined") {
       const observer = new ResizeObserver(scheduleUpdate);
       [HEADER_SELECTOR, TABS_SELECTOR, FOOTER_SELECTOR].forEach((selector) => {
@@ -117,6 +124,13 @@ export const useLayoutMetrics = (
         window.visualViewport.removeEventListener("resize", handleViewportResize);
         window.visualViewport.removeEventListener("scroll", handleViewportResize);
       }
+      refreshRef.current = () => {
+        /* noop */
+      };
     };
   }, [rootRef, ...dependencies]);
+
+  return useCallback(() => {
+    refreshRef.current();
+  }, []);
 };
