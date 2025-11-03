@@ -1835,12 +1835,12 @@ select.input:focus {
   display: inline-flex;
   align-items: center;
   gap: 0.4rem;
-  height: 38px;
-  padding: 0 1.15rem;
+  height: 30px;
+  padding: 0 0.9rem;
   border-radius: 999px;
   border: 1px solid rgba(148, 163, 184, 0.35);
   background: transparent;
-  font-size: 0.95rem;
+  font-size: 0.75rem;
   font-weight: 600;
   flex-shrink: 0;
 }
@@ -2370,6 +2370,13 @@ select.input:focus {
 
 /* Mobile adjustments -------------------------------------- */
 @media (max-width: 1024px) {
+  :root {
+    --mobile-padding-inline: clamp(0.55rem, 3vw, 1rem);
+    --mobile-header-base: 38px;
+    --mobile-category-tabs-height: 30px;
+    --mobile-action-bar-base: 46px;
+  }
+
   .app-shell {
     flex-direction: column;
     min-height: var(--app-viewport-height, var(--app-height));
@@ -2389,33 +2396,33 @@ select.input:focus {
     min-width: 0;
     display: flex;
     min-height: var(--mobile-header-base);
-    padding-top: calc(var(--safe-area-top) + 0.4rem);
-    padding-bottom: 0.4rem;
+    padding-top: calc(var(--safe-area-top) + 0.25rem);
+    padding-bottom: 0.25rem;
   }
 
   .app-header.compact .header-logo-image {
-    height: 36px;
-    max-width: min(120px, 36vw);
+    height: 30px;
+    max-width: min(108px, 32vw);
   }
 
   .app-header.compact .language-select select {
-    padding: 0.4rem 0.7rem;
-    font-size: 0.75rem;
+    padding: 0.3rem 0.6rem;
+    font-size: 0.7rem;
   }
 
   .app-header.compact .language-icon {
-    transform: scale(0.85);
+    transform: scale(0.8);
     transform-origin: center;
   }
 
   .app-header.compact .icon-button {
-    width: 48px;
-    height: 48px;
+    width: 42px;
+    height: 42px;
   }
 
   .app-header.compact .icon svg {
-    width: 22px;
-    height: 22px;
+    width: 20px;
+    height: 20px;
   }
 
   .category-tabs {
@@ -2428,9 +2435,18 @@ select.input:focus {
     align-items: center;
     box-sizing: border-box;
     z-index: 11;
-    padding-top: 0.25rem;
+    padding-top: 0.15rem;
     padding-left: calc(var(--mobile-padding-inline) + var(--safe-area-left));
     padding-right: calc(var(--mobile-padding-inline) + var(--safe-area-right));
+  }
+
+  .category-tabs .category-pill.inline {
+    padding: 0.15rem 0.7rem;
+    font-size: 0.72rem;
+  }
+
+  .category-tabs .category-pill.inline.active {
+    font-size: 0.74rem;
   }
 
   .action-bar {
@@ -2441,18 +2457,33 @@ select.input:focus {
     max-width: 100vw;
     min-height: var(--mobile-action-bar-base);
     padding-top: 0;
-    padding-bottom: var(--safe-area-bottom);
+    padding-bottom: calc(var(--safe-area-bottom) + 0.2rem);
     padding-left: calc(var(--mobile-padding-inline) + var(--safe-area-left));
     padding-right: calc(var(--mobile-padding-inline) + var(--safe-area-right));
     margin-top: 0;
     box-sizing: border-box;
     align-items: center;
-    gap: clamp(0.5rem, 2vw, 1rem);
+    gap: clamp(0.35rem, 1.6vw, 0.75rem);
     background: #ffffff;
     border-top: 1px solid rgba(148, 163, 184, 0.2);
     box-shadow: 0 -10px 24px rgba(15, 23, 42, 0.08);
     z-index: 12;
     transition: transform 160ms ease;
+  }
+
+  .action-bar-button {
+    min-height: var(--mobile-action-bar-base);
+    padding: 0.2rem 0;
+    gap: 0.15rem;
+    font-size: 0.76rem;
+  }
+
+  .action-bar-button span {
+    font-size: 0.72rem;
+  }
+
+  .action-icon {
+    transform: scale(0.9);
   }
 
   body.mode-list {
@@ -2587,11 +2618,11 @@ select.input:focus {
   }
 
   .action-bar-button {
-    min-height: 44px;
+    min-height: var(--mobile-action-bar-base);
   }
 
   .action-bar-button span {
-    font-size: 0.82rem;
+    font-size: 0.72rem;
   }
 }
 
@@ -2611,14 +2642,14 @@ select.input:focus {
   }
 
   .header-actions {
-    gap: 0.35rem;
+    gap: 0.3rem;
     flex-wrap: nowrap;
     margin-left: auto;
   }
 
   .header-logo-image {
-    height: 34px;
-    max-width: min(120px, 36vw);
+    height: 28px;
+    max-width: min(104px, 34vw);
   }
 
   .language-select {
@@ -2629,12 +2660,12 @@ select.input:focus {
 
   .language-select select {
     width: 100%;
-    padding: 0.4rem 0.7rem;
-    font-size: 0.75rem;
+    padding: 0.28rem 0.55rem;
+    font-size: 0.68rem;
   }
 
   .language-select .language-icon {
-    transform: scale(0.75);
+    transform: scale(0.68);
     transform-origin: center;
   }
 
@@ -2645,27 +2676,27 @@ select.input:focus {
 
   .header-auth-buttons {
     justify-content: flex-end;
-    gap: 0.35rem;
+    gap: 0.3rem;
   }
 
   .icon-button {
-    width: 48px;
-    height: 48px;
+    width: 40px;
+    height: 40px;
   }
 
   .icon-button .icon svg {
-    width: 22px;
-    height: 22px;
+    width: 18px;
+    height: 18px;
   }
 
   .text-button {
-    padding: 0.35rem 0.7rem;
-    font-size: 0.88rem;
+    padding: 0.28rem 0.6rem;
+    font-size: 0.78rem;
   }
 
   .language-select .language-icon svg {
-    width: 20px;
-    height: 20px;
+    width: 16px;
+    height: 16px;
   }
 
   .spot-list-toolbar {

@@ -1405,7 +1405,6 @@ function App() {
           onSpotClick={handleSpotAction}
           onSelectPage={handleSelectPage}
           onModeToggle={handleModeToggle}
-          onRefresh={handleRefreshSpots}
           showAdmin={hasAdminClaim}
           onAdminClick={handleAdminClick}
         />
