@@ -23,6 +23,7 @@ import { useSpotFeed } from "./hooks/useSpotFeed";
 import { useProfile } from "./hooks/useProfile";
 import { usePopularSpots } from "./hooks/usePopularSpots";
 import { usePromotions } from "./hooks/usePromotions";
+import { useLayoutMetrics } from "./hooks/useLayoutMetrics";
 import { auth, db } from "./lib/firebase";
 import { mockSpots } from "./mockData";
 import { Coordinates, Spot, SpotCategory, ViewMode, PageMode } from "./types";
@@ -161,6 +162,7 @@ function App() {
   const navigate = useNavigate();
   const location = useLocation();
   const [, setSearchParams] = useSearchParams();
+  const layoutRootRef = useRef<HTMLDivElement | null>(null);
   const initialCategoryKeys = useMemo(() => loadStoredCategoryKeys(), []);
   const [viewMode, setViewMode] = useState<ViewMode>(() => {
     if (typeof window === "undefined") return "map";
@@ -1178,6 +1180,7 @@ function App() {
   const pageMode: PageMode = normalizedPath === "/spots/trending" ? "trending" : "home";
   const isHomePage = pageMode === "home" && normalizedPath.startsWith("/spots");
   const isMapHomeView = isHomePage && viewMode === "map";
+  const homeMainAriaLabel = viewMode === "map" ? "スポットマップ" : "スポット一覧";
   const spotCreateHeaderActions = currentUser ? (
     <button type="button" className="button secondary" onClick={handleAccountPanelOpen}>
       アカウント
@@ -1187,6 +1190,10 @@ function App() {
       ログイン
     </button>
   );
+
+  useLayoutMetrics(layoutRootRef, {
+    dependencies: [isHomePage, viewMode, isMapHomeView]
+  });
 
   const mainLayout = (
     <div className="app-shell">
@@ -1207,7 +1214,7 @@ function App() {
         showAdminButton={hasAdminClaim}
         onAdminClick={handleAdminClick}
       />
-      <div className={`layout-column ${isMapHomeView ? "map-view" : ""}`.trim()}>
+      <div ref={layoutRootRef} className={`layout-column ${isMapHomeView ? "map-view" : ""}`.trim()}>
         <HeaderBar
           currentUser={currentUser}
           notificationsCount={notificationsCount}
@@ -1230,7 +1237,7 @@ function App() {
           <div className="category-spacer" aria-hidden="true" />
         )}
         {isHomePage ? (
-          <div className={`content-area ${viewMode}`.trim()}>
+          <main className={`app-main content-area ${viewMode}`.trim()} aria-label={homeMainAriaLabel}>
             {viewMode === "map" ? (
               <MapView
                 initialView={DEFAULT_HOME_VIEW}
@@ -1253,9 +1260,9 @@ function App() {
                 {MOBILE_SCROLL_FOOTER}
               </>
             )}
-          </div>
+          </main>
         ) : (
-          <div className="content-area trending">
+          <main className="app-main content-area trending" aria-label="トレンドとプロモーション">
             <div className="trending-content">
               <header className="trending-header">
                 <h2>トレンド & プロモーション</h2>
@@ -1276,7 +1283,7 @@ function App() {
               />
             </div>
             {MOBILE_SCROLL_FOOTER}
-          </div>
+          </main>
         )}
         <ActionBar
           pageMode={pageMode}

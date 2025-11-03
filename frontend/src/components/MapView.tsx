@@ -672,11 +672,15 @@ const MapOuter = styled.div`
   position: relative;
   width: 100%;
   height: 100%;
+  display: flex;
+  flex-direction: column;
 `;
 
-const MapRoot = styled.div`
+const MapRoot = styled.div.attrs({ className: 'map-container' })`
   width: 100%;
   height: 100%;
+  flex: 1 1 auto;
+  min-height: 0;
 `;
 
 const MapCanvas = styled.canvas`
@@ -703,10 +707,12 @@ export const MapView = ({
   void legacySpots;
 
   const mapContainerRef = useRef<HTMLDivElement | null>(null);
+  const mapOuterRef = useRef<HTMLDivElement | null>(null);
   const mapRef = useRef<MapboxMap | null>(null);
   const initialViewRef = useRef(initialView);
   const selectionMarkerRef = useRef<mapboxgl.Marker | null>(null);
   const resizeObserverRef = useRef<ResizeObserver | null>(null);
+  const resizeAnimationFrameRef = useRef<number | null>(null);
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const canvasContextRef = useRef<CanvasRenderingContext2D | null>(null);
   const calloutManagerRef = useRef<SpotCalloutManager | null>(null);
@@ -810,12 +816,44 @@ export const MapView = ({
     setFallbackSpots(nonPremium);
   }, [renderMode, renderingData.spotFeatures]);
 
-  const syncContainerSize = useCallback(() => {
+  const logContainerMetrics = useCallback((label: string) => {
     const container = mapContainerRef.current;
-    if (!container) return false;
-    const rect = container.getBoundingClientRect();
-    return rect.width > 0 && rect.height > 0;
+    if (!container) return;
+    const parent = container.parentElement;
+    const contentArea = container.closest('.content-area');
+    const shell = container.closest('.app-shell');
+    const containerRect = container.getBoundingClientRect();
+    const parentRect = parent?.getBoundingClientRect();
+    const contentAreaRect = contentArea instanceof HTMLElement ? contentArea.getBoundingClientRect() : undefined;
+    const shellRect = shell instanceof HTMLElement ? shell.getBoundingClientRect() : undefined;
+    // eslint-disable-next-line no-console
+    console.debug('[MapView] layout', label, {
+      windowInnerHeight: typeof window !== 'undefined' ? window.innerHeight : undefined,
+      containerRect,
+      parentRect,
+      contentAreaRect,
+      shellRect
+    });
   }, []);
+
+  const scheduleMapResize = useCallback(
+    (label?: string) => {
+      if (typeof window === 'undefined') return;
+      if (resizeAnimationFrameRef.current !== null) {
+        window.cancelAnimationFrame(resizeAnimationFrameRef.current);
+      }
+      resizeAnimationFrameRef.current = window.requestAnimationFrame(() => {
+        resizeAnimationFrameRef.current = null;
+        if (mapRef.current) {
+          mapRef.current.resize();
+        }
+        if (label) {
+          logContainerMetrics(label);
+        }
+      });
+    },
+    [logContainerMetrics]
+  );
 
   useEffect(() => {
     if (mapRef.current) return;
@@ -828,9 +866,8 @@ export const MapView = ({
       const container = mapContainerRef.current;
       if (!container || mapRef.current) return;
 
-      const hasSize = syncContainerSize();
       const { width, height } = container.getBoundingClientRect();
-      if (!hasSize || width <= 0 || height <= 0) {
+      if (width <= 0 || height <= 0) {
         frameId = window.requestAnimationFrame(initializeMap);
         return;
       }
@@ -850,15 +887,13 @@ export const MapView = ({
 
       if (typeof ResizeObserver !== "undefined") {
         const observer = new ResizeObserver(() => {
-          map.resize();
+          scheduleMapResize('resize-observer');
         });
         observer.observe(container);
         resizeObserverRef.current = observer;
       }
 
-      window.requestAnimationFrame(() => {
-        map.resize();
-      });
+      scheduleMapResize('initialized');
 
       const calloutLayer = document.createElement('div');
       calloutLayer.className = 'map-callout-layer';
@@ -877,6 +912,7 @@ export const MapView = ({
         if (!isLayerOverridden) {
           setActiveLayer(deriveLayerForZoom(map.getZoom()));
         }
+        scheduleMapResize('map-load');
       };
 
       if (map.isStyleLoaded()) {
@@ -918,7 +954,32 @@ export const MapView = ({
         calloutLayerRef.current = null;
       }
     };
-  }, [syncContainerSize, isLayerOverridden]);
+  }, [scheduleMapResize, isLayerOverridden]);
+
+  useEffect(() => {
+    const handleWindowResize = () => {
+      if (mapRef.current) {
+        scheduleMapResize('window-resize');
+      }
+    };
+
+    window.addEventListener('resize', handleWindowResize);
+    window.addEventListener('orientationchange', handleWindowResize);
+
+    return () => {
+      window.removeEventListener('resize', handleWindowResize);
+      window.removeEventListener('orientationchange', handleWindowResize);
+    };
+  }, [scheduleMapResize]);
+
+  useEffect(() => {
+    return () => {
+      if (resizeAnimationFrameRef.current !== null) {
+        window.cancelAnimationFrame(resizeAnimationFrameRef.current);
+        resizeAnimationFrameRef.current = null;
+      }
+    };
+  }, []);
 
   useEffect(() => {
     const map = mapRef.current;
@@ -1172,27 +1233,6 @@ export const MapView = ({
   }, [onSpotClick, onSelectLocation]);
 
   useEffect(() => {
-    if (!mapContainerRef.current) return;
-
-    const handleResize = () => {
-      const mapInstance = mapRef.current;
-      const hasSize = syncContainerSize();
-      if (!mapInstance || !hasSize) return;
-
-      const canvas = mapInstance.getCanvas?.();
-      if (!canvas) return;
-
-      mapInstance.resize();
-    };
-
-    window.addEventListener("resize", handleResize);
-    handleResize();
-    return () => {
-      window.removeEventListener("resize", handleResize);
-    };
-  }, [syncContainerSize]);
-
-  useEffect(() => {
     const map = mapRef.current;
     if (!map) return;
 
@@ -1250,7 +1290,7 @@ export const MapView = ({
   }, []);
 
   return (
-    <MapOuter role="presentation">
+    <MapOuter role="presentation" ref={mapOuterRef}>
       <MapRoot ref={mapContainerRef} />
       <MapCanvas ref={canvasRef} aria-hidden="true" />
     </MapOuter>
