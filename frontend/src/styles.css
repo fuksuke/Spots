@@ -2549,11 +2549,21 @@ select.input:focus {
   }
 
   .app-main.map {
-    padding-bottom: 0;
+    padding-bottom: env(safe-area-inset-bottom, 0px);
     overflow: hidden;
     display: flex;
     flex-direction: column;
     min-height: 0;
+    block-size: 100dvh;
+    min-block-size: 100dvh;
+    block-size: 100svh;
+    min-block-size: 100svh;
+    block-size: calc(
+      var(--app-viewport-height) - var(--app-header-height, 0px) - var(--app-tabs-height, 0px) - var(--app-footer-height, 0px)
+    );
+    min-block-size: calc(
+      var(--app-viewport-height) - var(--app-header-height, 0px) - var(--app-tabs-height, 0px) - var(--app-footer-height, 0px)
+    );
   }
 
   .app-main:not(.map) {
