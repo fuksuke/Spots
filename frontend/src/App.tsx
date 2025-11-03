@@ -1204,40 +1204,20 @@ function App() {
   const [isListHeaderHidden, setListHeaderHidden] = useState(false);
   const mainRef = useRef<HTMLElement | null>(null);
 
-  const refreshLayoutMetrics = useLayoutMetrics(layoutRootRef, {
+  useLayoutMetrics(layoutRootRef, {
     dependencies: [isHomePage, viewMode, isMapHomeView]
   });
 
   const exitListMode = useCallback(() => {
-    document.body.classList.remove("mode-list");
-    const mainEl = mainRef.current;
-    if (mainEl) {
-      mainEl.style.overflow = "";
-      mainEl.style.blockSize = "";
-      mainEl.style.minBlockSize = "";
-    }
     setListHeaderHidden(false);
-    refreshLayoutMetrics();
-    window.dispatchEvent(new Event("resize"));
-  }, [refreshLayoutMetrics]);
+  }, []);
 
   useEffect(() => {
     goToMapViewRef.current = async () => {
       exitListMode();
       applyViewModeToQuery("map");
-      if (typeof window !== "undefined") {
-        const amount = Math.min((window.innerHeight || 0) * 0.25, 120);
-        requestAnimationFrame(() => {
-          window.scrollBy({ top: -amount, behavior: "auto" });
-          window.setTimeout(() => {
-            window.scrollBy({ top: amount, behavior: "auto" });
-            refreshLayoutMetrics();
-            window.dispatchEvent(new Event("resize"));
-          }, 120);
-        });
-      }
     };
-  }, [applyViewModeToQuery, exitListMode, refreshLayoutMetrics]);
+  }, [applyViewModeToQuery, exitListMode]);
 
   useEffect(() => {
     const mainEl = mainRef.current;

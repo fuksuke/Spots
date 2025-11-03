@@ -34,6 +34,7 @@ export const useLayoutMetrics = (
 
     let cleanupAnimation: (() => void) | null = null;
     const activeObservers: ResizeObserver[] = [];
+    let mutationObserver: MutationObserver | null = null;
 
     const applyHeight = (property: string, value: number) => {
       root.style.setProperty(property, `${Math.max(0, Math.round(value))}px`);
@@ -86,7 +87,7 @@ export const useLayoutMetrics = (
 
     updateMetrics();
 
-     refreshRef.current = () => {
+    refreshRef.current = () => {
       updateMetrics();
     };
 
@@ -99,6 +100,27 @@ export const useLayoutMetrics = (
         }
       });
       activeObservers.push(observer);
+    }
+
+    if (typeof MutationObserver !== "undefined") {
+      mutationObserver = new MutationObserver(() => {
+        scheduleUpdate();
+      });
+      mutationObserver.observe(root, {
+        attributes: true,
+        attributeFilter: ["class", "style"],
+        childList: false,
+        subtree: false
+      });
+      const mainArea = root.querySelector(".app-main");
+      if (mainArea instanceof HTMLElement) {
+        mutationObserver.observe(mainArea, {
+          attributes: true,
+          attributeFilter: ["style", "class"],
+          childList: false,
+          subtree: false
+        });
+      }
     }
 
     const handleWindowResize = () => scheduleUpdate();
@@ -124,6 +146,7 @@ export const useLayoutMetrics = (
         window.visualViewport.removeEventListener("resize", handleViewportResize);
         window.visualViewport.removeEventListener("scroll", handleViewportResize);
       }
+      mutationObserver?.disconnect();
       refreshRef.current = () => {
         /* noop */
       };

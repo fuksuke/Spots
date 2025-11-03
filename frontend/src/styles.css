@@ -7,7 +7,8 @@
   --mobile-header-base: 44px;
   --mobile-category-tabs-height: 36px;
   --mobile-action-bar-base: 56px;
-  --app-viewport-height: 100vh;
+  --app-height: 100dvh;
+  --app-viewport-height: var(--app-height);
   --app-header-height: var(--mobile-header-base);
   --app-tabs-height: var(--mobile-category-tabs-height);
   --app-footer-height: var(--mobile-action-bar-base);
@@ -18,15 +19,15 @@
   background: #f1f5f9;
 }
 
-@supports (height: 100dvh) {
+@supports not (height: 100dvh) {
   :root {
-    --app-viewport-height: 100dvh;
+    --app-height: 100svh;
   }
 }
 
-@supports (height: 100svh) {
+@supports not (height: 100svh) {
   :root {
-    --app-viewport-height: 100svh;
+    --app-height: 100vh;
   }
 }
 
@@ -40,9 +41,7 @@ body {
   padding: 0;
   width: 100%;
   height: 100%;
-  min-height: 100vh;
-  min-height: 100dvh;
-  min-height: 100svh;
+  min-height: var(--app-height);
   overflow-x: hidden;
   background: #f1f5f9;
 }
@@ -55,9 +54,7 @@ body {
 #root {
   width: 100%;
   height: 100%;
-  min-height: 100vh;
-  min-height: 100dvh;
-  min-height: 100svh;
+  min-height: var(--app-height);
   display: flex;
   flex-direction: column;
   box-sizing: border-box;
@@ -89,9 +86,7 @@ button {
   flex-direction: row;
   align-items: stretch;
   width: 100%;
-  min-height: 100vh;
-  min-height: 100dvh;
-  min-height: 100svh;
+  min-height: var(--app-height);
   box-sizing: border-box;
   overflow-x: hidden;
   background: #f1f5f9;
@@ -2377,7 +2372,7 @@ select.input:focus {
 @media (max-width: 1024px) {
   .app-shell {
     flex-direction: column;
-    min-height: var(--app-viewport-height);
+    min-height: var(--app-viewport-height, var(--app-height));
   }
 
   .layout-column {
@@ -2541,10 +2536,12 @@ select.input:focus {
     scroll-padding-top: calc(var(--app-header-height, 0px) + var(--app-tabs-height, 0px));
     scroll-padding-bottom: calc(var(--app-footer-height, 0px) + 1rem);
     block-size: calc(
-      var(--app-viewport-height) - var(--app-header-height, 0px) - var(--app-tabs-height, 0px) - var(--app-footer-height, 0px)
+      var(--app-viewport-height, var(--app-height)) - var(--app-header-height, 0px) - var(--app-tabs-height, 0px) -
+        var(--app-footer-height, 0px)
     );
     min-block-size: calc(
-      var(--app-viewport-height) - var(--app-header-height, 0px) - var(--app-tabs-height, 0px) - var(--app-footer-height, 0px)
+      var(--app-viewport-height, var(--app-height)) - var(--app-header-height, 0px) - var(--app-tabs-height, 0px) -
+        var(--app-footer-height, 0px)
     );
   }
 
@@ -2558,22 +2555,12 @@ select.input:focus {
     flex-direction: column;
     min-height: 0;
     block-size: calc(
-      var(--app-viewport-height) - var(--app-header-height, 0px) - var(--app-tabs-height, 0px) - var(--app-footer-height, 0px)
+      var(--app-viewport-height, var(--app-height)) - var(--app-header-height, 0px) - var(--app-tabs-height, 0px) -
+        var(--app-footer-height, 0px)
     );
     min-block-size: calc(
-      var(--app-viewport-height) - var(--app-header-height, 0px) - var(--app-tabs-height, 0px) - var(--app-footer-height, 0px)
-    );
-    block-size: calc(
-      100svh - var(--app-header-height, 0px) - var(--app-tabs-height, 0px) - var(--app-footer-height, 0px)
-    );
-    min-block-size: calc(
-      100svh - var(--app-header-height, 0px) - var(--app-tabs-height, 0px) - var(--app-footer-height, 0px)
-    );
-    block-size: calc(
-      100dvh - var(--app-header-height, 0px) - var(--app-tabs-height, 0px) - var(--app-footer-height, 0px)
-    );
-    min-block-size: calc(
-      100dvh - var(--app-header-height, 0px) - var(--app-tabs-height, 0px) - var(--app-footer-height, 0px)
+      var(--app-viewport-height, var(--app-height)) - var(--app-header-height, 0px) - var(--app-tabs-height, 0px) -
+        var(--app-footer-height, 0px)
     );
   }
 
