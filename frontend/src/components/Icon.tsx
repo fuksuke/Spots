@@ -11,12 +11,18 @@ import {
   PiHouse,
   PiMagnifyingGlassBold,
   PiMapPinArea,
+  PiMapPinFill,
   PiMusicNoteFill,
   PiPlus,
-  PiArticle,
+  PiTextOutdentLight,
   PiListBullets,
   PiGear,
-  PiUser
+  PiUser,
+  PiUserFill,
+  PiEyesFill,
+  PiCurrencyJpyFill,
+  PiCalendarFill,
+  PiHeart
 } from "react-icons/pi";
 
 const ICONS = {
@@ -25,10 +31,11 @@ const ICONS = {
   add: PiPlus,
   bell: PiBell,
   map: PiMapPinArea,
+  mapLight: PiMapPinFill,
   home: PiHouse,
   pin: PiGlobeHemisphereEastDuotone,
   music: PiMusicNoteFill,
-  list: PiArticle,
+  list: PiTextOutdentLight,
   menu: PiListBullets,
   calendar: PiCalendarDots,
   camera: PiCameraPlus,
@@ -36,7 +43,12 @@ const ICONS = {
   cafe: PiCoffee,
   refresh: PiArrowClockwise,
   gear: PiGear,
-  user: PiUser
+  user: PiUser,
+  userFill: PiUserFill,
+  eyesFill: PiEyesFill,
+  currencyJpyFill: PiCurrencyJpyFill,
+  calendarSimple: PiCalendarFill,
+  heart: PiHeart
 } as const;
 
 export type IconName = keyof typeof ICONS;
