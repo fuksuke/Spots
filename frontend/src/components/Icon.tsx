@@ -22,7 +22,8 @@ import {
   PiEyesFill,
   PiCurrencyJpyFill,
   PiCalendarFill,
-  PiHeart
+  PiHeart,
+  PiSealCheckFill
 } from "react-icons/pi";
 
 const ICONS = {
@@ -48,7 +49,8 @@ const ICONS = {
   eyesFill: PiEyesFill,
   currencyJpyFill: PiCurrencyJpyFill,
   calendarSimple: PiCalendarFill,
-  heart: PiHeart
+  heart: PiHeart,
+  sealCheck: PiSealCheckFill
 } as const;
 
 export type IconName = keyof typeof ICONS;

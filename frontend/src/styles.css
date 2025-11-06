@@ -527,27 +527,42 @@ button {
   position: relative;
   width: min(640px, 96svw);
   max-height: min(72vh, 640px);
-  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
   background: #ffffff;
   border-radius: 26px 26px 0 0;
-  padding: 0 clamp(1.25rem, 5vw, 2rem) clamp(2.75rem, 8vw, 3.5rem);
+  padding: 0 clamp(1.25rem, 5vw, 2rem) 0;
   box-shadow: 0 24px 70px rgba(15, 23, 42, 0.18);
   z-index: 1;
   transform: translateY(100%);
   transition: transform 0.28s ease, box-shadow 0.22s ease;
   will-change: transform;
   backdrop-filter: none;
+  touch-action: pan-y;
+  pointer-events: auto;
+  min-height: 0;
+}
+
+.spot-detail-sheet .sheet-scroll-container {
+  flex: 1 1 auto;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  overflow-y: auto;
+  margin: 0 calc(-1 * clamp(1.25rem, 5vw, 2rem));
+  padding: 0 clamp(1.25rem, 5vw, 2rem) clamp(2.75rem, 8vw, 3.5rem);
+  overscroll-behavior: contain;
   scrollbar-width: thin;
   scrollbar-color: rgba(148, 163, 184, 0.4) transparent;
   touch-action: pan-y;
-  pointer-events: auto;
 }
 
-.spot-detail-sheet .sheet-body::-webkit-scrollbar {
+.spot-detail-sheet .sheet-scroll-container::-webkit-scrollbar {
   width: 6px;
 }
 
-.spot-detail-sheet .sheet-body::-webkit-scrollbar-thumb {
+.spot-detail-sheet .sheet-scroll-container::-webkit-scrollbar-thumb {
   background: rgba(148, 163, 184, 0.45);
   border-radius: 999px;
 }
@@ -635,7 +650,10 @@ button {
 }
 
 .spot-detail-sheet .spot-owner-verified {
-  font-size: 0.85rem;
+  display: inline-flex;
+  align-items: center;
+  margin-left: 0.35rem;
+  color: #a3e635;
 }
 
 .spot-detail-sheet .sheet-actions {
@@ -686,7 +704,8 @@ button {
   background: rgba(15, 23, 42, 0.06);
 }
 
-.spot-detail-sheet .sheet-media.single img {
+.spot-detail-sheet .sheet-media.single img,
+.spot-detail-sheet .sheet-media.carousel .media-slide img {
   width: 100%;
   height: auto;
   display: block;
@@ -706,18 +725,7 @@ button {
   display: none;
 }
 
-.spot-detail-sheet .sheet-media.carousel .media-slide {
-  flex: 0 0 100%;
-  scroll-snap-align: center;
-  margin: 0;
-  position: relative;
-}
 
-.spot-detail-sheet .sheet-media.carousel .media-slide img {
-  width: 100%;
-  height: auto;
-  display: block;
-}
 
 .spot-detail-sheet .sheet-media.carousel .media-nav {
   position: absolute;
@@ -3335,8 +3343,13 @@ select.input:focus {
     .spot-detail-sheet .sheet-body {
       width: 100vw;
       max-height: 90vh;
-      padding: 0 clamp(0.9rem, 5vw, 1.4rem) clamp(3.2rem, 11vw, 3.9rem);
+      padding: 0 clamp(0.9rem, 5vw, 1.4rem) 0;
       border-radius: 20px 20px 0 0;
+    }
+
+    .spot-detail-sheet .sheet-scroll-container {
+      margin: 0 calc(-1 * clamp(0.9rem, 5vw, 1.4rem));
+      padding: 0 clamp(0.9rem, 5vw, 1.4rem) clamp(3.2rem, 11vw, 3.9rem);
     }
 
     .spot-detail-sheet .sheet-actions .icon-button {
@@ -3556,6 +3569,11 @@ select.input:focus {
   .spot-detail-sheet .sheet-body {
     width: min(680px, 100vw);
     border-radius: 22px 22px 0 0;
+    padding: 0 clamp(1rem, 4.5vw, 1.75rem) 0;
+  }
+
+  .spot-detail-sheet .sheet-scroll-container {
+    margin: 0 calc(-1 * clamp(1rem, 4.5vw, 1.75rem));
     padding: 0 clamp(1rem, 4.5vw, 1.75rem) clamp(3.2rem, 6vw, 3.6rem);
   }
 
