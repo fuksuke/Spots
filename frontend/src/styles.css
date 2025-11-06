@@ -74,6 +74,25 @@ button {
   cursor: pointer;
 }
 
+.avatar {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  overflow: hidden;
+  background: #6d28d9;
+  color: #f8fafc;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+}
+
+.avatar img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
 .avatar-fallback {
   display: inline-flex;
   align-items: center;
@@ -511,7 +530,7 @@ button {
   overflow-y: auto;
   background: #ffffff;
   border-radius: 26px 26px 0 0;
-  padding: 1.5rem clamp(1.25rem, 5vw, 2rem) 2.25rem;
+  padding: 0 clamp(1.25rem, 5vw, 2rem) clamp(2.75rem, 8vw, 3.5rem);
   box-shadow: 0 24px 70px rgba(15, 23, 42, 0.18);
   z-index: 1;
   transform: translateY(100%);
@@ -542,20 +561,32 @@ button {
   box-shadow: 0 28px 80px rgba(15, 23, 42, 0.24);
 }
 
-.spot-detail-sheet .sheet-handle {
-  width: 56px;
-  height: 6px;
-  border-radius: 999px;
-  background: rgba(148, 163, 184, 0.5);
-  margin: 0 auto 1.1rem;
+.spot-detail-sheet .sheet-drag-region {
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
   cursor: grab;
   touch-action: none;
+  user-select: none;
+  margin: 0 calc(-1 * clamp(1.25rem, 5vw, 2rem));
+  padding: clamp(0.65rem, 2.4vw, 0.9rem) clamp(1.25rem, 5vw, 2rem) 0;
+}
+
+.spot-detail-sheet .sheet-drag-region.dragging {
+  cursor: grabbing;
+}
+
+.spot-detail-sheet .sheet-handle {
+  width: 46px;
+  height: 4px;
+  border-radius: 999px;
+  background: rgba(148, 163, 184, 0.5);
+  margin: 0 auto;
   transition: background-color 0.2s ease;
 }
 
 .spot-detail-sheet .sheet-handle.active {
   background: rgba(59, 130, 246, 0.6);
-  cursor: grabbing;
 }
 
 .spot-detail-sheet .sheet-top-bar {
@@ -566,6 +597,12 @@ button {
   padding-bottom: 0.75rem;
   border-bottom: 1px solid rgba(226, 232, 240, 0.9);
   margin-bottom: 0;
+  cursor: inherit;
+  touch-action: none;
+}
+
+.spot-detail-sheet .sheet-body.dragging .sheet-top-bar {
+  cursor: grabbing;
 }
 
 .spot-detail-sheet .sheet-owner {
@@ -594,6 +631,7 @@ button {
   width: 36px;
   height: 36px;
   font-size: 0.82rem;
+  cursor: pointer;
 }
 
 .spot-detail-sheet .spot-owner-verified {
@@ -3297,7 +3335,7 @@ select.input:focus {
     .spot-detail-sheet .sheet-body {
       width: 100vw;
       max-height: 90vh;
-      padding: 1.25rem clamp(0.9rem, 5vw, 1.4rem) 1.9rem;
+      padding: 0 clamp(0.9rem, 5vw, 1.4rem) clamp(3.2rem, 11vw, 3.9rem);
       border-radius: 20px 20px 0 0;
     }
 
@@ -3518,7 +3556,7 @@ select.input:focus {
   .spot-detail-sheet .sheet-body {
     width: min(680px, 100vw);
     border-radius: 22px 22px 0 0;
-    padding: 1.35rem clamp(1rem, 4.5vw, 1.75rem) 2rem;
+    padding: 0 clamp(1rem, 4.5vw, 1.75rem) clamp(3.2rem, 6vw, 3.6rem);
   }
 
   .spot-detail-sheet .sheet-top-bar {

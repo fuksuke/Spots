@@ -329,10 +329,18 @@ export const SpotDetailSheet = ({
     };
   }, [mediaItems.length]);
 
-  const handlePointerDown = useCallback(
-    (event: ReactPointerEvent<HTMLDivElement>) => {
+  const shouldIgnoreDragTarget = (event: ReactPointerEvent<HTMLElement>) => {
+    const element = event.target as HTMLElement | null;
+    if (!element) return false;
+    const interactive = element.closest("button, a, input, textarea, select, [data-prevent-drag]");
+    return Boolean(interactive);
+  };
+
+  const beginDrag = useCallback(
+    (event: ReactPointerEvent<HTMLElement>) => {
       if (!isOpen) return;
       if (event.pointerType === "mouse" && event.buttons !== 1) return;
+      if (shouldIgnoreDragTarget(event)) return;
       dragStateRef.current = {
         startY: event.clientY,
         startTranslate: sheetTranslate,
@@ -345,7 +353,7 @@ export const SpotDetailSheet = ({
   );
 
   const handlePointerMove = useCallback(
-    (event: ReactPointerEvent<HTMLDivElement>) => {
+    (event: ReactPointerEvent<HTMLElement>) => {
       if (!isDragging) return;
       if (dragStateRef.current.pointerId !== event.pointerId) return;
 
@@ -362,7 +370,7 @@ export const SpotDetailSheet = ({
   );
 
   const handlePointerEnd = useCallback(
-    (event: ReactPointerEvent<HTMLDivElement>) => {
+    (event: ReactPointerEvent<HTMLElement>) => {
       if (!isDragging) return;
       if (dragStateRef.current.pointerId !== event.pointerId) return;
 
@@ -485,33 +493,34 @@ export const SpotDetailSheet = ({
         {spot ? (
           <>
             <div
-              className={`sheet-handle ${isDragging ? "active" : ""}`.trim()}
-              aria-hidden="true"
-              onPointerDown={handlePointerDown}
+              className={`sheet-drag-region ${isDragging ? "dragging" : ""}`.trim()}
+              onPointerDown={beginDrag}
               onPointerMove={handlePointerMove}
               onPointerUp={handlePointerEnd}
               onPointerCancel={handlePointerEnd}
-            />
-            <header className="sheet-top-bar">
-              <div className="sheet-owner">
-                <Avatar name={spot.ownerDisplayName ?? spot.ownerId} photoUrl={spot.ownerPhotoUrl ?? undefined} size={36} />
-                <div className="sheet-owner-meta">
-                  <p className="sheet-owner-name">
-                    {spot.ownerDisplayName ?? spot.ownerId}
-                    {spot.ownerPhoneVerified ? (
-                      <span className="spot-owner-verified" title="SMS認証済み" aria-label="SMS認証済み">
-                        ✅
-                      </span>
-                    ) : null}
-                  </p>
+            >
+              <div className={`sheet-handle ${isDragging ? "active" : ""}`.trim()} aria-hidden="true" />
+              <header className="sheet-top-bar">
+                <div className="sheet-owner">
+                  <Avatar name={spot.ownerDisplayName ?? spot.ownerId} photoUrl={spot.ownerPhotoUrl ?? undefined} size={36} />
+                  <div className="sheet-owner-meta">
+                    <p className="sheet-owner-name">
+                      {spot.ownerDisplayName ?? spot.ownerId}
+                      {spot.ownerPhoneVerified ? (
+                        <span className="spot-owner-verified" title="SMS認証済み" aria-label="SMS認証済み">
+                          ✅
+                        </span>
+                      ) : null}
+                    </p>
+                  </div>
                 </div>
-              </div>
-              <div className="sheet-actions">
-                <button type="button" className="icon-button" onClick={closeSheet} aria-label="閉じる">
-                  ✕
-                </button>
-              </div>
-            </header>
+                <div className="sheet-actions">
+                  <button type="button" className="icon-button" onClick={closeSheet} aria-label="閉じる" data-prevent-drag>
+                    ✕
+                  </button>
+                </div>
+              </header>
+            </div>
 
             {renderMedia()}
 
