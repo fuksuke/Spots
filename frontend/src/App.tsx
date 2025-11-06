@@ -251,6 +251,7 @@ function App() {
   const [billingError, setBillingError] = useState<string | null>(null);
   const [hasAdminClaim, setHasAdminClaim] = useState(false);
   const [isAdminPanelOpen, setAdminPanelOpen] = useState(false);
+  const [isNotificationsOpen, setNotificationsOpen] = useState(false);
   const profileRefreshTimeoutRef = useRef<number | null>(null);
   const supportMailto = `mailto:${SUPPORT_EMAIL}`;
 
@@ -911,26 +912,25 @@ function App() {
       if (!currentUser) {
         setAuthModalOpen(true);
       }
+      setNotificationsOpen(false);
       return;
     }
     trackEvent("admin_dashboard_open", {});
+    setNotificationsOpen(false);
     setAdminPanelOpen(true);
   }, [authToken, currentUser, hasAdminClaim, triggerMessage]);
 
   const handleNotificationsClick = useCallback(() => {
-    if (notifications.length === 0) {
-      triggerMessage("新しい通知はありません");
-    } else {
-      markNotificationsAsRead(notifications.filter((notification) => notification.source === "remote"));
-      setNotifications([]);
-      triggerMessage("通知をクリアしました");
-    }
-  }, [markNotificationsAsRead, notifications, triggerMessage]);
+    setNotificationsOpen((open) => !open);
+  }, []);
 
   const handleNotificationDismiss = useCallback(
     (notification: InAppNotification) => {
       markNotificationsAsRead([notification]);
       setNotifications((current) => current.filter((item) => item.id !== notification.id));
+      if (notifications.length <= 1) {
+        setNotificationsOpen(false);
+      }
     },
     [markNotificationsAsRead]
   );
@@ -946,6 +946,7 @@ function App() {
       } else {
         triggerMessage("通知を確認しました");
       }
+      setNotificationsOpen(false);
     },
     [handlePromotionSelect, handleSpotSelect, markNotificationsAsRead, triggerMessage]
   );
@@ -953,6 +954,7 @@ function App() {
   const handleNotificationDismissAll = useCallback(() => {
     markNotificationsAsRead(notifications.filter((notification) => notification.source === "remote"));
     setNotifications([]);
+    setNotificationsOpen(false);
   }, [markNotificationsAsRead, notifications]);
 
   const handleAccountPanelOpen = useCallback(() => {
@@ -1405,8 +1407,6 @@ function App() {
           onSpotClick={handleSpotAction}
           onSelectPage={handleSelectPage}
           onModeToggle={handleModeToggle}
-          showAdmin={hasAdminClaim}
-          onAdminClick={handleAdminClick}
         />
       </div>
     </div>
@@ -1650,8 +1650,12 @@ function App() {
       <InAppNotifications
         notifications={notifications}
         onSelect={handleNotificationSelect}
-        onDismiss={handleNotificationDismiss}
-        onDismissAll={handleNotificationDismissAll}
+      isOpen={isNotificationsOpen}
+      hasAdminAccess={hasAdminClaim}
+      onDismiss={handleNotificationDismiss}
+      onDismissAll={handleNotificationDismissAll}
+      onAdminClick={handleAdminClick}
+      onClose={() => setNotificationsOpen(false)}
       />
 
       <SearchOverlay

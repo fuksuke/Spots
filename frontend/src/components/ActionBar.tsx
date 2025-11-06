@@ -8,11 +8,9 @@ export type ActionBarProps = {
   onSpotClick: () => void;
   onSelectPage: (page: PageMode) => void;
   onModeToggle: () => void;
-  showAdmin?: boolean;
-  onAdminClick?: () => void;
 };
 
-export const ActionBar = ({ pageMode, viewMode, onSpotClick, onSelectPage, onModeToggle, showAdmin, onAdminClick }: ActionBarProps) => {
+export const ActionBar = ({ pageMode, viewMode, onSpotClick, onSelectPage, onModeToggle }: ActionBarProps) => {
   const isHome = pageMode === "home";
   const nextModeIcon = viewMode === "map" ? (
     <Icon name="list" wrapperClassName="action-icon" label="リスト表示" />
@@ -40,11 +38,6 @@ export const ActionBar = ({ pageMode, viewMode, onSpotClick, onSelectPage, onMod
           </>
         )}
       </button>
-      {showAdmin ? (
-        <button type="button" className="action-bar-button" onClick={onAdminClick}>
-          🛡️<span>審査</span>
-        </button>
-      ) : null}
       <button type="button" className="action-bar-button primary" onClick={onSpotClick}>
         <Icon name="add" wrapperClassName="action-icon" label="投稿" />
         <span>投稿</span>
