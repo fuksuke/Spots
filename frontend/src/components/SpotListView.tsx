@@ -3,6 +3,7 @@ import { useMemo, useState } from "react";
 import type { Spot } from "../types";
 import { mockSpots } from "../mockData";
 import { Icon } from "./Icon";
+import { Avatar } from "./Avatar";
 
 const CATEGORY_ACCENT: Record<Spot["category"], string> = {
   live: "#ef4444",
@@ -144,7 +145,6 @@ export const SpotListView = ({ spots, isLoading, error, onSpotSelect }: SpotList
           const description = spot.summary?.trim() || spot.description;
           const viewLabel = views.toLocaleString("ja-JP");
           const likesLabel = likes.toLocaleString("ja-JP");
-          const accentColor = CATEGORY_ACCENT[spot.category] ?? "#f97316";
           const tagCandidates: string[] = [];
           tagCandidates.push(`#${spot.category}`);
           if (spot.locationName) {
@@ -173,11 +173,10 @@ export const SpotListView = ({ spots, isLoading, error, onSpotSelect }: SpotList
                 }
               }}
             >
-              <header
-                className="spot-mobile-card__title"
-                aria-label="イベント名"
-                style={{ borderLeftColor: accentColor }}
-              >
+              <header className="spot-mobile-card__title" aria-label="イベント名">
+                <span className="spot-mobile-card__avatar" aria-hidden="true">
+                  <Avatar name={spot.ownerDisplayName ?? spot.ownerId} photoUrl={spot.ownerPhotoUrl ?? null} size={32} />
+                </span>
                 <h3>{spot.title}</h3>
               </header>
               <section className="spot-mobile-card__meta" aria-label="イベント概要">
