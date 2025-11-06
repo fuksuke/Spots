@@ -458,7 +458,7 @@ class SpotCalloutManager {
   private position(entry: CalloutEntry) {
     const point = this.map.project(entry.lngLat);
     const x = point.x - entry.width / 2;
-    const y = point.y - entry.height;
+    const y = point.y - entry.height - 8;
     entry.element.style.transform = `translate(${x}px, ${y}px)`;
   }
 
@@ -632,25 +632,6 @@ const ensureMapLayers = (map: MapboxMap) => {
     });
   }
 
-  if (!map.getLayer(LAYER_BALLOON)) {
-    map.addLayer({
-      id: LAYER_BALLOON,
-      type: "symbol",
-      source: TILE_SOURCE_ID,
-      filter: ["==", ["get", "featureType"], "balloon"],
-      layout: {
-        "text-field": ["get", "title"],
-        "text-anchor": "top",
-        "text-offset": [0, 1.1],
-        "text-size": 12
-      },
-      paint: {
-        "text-color": "#111827",
-        "text-halo-color": "rgba(255,255,255,0.8)",
-        "text-halo-width": 1.5
-      }
-    });
-  }
 };
 
 export type MapViewProps = {

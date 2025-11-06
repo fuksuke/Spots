@@ -44,7 +44,7 @@ export const InAppNotifications = ({
       <section className="floating-body notification-panel-card" role="document">
         <header className="notification-panel__header">
           <div>
-            <h3>通知センター</h3>
+            <h3>通知</h3>
             <p className="notification-panel__subtitle">
               {hasNotifications ? `新着通知 (${notifications.length})` : "通知はありません"}
             </p>
@@ -98,9 +98,9 @@ export const InAppNotifications = ({
         {hasAdminAccess ? (
           <footer className="notification-panel__footer">
             <button type="button" className="button primary" onClick={onAdminClick}>
-              審査ツールを開く
+              審査状況
             </button>
-            <p className="hint">管理者としてログイン中のため、審査ツールへアクセスできます。</p>
+            <p className="hint">投稿の審査状況が確認できます。</p>
           </footer>
         ) : null}
       </section>
