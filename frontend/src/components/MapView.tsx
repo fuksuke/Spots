@@ -363,8 +363,12 @@ const createCalloutDom = (
   const tail = document.createElement('span');
   tail.className = 'map-callout__tail';
 
+  const hostLabel = document.createElement('span');
+  hostLabel.className = 'map-callout__host';
+  hostLabel.tabIndex = -1;
+
   bubble.append(lamp, text, status);
-  wrapper.append(bubble, tail);
+  wrapper.append(hostLabel, bubble, tail);
 
   const update = (next: MapTileFeature) => {
     wrapper.dataset.spotId = next.id;
@@ -389,6 +393,15 @@ const createCalloutDom = (
     } else {
       status.textContent = '';
       status.style.display = 'none';
+    }
+
+    const hostName = next.spot?.ownerDisplayName || next.spot?.ownerId || '';
+    if (hostName.trim()) {
+      hostLabel.textContent = hostName.trim();
+      hostLabel.style.display = 'inline-flex';
+    } else {
+      hostLabel.textContent = '';
+      hostLabel.style.display = 'none';
     }
   };
 
