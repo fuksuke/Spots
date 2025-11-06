@@ -12,6 +12,12 @@ export type SpotPricing = {
   isFree: boolean;
 };
 
+export type SpotExternalLink = {
+  label: string;
+  url: string;
+  icon?: string | null;
+};
+
 export type Spot = {
   id: string;
   title: string;
@@ -25,6 +31,7 @@ export type Spot = {
   endTime: string;
   durationMinutes?: number;
   imageUrl?: string | null;
+  mediaUrls?: string[] | null;
   likes: number;
   commentsCount: number;
   ownerId: string;
@@ -49,6 +56,7 @@ export type Spot = {
     id: string;
     priority: number;
   } | null;
+  externalLinks?: SpotExternalLink[] | null;
 };
 
 export type Coordinates = {

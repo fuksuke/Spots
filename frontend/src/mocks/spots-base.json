@@ -8,10 +8,14 @@
     "category": "live",
     "lat": 35.6602,
     "lng": 139.7001,
-    "startTime": "2025-11-06T11:30:00.000Z",
-    "endTime": "2025-11-06T23:00:00.000Z",
+    "startTime": "2025-11-07T11:30:00.000Z",
+    "endTime": "2025-11-07T23:00:00.000Z",
     "durationMinutes": 90,
     "imageUrl": null,
+    "mediaUrls": [
+      "https://images.unsplash.com/photo-1511671782779-c97d3d27a1d4",
+      "https://images.unsplash.com/photo-1497032628192-86f99bcd76bc"
+    ],
     "likes": 12,
     "viewCount": 320,
     "ownerId": "owner-live",
@@ -30,7 +34,17 @@
     "premium": false,
     "promotion": null,
     "popularityScore": 35,
-    "commentsCount": 3
+    "commentsCount": 3,
+    "externalLinks": [
+      {
+        "label": "Instagram",
+        "url": "https://www.instagram.com/backstage_live/"
+      },
+      {
+        "label": "公式サイト",
+        "url": "https://shibuya-live.example.com"
+      }
+    ]
   },
   {
     "id": "spot-2",
@@ -41,10 +55,15 @@
     "category": "cafe",
     "lat": 35.661,
     "lng": 139.6995,
-    "startTime": "2025-11-06T00:00:00.000+09:00",
-    "endTime": "2025-11-06T23:00:00.000+09:00",
+    "startTime": "2025-11-07T00:00:00.000+09:00",
+    "endTime": "2025-11-07T23:00:00.000+09:00",
     "durationMinutes": 120,
     "imageUrl": null,
+    "mediaUrls": [
+      "https://images.unsplash.com/photo-1509042239860-f550ce710b93",
+      "https://images.unsplash.com/photo-1495474472287-4d71bcdd2085",
+      "https://images.unsplash.com/photo-1495474472287-4d71bcdd2085?auto=format&fit=crop&w=900&q=80"
+    ],
     "likes": 7,
     "viewCount": 150,
     "ownerId": "owner-cafe",
@@ -65,7 +84,17 @@
     "premium": false,
     "promotion": null,
     "popularityScore": 18,
-    "commentsCount": 2
+    "commentsCount": 2,
+    "externalLinks": [
+      {
+        "label": "X (旧Twitter)",
+        "url": "https://twitter.com/sunrise_coffee"
+      },
+      {
+        "label": "Google マップ",
+        "url": "https://maps.google.com/?q=35.661,139.6995"
+      }
+    ]
   },
   {
     "id": "spot-3",
@@ -76,8 +105,8 @@
     "category": "event",
     "lat": 35.658,
     "lng": 139.702,
-    "startTime": "2025-11-06T09:00:00.000Z",
-    "endTime": "2025-11-06T23:30:00.000Z",
+    "startTime": "2025-11-07T09:00:00.000Z",
+    "endTime": "2025-11-07T23:30:00.000Z",
     "durationMinutes": 90,
     "imageUrl": null,
     "likes": 30,
@@ -111,8 +140,8 @@
     "category": "event",
     "lat": 35.6589,
     "lng": 139.704,
-    "startTime": "2025-11-06T12:00:00.000Z",
-    "endTime": "2025-11-06T23:00:00.000Z",
+    "startTime": "2025-11-07T12:00:00.000Z",
+    "endTime": "2025-11-07T23:00:00.000Z",
     "durationMinutes": 120,
     "imageUrl": null,
     "likes": 42,
