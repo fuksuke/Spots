@@ -18,6 +18,12 @@ export type SpotExternalLink = {
   icon?: string | null;
 };
 
+export type SpotContact = {
+  phone?: string | null;
+  email?: string | null;
+  sns?: Record<string, string> | null;
+};
+
 export type Spot = {
   id: string;
   title: string;
@@ -38,6 +44,7 @@ export type Spot = {
   ownerDisplayName?: string | null;
   ownerPhotoUrl?: string | null;
   locationName?: string | null;
+  locationDetails?: string | null;
   distanceMeters?: number;
   pricing?: SpotPricing | null;
   isIndoor?: boolean | null;
@@ -52,6 +59,7 @@ export type Spot = {
   popularityScore?: number;
   popularityRank?: number;
   ownerPhoneVerified?: boolean;
+  contact?: SpotContact | null;
   promotion?: {
     id: string;
     priority: number;

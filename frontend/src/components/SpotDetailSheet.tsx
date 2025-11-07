@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import type { FormEvent, PointerEvent as ReactPointerEvent, WheelEvent as ReactWheelEvent } from "react";
+import type { FormEvent, PointerEvent as ReactPointerEvent, ReactNode, WheelEvent as ReactWheelEvent } from "react";
 
 import { Avatar } from "./Avatar";
 import { Icon } from "./Icon";
@@ -29,6 +29,7 @@ export type SpotDetailSheetProps = {
   onClose: () => void;
   onNotify?: (spot: Spot) => void;
   onShare?: (spot: Spot) => void;
+  onOverlayToggle?: (open: boolean) => void;
 };
 
 export const SpotDetailSheet = ({
@@ -36,7 +37,8 @@ export const SpotDetailSheet = ({
   isOpen,
   onClose,
   onNotify,
-  onShare
+  onShare,
+  onOverlayToggle
 }: SpotDetailSheetProps) => {
   const timeRange = useMemo(() => {
     if (!spot) return "";
@@ -123,6 +125,16 @@ export const SpotDetailSheet = ({
       setReportCategory(REPORT_CATEGORIES[0].value);
     }
   }, [spot?.id, isOpen]);
+
+  useEffect(() => {
+    onOverlayToggle?.(isReportModalOpen);
+  }, [isReportModalOpen, onOverlayToggle]);
+
+  useEffect(() => {
+    return () => {
+      onOverlayToggle?.(false);
+    };
+  }, [onOverlayToggle]);
 
   useEffect(() => {
     if (sheetTranslate > 0) {
@@ -621,6 +633,45 @@ export const SpotDetailSheet = ({
     return urls;
   }, [spot]);
 
+  const hasMedia = mediaGalleryUrls.length > 0;
+  const contactEntry = useMemo(() => {
+    if (!spot?.contact) return null;
+    const { phone, email, sns } = spot.contact;
+    if (phone) {
+      return { label: "連絡先", value: phone, href: `tel:${phone.replace(/\s+/g, "")}` };
+    }
+    if (email) {
+      return { label: "連絡先", value: email, href: `mailto:${email}` };
+    }
+    if (sns) {
+      const first = Object.entries(sns).find(([, url]) => Boolean(url));
+      if (first) {
+        const [key, url] = first;
+        if (url) {
+          return { label: "連絡先", value: `${key.toUpperCase()}: ${url}`, href: url };
+        }
+      }
+    }
+    return null;
+  }, [spot?.contact]);
+  const detailItems = useMemo(() => {
+    const items: Array<{ type: "contact" | "location"; content: ReactNode; key: string }> = [];
+    if (contactEntry) {
+      const content = contactEntry.href ? (
+        <a href={contactEntry.href} target={contactEntry.href.startsWith("http") ? "_blank" : undefined} rel="noopener noreferrer">
+          {contactEntry.value}
+        </a>
+      ) : (
+        contactEntry.value
+      );
+      items.push({ type: "contact", content, key: "contact" });
+    }
+    if (spot?.locationDetails) {
+      items.push({ type: "location", content: spot.locationDetails, key: "location" });
+    }
+    return items;
+  }, [contactEntry, spot?.locationDetails]);
+
   const externalLinks = useMemo<SpotExternalLink[]>(() => {
     if (!spot || !spot.externalLinks) return [];
     return spot.externalLinks.filter((link) => Boolean(link?.url)).map((link) => ({
@@ -653,9 +704,17 @@ export const SpotDetailSheet = ({
 
   const sheetMode = sheetTranslate <= EXPAND_THRESHOLD ? "expanded" : sheetTranslate >= 99 ? "closed" : "peek";
 
+  const sheetClassName = [
+    "spot-detail-sheet",
+    isOpen ? "open" : "",
+    isReportModalOpen ? "overlay-active" : ""
+  ]
+    .filter(Boolean)
+    .join(" ");
+
   return (
     <div
-      className={`spot-detail-sheet ${isOpen ? "open" : ""}`.trim()}
+      className={sheetClassName}
       role="dialog"
       aria-modal={false}
       aria-hidden={!isOpen}
@@ -706,8 +765,8 @@ export const SpotDetailSheet = ({
               onWheel={handleScrollableWheel}
               style={{ overflowY: sheetTranslate <= 0 ? "auto" : "hidden" }}
             >
-              <div className="sheet-content">
-                {mediaGalleryUrls.length > 0 ? (
+              <div className={`sheet-content ${hasMedia ? "has-media" : "no-media"}`.trim()}>
+                {hasMedia ? (
                   <SpotMediaGallery title={spot.title} mediaUrls={mediaGalleryUrls} />
                 ) : null}
 
@@ -760,6 +819,24 @@ export const SpotDetailSheet = ({
                   </div>
                 </section>
 
+                {detailItems.length > 0 ? (
+                  <section className="sheet-section sheet-details">
+                    <h3>詳細情報</h3>
+                    <ul className="sheet-detail-list">
+                      {detailItems.map((item) => (
+                        <li key={item.key} className="detail-row">
+                          <span className="detail-icon">
+                            <Icon name={item.type === "contact" ? "wechatLogo" : "mapLight"} size={18} />
+                          </span>
+                          <div className="detail-content">
+                            {item.content}
+                          </div>
+                        </li>
+                      ))}
+                    </ul>
+                  </section>
+                ) : null}
+
                 {externalLinks.length > 0 ? (
                   <section className="sheet-section">
                     <h3>関連リンク</h3>
@@ -778,7 +855,7 @@ export const SpotDetailSheet = ({
                 <section className="sheet-section sheet-report">
                   <button
                     type="button"
-                    className="button danger report-trigger"
+                    className="button secondary report-trigger"
                     onClick={() => setIsReportModalOpen(true)}
                   >
                     通報する

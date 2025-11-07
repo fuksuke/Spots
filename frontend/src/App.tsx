@@ -253,8 +253,25 @@ function App() {
   const [hasAdminClaim, setHasAdminClaim] = useState(false);
   const [isAdminPanelOpen, setAdminPanelOpen] = useState(false);
   const [isNotificationsOpen, setNotificationsOpen] = useState(false);
+  const [isSheetModalOpen, setSheetModalOpen] = useState(false);
   const profileRefreshTimeoutRef = useRef<number | null>(null);
   const supportMailto = `mailto:${SUPPORT_EMAIL}`;
+  const isAnyModalOpen =
+    isAdminPanelOpen ||
+    isAccountPanelOpen ||
+    isAuthModalOpen ||
+    isCategoryManagerOpen ||
+    isUpgradeModalOpen ||
+    isNotificationsOpen ||
+    isSheetModalOpen;
+
+  useEffect(() => {
+    if (typeof document === "undefined") return;
+    document.body.classList.toggle("modal-open", isAnyModalOpen);
+    return () => {
+      document.body.classList.remove("modal-open");
+    };
+  }, [isAnyModalOpen]);
 
   const triggerMessage = useCallback((message: string) => {
     setAppMessage(message);
@@ -845,6 +862,10 @@ function App() {
     },
     [triggerMessage]
   );
+
+  const handleSheetOverlayToggle = useCallback((open: boolean) => {
+    setSheetModalOpen(open);
+  }, []);
 
   const handleNotify = useCallback(
     (spot: Spot) => {
@@ -1454,6 +1475,14 @@ function App() {
       <div className={`auth-modal ${isAuthModalOpen ? "open" : ""}`.trim()} role="dialog" aria-hidden={!isAuthModalOpen}>
         <div className="modal-scrim" aria-hidden="true" onClick={() => setAuthModalOpen(false)} />
         <div className="modal-body">
+          <button
+            type="button"
+            className="icon-button modal-close"
+            aria-label="閉じる"
+            onClick={() => setAuthModalOpen(false)}
+          >
+            ✕
+          </button>
           <Suspense fallback={<div className="panel">認証フォームを読み込み中...</div>}>
             <AuthPanel user={currentUser} />
           </Suspense>
@@ -1620,6 +1649,7 @@ function App() {
         onClose={() => setActiveSpot(null)}
         onNotify={handleNotify}
         onShare={handleShareSpot}
+        onOverlayToggle={handleSheetOverlayToggle}
       />
 
       <InAppNotifications

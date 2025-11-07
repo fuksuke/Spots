@@ -21,7 +21,11 @@
     "ownerId": "owner-live",
     "ownerDisplayName": "backstage",
     "ownerPhoneVerified": true,
+    "contact": {
+      "phone": "+81-3-6400-5522"
+    },
     "locationName": "渋谷駅ハチ公前",
+    "locationDetails": "スクランブル交差点側・忠犬ハチ公像前",
     "distanceMeters": 180,
     "pricing": {
       "label": "無料",
@@ -69,7 +73,13 @@
     "ownerId": "owner-cafe",
     "ownerDisplayName": "SUNRISE BREW",
     "ownerPhoneVerified": false,
+    "contact": {
+      "sns": {
+        "twitter": "https://twitter.com/sunrise_coffee"
+      }
+    },
     "locationName": "MIYASHITA PARK",
+    "locationDetails": "屋上フードコード内・北側テラス",
     "distanceMeters": 260,
     "pricing": {
       "label": "¥600",
@@ -114,7 +124,11 @@
     "ownerId": "owner-yoga",
     "ownerDisplayName": "渋谷 Yoga ガーデン",
     "ownerPhoneVerified": true,
+    "contact": {
+      "phone": "+81-3-5800-2201"
+    },
     "locationName": "渋谷ガーデンルーム",
+    "locationDetails": "ヒカリエ7F ガーデンルーム",
     "distanceMeters": 420,
     "pricing": {
       "label": "¥1,500",
@@ -149,7 +163,11 @@
     "ownerId": "owner-premium",
     "ownerDisplayName": "Club Sonic",
     "ownerPhoneVerified": true,
+    "contact": {
+      "email": "vip@clubsonic.example.com"
+    },
     "locationName": "渋谷Club Sonic",
+    "locationDetails": "センター街 B1F VIPフロア",
     "distanceMeters": 350,
     "pricing": {
       "label": "¥2,500",

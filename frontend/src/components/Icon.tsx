@@ -23,7 +23,8 @@ import {
   PiCurrencyJpyFill,
   PiCalendarFill,
   PiHeart,
-  PiSealCheckFill
+  PiSealCheckFill,
+  PiWechatLogoFill
 } from "react-icons/pi";
 
 const ICONS = {
@@ -50,7 +51,8 @@ const ICONS = {
   currencyJpyFill: PiCurrencyJpyFill,
   calendarSimple: PiCalendarFill,
   heart: PiHeart,
-  sealCheck: PiSealCheckFill
+  sealCheck: PiSealCheckFill,
+  wechatLogo: PiWechatLogoFill
 } as const;
 
 export type IconName = keyof typeof ICONS;

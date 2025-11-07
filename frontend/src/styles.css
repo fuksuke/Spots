@@ -51,6 +51,10 @@ body {
   color: inherit;
 }
 
+body.modal-open {
+  overflow: hidden;
+}
+
 #root {
   width: 100%;
   height: 100%;
@@ -474,6 +478,16 @@ button {
   width: min(520px, 90svw);
 }
 
+.auth-modal .modal-close {
+  position: absolute;
+  top: 0.5rem;
+  right: 0.5rem;
+  width: 32px;
+  height: 32px;
+  background: rgba(15, 23, 42, 0.06);
+  border-radius: 999px;
+}
+
 .auth-modal.billing-modal .modal-body {
   width: min(640px, 92svw);
 }
@@ -521,6 +535,9 @@ button {
 
 .spot-detail-sheet.open {
   opacity: 1;
+}
+
+.spot-detail-sheet.overlay-active {
   pointer-events: auto;
 }
 
@@ -553,7 +570,7 @@ button {
   min-height: 0;
   overflow-y: auto;
   margin: 0 calc(-1 * var(--sheet-horizontal-padding));
-  padding: 0 var(--sheet-horizontal-padding) clamp(3.5rem, 10vw, 4.5rem);
+  padding: 0 calc(var(--sheet-horizontal-padding) + 0.75rem) clamp(3.5rem, 10vw, 4.5rem);
   overscroll-behavior: contain;
   scrollbar-width: thin;
   scrollbar-color: rgba(148, 163, 184, 0.4) transparent;
@@ -706,7 +723,7 @@ button {
 
 .spot-detail-sheet .sheet-event-title {
   margin: 0;
-  font-size: clamp(1.45rem, 2.6vw, 1.85rem);
+  font-size: clamp(1.35rem, 2.4vw, 1.75rem);
   color: #0f172a;
   line-height: 1.2;
 }
@@ -722,6 +739,10 @@ button {
   display: flex;
   flex-direction: column;
   gap: 1.5rem;
+}
+
+.spot-detail-sheet .sheet-content.no-media .sheet-section:first-of-type {
+  margin-top: 0.75rem;
 }
 
 .spot-detail-sheet .sheet-media {
@@ -878,11 +899,68 @@ button {
 
 .spot-detail-sheet .sheet-section.sheet-report {
   margin-top: 0.25rem;
+  margin-bottom: 0.5rem;
 }
 
 .spot-detail-sheet .sheet-section.sheet-report .report-trigger {
   width: 100%;
   justify-content: center;
+}
+
+.spot-detail-sheet .sheet-section.sheet-details .sheet-detail-list {
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.65rem;
+  list-style: none;
+}
+
+.spot-detail-sheet .sheet-section.sheet-details {
+  background: rgba(148, 163, 184, 0.14);
+  border-radius: 18px;
+  padding: 1rem;
+}
+
+.spot-detail-sheet .sheet-section.sheet-details .detail-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.6rem;
+}
+
+.spot-detail-sheet .sheet-section.sheet-details .detail-icon {
+  width: 36px;
+  height: 36px;
+  border-radius: 12px;
+  background: rgba(15, 23, 42, 0.05);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: #0f172a;
+}
+
+.spot-detail-sheet .sheet-section.sheet-details .detail-content {
+  flex: 1 1 auto;
+  font-size: 0.95rem;
+  color: rgba(15, 23, 42, 0.95);
+}
+
+.spot-detail-sheet .sheet-section.sheet-details .detail-content a {
+  color: #2563eb;
+  text-decoration: none;
+}
+
+.spot-detail-sheet .sheet-section.sheet-details .detail-content a:hover {
+  text-decoration: underline;
+}
+
+.spot-detail-sheet .sheet-section.sheet-details dd a {
+  color: #2563eb;
+  text-decoration: none;
+}
+
+.spot-detail-sheet .sheet-section.sheet-details dd a:hover {
+  text-decoration: underline;
 }
 
 .spot-detail-sheet .sheet-report-modal {
@@ -953,18 +1031,19 @@ button {
 
 .spot-detail-sheet .sheet-section h3 {
   margin: 0;
-  font-size: 1.05rem;
+  font-size: 0.98rem;
   color: #0f172a;
 }
 
 .spot-detail-sheet .sheet-period {
   margin: 0;
-  font-size: 0.92rem;
+  font-size: 0.88rem;
   color: rgba(71, 85, 105, 0.88);
 }
 
 .spot-detail-sheet .sheet-description {
   margin: 0;
+  font-size: 0.95rem;
   line-height: 1.7;
   color: rgba(30, 41, 59, 0.95);
   white-space: pre-wrap;
@@ -3512,7 +3591,7 @@ select.input:focus {
     }
 
     .spot-detail-sheet .sheet-scroll-container {
-      padding: 0 var(--sheet-horizontal-padding) clamp(4.5rem, 18vw, 5.5rem);
+      padding: 0 calc(var(--sheet-horizontal-padding) + 0.35rem) clamp(4.5rem, 18vw, 5.5rem);
     }
 
     .spot-detail-sheet .sheet-owner-name {
@@ -3563,6 +3642,10 @@ select.input:focus {
 
   .layout-column.is-keyboard-open .action-bar {
     transform: translateY(calc(-1 * var(--app-keyboard-offset, 0px)));
+  }
+
+  body.modal-open .layout-column.is-keyboard-open .action-bar {
+    transform: none !important;
   }
 
   .action-bar-button {
