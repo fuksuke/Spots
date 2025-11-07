@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import type { PointerEvent as ReactPointerEvent, WheelEvent as ReactWheelEvent } from "react";
+import type { FormEvent, PointerEvent as ReactPointerEvent, WheelEvent as ReactWheelEvent } from "react";
 
 import { Avatar } from "./Avatar";
 import { Icon } from "./Icon";
@@ -7,7 +7,14 @@ import { SpotMediaGallery } from "./SpotMediaGallery";
 import { Spot, SpotExternalLink } from "../types";
 
 const clamp = (value: number, min: number, max: number) => Math.min(Math.max(value, min), max);
-const PEEK_TRANSLATE = 45;
+const PEEK_TRANSLATE = 50;
+const REPORT_CATEGORIES = [
+  { value: "spam", label: "スパム・宣伝" },
+  { value: "misinfo", label: "誤った情報" },
+  { value: "inappropriate", label: "不適切な内容" },
+  { value: "safety", label: "安全上の問題" },
+  { value: "other", label: "その他" }
+] as const;
 const EXPAND_THRESHOLD = 18;
 const CLOSE_THRESHOLD = 70;
 const CLOSE_ANIMATION_MS = 240;
@@ -73,6 +80,11 @@ export const SpotDetailSheet = ({
   const wheelActiveRef = useRef(false);
   const wheelSettleTimeoutRef = useRef<number | null>(null);
   const [isDragging, setIsDragging] = useState(false);
+  const [isShareMenuOpen, setIsShareMenuOpen] = useState(false);
+  const [isReportModalOpen, setIsReportModalOpen] = useState(false);
+  const [reportCategory, setReportCategory] = useState<string>(REPORT_CATEGORIES[0].value);
+  const [reportDetails, setReportDetails] = useState("");
+  const [isSubmittingReport, setIsSubmittingReport] = useState(false);
 
   useEffect(() => {
     return () => {
@@ -105,6 +117,10 @@ export const SpotDetailSheet = ({
       setSheetTranslate(PEEK_TRANSLATE);
       setIsDragging(false);
       scrollAreaRef.current?.scrollTo({ top: 0, behavior: "auto" });
+      setIsShareMenuOpen(false);
+      setIsReportModalOpen(false);
+      setReportDetails("");
+      setReportCategory(REPORT_CATEGORIES[0].value);
     }
   }, [spot?.id, isOpen]);
 
@@ -567,6 +583,28 @@ export const SpotDetailSheet = ({
     window.open(url, "_blank", "noopener,noreferrer");
   }, [spot]);
 
+  const handleSubmitReport = useCallback(
+    async (event: FormEvent<HTMLFormElement>) => {
+      event.preventDefault();
+      if (!spot || isSubmittingReport) return;
+      setIsSubmittingReport(true);
+      try {
+        await new Promise((resolve) => setTimeout(resolve, 600));
+        console.info("Report submitted", {
+          spotId: spot.id,
+          reportCategory,
+          reportDetails
+        });
+        setIsReportModalOpen(false);
+        setReportDetails("");
+        setReportCategory(REPORT_CATEGORIES[0].value);
+      } finally {
+        setIsSubmittingReport(false);
+      }
+    },
+    [isSubmittingReport, reportCategory, reportDetails, spot]
+  );
+
   const mediaGalleryUrls = useMemo(() => {
     if (!spot) return [];
     const urls: string[] = [];
@@ -590,6 +628,27 @@ export const SpotDetailSheet = ({
       url: link.url,
       icon: link.icon ?? null
     }));
+  }, [spot]);
+
+  const shareMenuLinks = useMemo(() => {
+    if (!spot) return [];
+    const shareUrl = `https://shibuya-livemap.example/spots/${spot.id}`;
+    const encodedUrl = encodeURIComponent(shareUrl);
+    const encodedText = encodeURIComponent(`${spot.title} @Shibuya LiveMap`);
+    return [
+      {
+        label: "LINE",
+        href: `https://line.me/R/msg/text/?${encodeURIComponent(`${spot.title}\n${shareUrl}`)}`
+      },
+      {
+        label: "Instagram",
+        href: `https://www.instagram.com/?url=${encodedUrl}`
+      },
+      {
+        label: "X (旧Twitter)",
+        href: `https://twitter.com/intent/tweet?text=${encodedText}&url=${encodedUrl}`
+      }
+    ];
   }, [spot]);
 
   const sheetMode = sheetTranslate <= EXPAND_THRESHOLD ? "expanded" : sheetTranslate >= 99 ? "closed" : "peek";
@@ -620,17 +679,15 @@ export const SpotDetailSheet = ({
               <div className={`sheet-handle ${isDragging ? "active" : ""}`.trim()} aria-hidden="true" />
               <header className="sheet-top-bar">
                 <div className="sheet-owner">
-                  <Avatar name={spot.ownerDisplayName ?? spot.ownerId} photoUrl={spot.ownerPhotoUrl ?? undefined} size={36} />
-                  <div className="sheet-owner-meta">
-                    <p className="sheet-owner-name">
-                      {spot.ownerDisplayName ?? spot.ownerId}
-                      {spot.ownerPhoneVerified ? (
-                        <span className="spot-owner-verified" title="SMS認証済み" aria-label="SMS認証済み">
-                          <Icon name="sealCheck" size={18} color="#a3e635" label={undefined} />
-                        </span>
-                      ) : null}
-                    </p>
-                  </div>
+                  <Avatar name={spot.ownerDisplayName ?? spot.ownerId} photoUrl={spot.ownerPhotoUrl ?? undefined} size={28} />
+                  <p className="sheet-owner-name">
+                    {spot.ownerDisplayName ?? spot.ownerId}
+                    {spot.ownerPhoneVerified ? (
+                      <span className="spot-owner-verified" title="SMS認証済み" aria-label="SMS認証済み">
+                        <Icon name="sealCheck" size={16} color="#a3e635" label={undefined} />
+                      </span>
+                    ) : null}
+                  </p>
                 </div>
                 <div className="sheet-actions">
                   <button type="button" className="icon-button" onClick={closeSheet} aria-label="閉じる" data-prevent-drag>
@@ -656,10 +713,16 @@ export const SpotDetailSheet = ({
 
                 <section className="sheet-section">
                   <header className="sheet-section-header">
-                    <div className="sheet-section-heading">
-                      <h2 className="sheet-event-title" id={`spot-detail-${spot.id}`}>
-                        {spot.title}
-                      </h2>
+                    <div className="sheet-heading-row">
+                      <div className="sheet-section-heading">
+                        <h2 className="sheet-event-title" id={`spot-detail-${spot.id}`}>
+                          {spot.title}
+                        </h2>
+                      </div>
+                      <button type="button" className="sheet-like-button" aria-label="いいね" data-prevent-drag>
+                        <Icon name="heart" size={18} color={spot.likedByViewer ? "#ef4444" : "#cbd5f5"} />
+                        <span>{(spot.likes ?? 0).toLocaleString("ja-JP")}</span>
+                      </button>
                     </div>
                     <p className="sheet-period">{timeRange}</p>
                   </header>
@@ -667,9 +730,34 @@ export const SpotDetailSheet = ({
                 </section>
 
                 <section className="sheet-section">
-                  <button type="button" className="button primary directions" onClick={handleDirections}>
-                    Google マップで経路を表示
-                  </button>
+                  <div className="sheet-action-row">
+                    <button type="button" className="button primary directions" onClick={handleDirections}>
+                      Google マップで経路を表示
+                    </button>
+                    <div className="sheet-share-wrapper" data-prevent-drag>
+                      <button
+                        type="button"
+                        className="button secondary share-toggle"
+                        onClick={() => setIsShareMenuOpen((prev) => !prev)}
+                      >
+                        共有
+                      </button>
+                      {isShareMenuOpen ? (
+                        <div className="sheet-share-menu">
+                          <button type="button" className="sheet-share-menu__native" onClick={() => spot && onShare?.(spot)}>
+                            端末で共有
+                          </button>
+                          <div className="sheet-share-menu__links">
+                            {shareMenuLinks.map((link) => (
+                              <a key={link.label} href={link.href} target="_blank" rel="noopener noreferrer">
+                                {link.label}
+                              </a>
+                            ))}
+                          </div>
+                        </div>
+                      ) : null}
+                    </div>
+                  </div>
                 </section>
 
                 {externalLinks.length > 0 ? (
@@ -687,6 +775,16 @@ export const SpotDetailSheet = ({
                   </section>
                 ) : null}
 
+                <section className="sheet-section sheet-report">
+                  <button
+                    type="button"
+                    className="button danger report-trigger"
+                    onClick={() => setIsReportModalOpen(true)}
+                  >
+                    通報する
+                  </button>
+                </section>
+
               </div>
             </div>
           </>
@@ -694,6 +792,42 @@ export const SpotDetailSheet = ({
           <div className="sheet-placeholder">イベントを選択してください。</div>
         )}
       </section>
+      {isReportModalOpen ? (
+        <div className="sheet-report-modal" role="dialog" aria-modal>
+          <div className="sheet-report-modal__body">
+            <header className="sheet-report-modal__header">
+              <h3>このイベントを通報</h3>
+              <button type="button" className="icon-button" onClick={() => setIsReportModalOpen(false)} aria-label="閉じる">
+                ✕
+              </button>
+            </header>
+            <form className="sheet-report-form" onSubmit={handleSubmitReport}>
+              <label className="sheet-report-field">
+                <span>カテゴリ</span>
+                <select value={reportCategory} onChange={(event) => setReportCategory(event.target.value)}>
+                  {REPORT_CATEGORIES.map((category) => (
+                    <option key={category.value} value={category.value}>
+                      {category.label}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <label className="sheet-report-field">
+                <span>詳細 (任意)</span>
+                <textarea value={reportDetails} onChange={(event) => setReportDetails(event.target.value)} rows={3} />
+              </label>
+              <div className="sheet-report-actions">
+                <button type="button" className="button subtle" onClick={() => setIsReportModalOpen(false)}>
+                  キャンセル
+                </button>
+                <button type="submit" className="button danger" disabled={isSubmittingReport}>
+                  {isSubmittingReport ? "送信中..." : "送信"}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      ) : null}
     </div>
   );
 };

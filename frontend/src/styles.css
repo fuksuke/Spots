@@ -521,6 +521,7 @@ button {
 
 .spot-detail-sheet.open {
   opacity: 1;
+  pointer-events: auto;
 }
 
 .spot-detail-sheet .sheet-body {
@@ -624,29 +625,24 @@ button {
 .spot-detail-sheet .sheet-owner {
   display: flex;
   align-items: center;
-  gap: 0.6rem;
-}
-
-.spot-detail-sheet .sheet-owner-meta {
-  display: flex;
-  flex-direction: column;
-  gap: 0.1rem;
+  gap: 0.45rem;
 }
 
 .spot-detail-sheet .sheet-owner-name {
   margin: 0;
-  font-size: 0.88rem;
+  font-size: 0.78rem;
   font-weight: 600;
   color: #0f172a;
   display: inline-flex;
   align-items: center;
-  gap: 0.28rem;
+  gap: 0.2rem;
+  line-height: 1.1;
 }
 
 .spot-detail-sheet .sheet-top-bar .icon-button {
-  width: 36px;
-  height: 36px;
-  font-size: 0.82rem;
+  width: 24px;
+  height: 24px;
+  font-size: 0.65rem;
   cursor: pointer;
 }
 
@@ -659,12 +655,12 @@ button {
 
 .spot-detail-sheet .sheet-actions {
   display: inline-flex;
-  gap: 0.65rem;
+  gap: 0.4rem;
 }
 
 .spot-detail-sheet .sheet-actions .icon-button {
-  width: 35px;
-  height: 3px;
+  width: 24px;
+  height: 24px;
 }
 
 
@@ -674,12 +670,38 @@ button {
   gap: 0.6rem;
 }
 
+.spot-detail-sheet .sheet-heading-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+
 .spot-detail-sheet .sheet-section-heading {
   display: flex;
   flex-direction: column;
   gap: 0.45rem;
   flex: 1 1 auto;
   min-width: 0;
+}
+
+.spot-detail-sheet .sheet-like-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  border: none;
+  border-radius: 999px;
+  padding: 0.35rem 0.75rem;
+  background: rgba(15, 23, 42, 0.04);
+  color: #0f172a;
+  font-weight: 600;
+  font-size: 0.85rem;
+  cursor: pointer;
+  transition: background 0.2s ease;
+}
+
+.spot-detail-sheet .sheet-like-button:hover {
+  background: rgba(239, 68, 68, 0.15);
 }
 
 .spot-detail-sheet .sheet-event-title {
@@ -784,6 +806,149 @@ button {
   display: flex;
   flex-direction: column;
   gap: 0.8rem;
+}
+
+.spot-detail-sheet .sheet-action-row {
+  display: flex;
+  flex-wrap: nowrap;
+  gap: 0.5rem;
+  align-items: center;
+}
+
+.spot-detail-sheet .sheet-action-row .button.directions {
+  flex: 1 1 auto;
+}
+
+.spot-detail-sheet .sheet-share-wrapper {
+  position: relative;
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+}
+
+.spot-detail-sheet .sheet-share-wrapper .share-toggle {
+  padding: 0.80rem 1.1rem;
+  font-size: 0.95rem;
+  line-height: 1.2;
+}
+
+.spot-detail-sheet .sheet-share-menu {
+  position: absolute;
+  top: calc(100% + 0.35rem);
+  right: 0;
+  min-width: 180px;
+  background: #ffffff;
+  border: 1px solid rgba(226, 232, 240, 0.85);
+  border-radius: 14px;
+  box-shadow: 0 12px 32px rgba(15, 23, 42, 0.18);
+  padding: 0.75rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.65rem;
+  z-index: 10;
+}
+
+.spot-detail-sheet .sheet-share-menu__native {
+  border: none;
+  background: rgba(15, 23, 42, 0.05);
+  border-radius: 10px;
+  padding: 0.45rem 0.6rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.spot-detail-sheet .sheet-share-menu__links {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+
+.spot-detail-sheet .sheet-share-menu__links a {
+  text-decoration: none;
+  color: #0f172a;
+  font-weight: 600;
+  padding: 0.25rem 0.35rem;
+  border-radius: 8px;
+  transition: background 0.2s ease;
+}
+
+.spot-detail-sheet .sheet-share-menu__links a:hover {
+  background: rgba(226, 232, 240, 0.6);
+}
+
+.spot-detail-sheet .sheet-section.sheet-report {
+  margin-top: 0.25rem;
+}
+
+.spot-detail-sheet .sheet-section.sheet-report .report-trigger {
+  width: 100%;
+  justify-content: center;
+}
+
+.spot-detail-sheet .sheet-report-modal {
+  position: fixed;
+  inset: 0;
+  background: rgba(15, 23, 42, 0.55);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1.5rem;
+  z-index: 1000;
+}
+
+.spot-detail-sheet .sheet-report-modal__body {
+  width: min(480px, 90vw);
+  background: #ffffff;
+  border-radius: 20px;
+  padding: 1.5rem;
+  box-shadow: 0 30px 70px rgba(15, 23, 42, 0.35);
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.spot-detail-sheet .sheet-report-modal__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+}
+
+.spot-detail-sheet .sheet-report-modal__header h3 {
+  margin: 0;
+  font-size: 1.1rem;
+}
+
+.spot-detail-sheet .sheet-report-form {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.spot-detail-sheet .sheet-report-field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+  font-size: 0.9rem;
+}
+
+.spot-detail-sheet .sheet-report-field select,
+.spot-detail-sheet .sheet-report-field textarea {
+  border: 1px solid rgba(148, 163, 184, 0.5);
+  border-radius: 0.9rem;
+  padding: 0.65rem 0.9rem;
+  font-size: 0.95rem;
+  font-family: inherit;
+}
+
+.spot-detail-sheet .sheet-report-field textarea {
+  resize: vertical;
+}
+
+.spot-detail-sheet .sheet-report-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.75rem;
 }
 
 .spot-detail-sheet .sheet-section h3 {
@@ -3318,8 +3483,8 @@ select.input:focus {
     }
 
     .spot-detail-sheet .sheet-actions .icon-button {
-      width: 36px;
-      height: 36px;
+      width: 28px;
+      height: 28px;
     }
 
     .spot-detail-sheet .sheet-section-top {
@@ -3329,7 +3494,7 @@ select.input:focus {
 
 
     .spot-detail-sheet .sheet-owner-name {
-      font-size: 0.98rem;
+      font-size: 0.85rem;
     }
 
     .spot-detail-sheet .sheet-title-group h2 {
@@ -3338,6 +3503,49 @@ select.input:focus {
 
     .spot-detail-sheet .sheet-info {
       grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+    }
+  }
+
+  @media (max-width: 640px) {
+    .spot-detail-sheet .sheet-body {
+      --sheet-horizontal-padding: clamp(0.55rem, 6vw, 0.9rem);
+    }
+
+    .spot-detail-sheet .sheet-scroll-container {
+      padding: 0 var(--sheet-horizontal-padding) clamp(4.5rem, 18vw, 5.5rem);
+    }
+
+    .spot-detail-sheet .sheet-owner-name {
+      font-size: 0.95rem;
+    }
+
+    .spot-detail-sheet .sheet-top-bar .icon-button,
+    .spot-detail-sheet .sheet-actions .icon-button {
+      width: 29px;
+      height: 29px;
+      font-size: 0.8rem;
+    }
+  }
+
+  @media (min-width: 641px) and (max-width: 1024px) {
+    .spot-detail-sheet .sheet-body {
+      width: min(760px, 100vw);
+      --sheet-horizontal-padding: clamp(1.2rem, 4vw, 2.25rem);
+    }
+
+    .spot-detail-sheet .sheet-scroll-container {
+      padding: 0 var(--sheet-horizontal-padding) clamp(4rem, 10vw, 4.6rem);
+    }
+
+    .spot-detail-sheet .sheet-owner-name {
+      font-size: 0.92rem;
+    }
+
+    .spot-detail-sheet .sheet-top-bar .icon-button,
+    .spot-detail-sheet .sheet-actions .icon-button {
+      width: 30px;
+      height: 30px;
+      font-size: 0.78rem;
     }
   }
 
