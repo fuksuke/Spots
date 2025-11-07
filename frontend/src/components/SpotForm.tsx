@@ -1,7 +1,8 @@
 import { FormEvent, useCallback, useEffect, useMemo, useState } from "react";
 import { uploadImageFile } from "../lib/storage";
 import { Coordinates, Spot, SpotCategory, SPOT_CATEGORY_VALUES } from "../types";
-import { MapView } from "./MapView";
+import { SpotCreateMap } from "./SpotCreateMap";
+import { searchPlaces } from "../lib/mapboxGeocoding";
 
 const categories: SpotCategory[] = [...SPOT_CATEGORY_VALUES];
 
@@ -26,6 +27,7 @@ const toIsoString = (value: string) => {
   return Number.isNaN(date.getTime()) ? "" : date.toISOString();
 };
 
+
 const MAX_IMAGE_SIZE_MB = 5;
 const MAX_IMAGE_SIZE_BYTES = MAX_IMAGE_SIZE_MB * 1024 * 1024;
 
@@ -33,15 +35,6 @@ const parseLocalDateTime = (value: string) => {
   if (!value) return null;
   const date = new Date(value);
   return Number.isNaN(date.getTime()) ? null : date;
-};
-
-const isValidHttpUrl = (value: string) => {
-  try {
-    const url = new URL(value);
-    return url.protocol === "http:" || url.protocol === "https:";
-  } catch {
-    return false;
-  }
 };
 
 type SpotFormProps = {
@@ -73,25 +66,28 @@ export const SpotForm = ({
   const [locationError, setLocationError] = useState<string | null>(null);
   const [planError, setPlanError] = useState<string | null>(null);
   const [isRequestingLocation, setIsRequestingLocation] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [isSearching, setIsSearching] = useState(false);
+  const [searchResults, setSearchResults] = useState<Array<{ label: string; coords: Coordinates }>>([]);
   const planOptions = useMemo<PostingPlanOption[]>(
     () => [
       {
-        id: "short_term" as PostingPlan,
-        title: "短期イベント",
-        description: "1日または数日のスポット情報を共有するプランです。",
+        id: "short_term",
+        title: "単発イベント",
+        description: "1日開催のライブやポップアップ向けのプランです。",
         locked: false
       },
       {
-        id: "long_term" as PostingPlan,
-        title: "長期イベント",
-        description: "数週間以上開催するイベント向けの投稿です。",
+        id: "long_term",
+        title: "継続イベント",
+        description: "数週間以上開催する展示やキャンペーンに最適です。",
         locked: !canPostLongTerm,
         badge: "有料"
       },
       {
-        id: "recurring" as PostingPlan,
+        id: "recurring",
         title: "定期イベント",
-        description: "定期開催のワークショップやライブなどに最適です。",
+        description: "毎週・毎月開催のワークショップやコミュニティ向け。",
         locked: !canPostRecurring,
         badge: "有料"
       }
@@ -156,21 +152,36 @@ export const SpotForm = ({
     );
   }, [onSelectLocation]);
 
-  const handleSearchByCoordinate = useCallback(() => {
-    const value = window.prompt("緯度,経度をカンマ区切りで入力してください (例: 35.6595,139.7016)");
-    if (!value) {
+  useEffect(() => {
+    if (!searchQuery.trim()) {
+      setSearchResults([]);
       return;
     }
-    const [latRaw, lngRaw] = value.split(",");
-    const lat = Number(latRaw?.trim());
-    const lng = Number(lngRaw?.trim());
-    if (Number.isFinite(lat) && Number.isFinite(lng)) {
-      onSelectLocation({ lat, lng });
-      setLocationError(null);
-      return;
-    }
-    setLocationError("緯度・経度を正しく入力してください。");
-  }, [onSelectLocation]);
+
+    const controller = new AbortController();
+    setIsSearching(true);
+    searchPlaces(searchQuery.trim(), controller.signal)
+      .then((features) => {
+        setSearchResults(
+          features.map((feature) => ({
+            label: feature.place_name,
+            coords: { lat: feature.center[1], lng: feature.center[0] }
+          }))
+        );
+      })
+      .catch((error) => {
+        if (!(error instanceof DOMException && error.name === "AbortError")) {
+          console.warn("Failed to search places", error);
+        }
+      })
+      .finally(() => {
+        setIsSearching(false);
+      });
+
+    return () => {
+      controller.abort();
+    };
+  }, [searchQuery]);
 
   const handleNextStep = useCallback(() => {
     if (step === 0 && !selectedLocation) {
@@ -214,9 +225,14 @@ export const SpotForm = ({
   const [category, setCategory] = useState<SpotCategory>("live");
   const [startTime, setStartTime] = useState(() => toDatetimeLocal(new Date()));
   const [endTime, setEndTime] = useState(() => toDatetimeLocal(new Date(Date.now() + 60 * 60 * 1000)));
-  const [imageUrl, setImageUrl] = useState("");
   const [imageFile, setImageFile] = useState<File | null>(null);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
+  const [contactType, setContactType] = useState<"phone" | "email">("phone");
+  const [contactValue, setContactValue] = useState("");
+  const [locationDetails, setLocationDetails] = useState("");
+  const [homepageUrl, setHomepageUrl] = useState("");
+  const [snsLinks, setSnsLinks] = useState({ x: "", instagram: "", youtube: "", facebook: "" });
+  const [hashtags, setHashtags] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [statusMessage, setStatusMessage] = useState<string | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
@@ -234,52 +250,70 @@ export const SpotForm = ({
       case 0:
         return (
           <div className="spot-step spot-step-map">
-            <div className="spot-map-wrapper">
-              <div className="spot-map-shell">
-                <MapView
-                  initialView={initialMapView}
-                  selectedLocation={selectedLocation}
-                  focusCoordinates={selectedLocation}
-                  onSelectLocation={onSelectLocation}
-                />
-                <div className="spot-map-crosshair" aria-hidden="true" />
-              </div>
-              <div className="spot-map-actions">
-                <button
-                  type="button"
-                  className="spot-chip"
-                  onClick={handleUseCurrentLocation}
-                  disabled={isRequestingLocation}
-                >
-                  {isRequestingLocation ? "現在地取得中..." : "現在地"}
-                </button>
-                <button type="button" className="spot-chip" onClick={handleSearchByCoordinate}>
-                  検索
-                </button>
-                <button
-                  type="button"
-                  className="spot-chip subtle"
-                  onClick={() => {
-                    onLocationReset();
-                    setLocationError(null);
-                  }}
-                  disabled={!selectedLocation}
-                >
-                  クリア
-                </button>
-              </div>
-            </div>
-            <div className="spot-map-summary">
-              {selectedLocation ? (
-                <p className="spot-map-coords">
-                  Lat: {selectedLocation.lat.toFixed(5)}, Lng: {selectedLocation.lng.toFixed(5)}
-                </p>
-              ) : (
-                <p className="hint">地図をクリックして会場の位置にピンを置いてください。</p>
-              )}
+            <div className="spot-map-summary spot-map-summary-lead">
+              <p className="hint">地図をクリックして位置を選択してください。ピンをドラッグすることで微調整することもできます。</p>
               {locationError ? <p className="spot-status error">{locationError}</p> : null}
             </div>
-            <p className="spot-step-hint">ピンはドラッグして微調整できます。</p>
+            <div className="spot-map-wrapper">
+              <div className="spot-map-shell">
+                <SpotCreateMap
+                  initialView={{ latitude: initialMapView.latitude, longitude: initialMapView.longitude, zoom: initialMapView.zoom }}
+                  value={selectedLocation}
+                  onChange={onSelectLocation}
+                />
+              </div>
+              <div className="spot-map-actions">
+                <div className="spot-map-search">
+                  <input
+                    type="search"
+                    placeholder="地名・住所で検索"
+                    value={searchQuery}
+                    onChange={(event) => setSearchQuery(event.target.value)}
+                  />
+                  {isSearching ? <span className="spot-map-search-status">検索中...</span> : null}
+                  {searchResults.length > 0 ? (
+                    <ul className="spot-map-search-results">
+                      {searchResults.map((item) => (
+                        <li key={`${item.label}-${item.coords.lat}-${item.coords.lng}`}>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              onSelectLocation(item.coords);
+                              setSearchQuery(item.label);
+                              setSearchResults([]);
+                              setLocationError(null);
+                            }}
+                          >
+                            {item.label}
+                          </button>
+                        </li>
+                      ))}
+                    </ul>
+                  ) : null}
+                </div>
+                <div className="spot-map-action-buttons">
+                  <button
+                    type="button"
+                    className="spot-chip"
+                    onClick={handleUseCurrentLocation}
+                    disabled={isRequestingLocation}
+                  >
+                    {isRequestingLocation ? "現在地取得中..." : "現在地"}
+                  </button>
+                  <button
+                    type="button"
+                    className="spot-chip subtle"
+                    onClick={() => {
+                      onLocationReset();
+                      setLocationError(null);
+                    }}
+                    disabled={!selectedLocation}
+                  >
+                    クリア
+                  </button>
+                </div>
+              </div>
+            </div>
           </div>
         );
       case 1:
@@ -299,7 +333,7 @@ export const SpotForm = ({
                     {option.badge ? <span className="spot-plan-badge">{option.badge}</span> : null}
                     <span className="spot-plan-title">{option.title}</span>
                     <span className="spot-plan-desc">{option.description}</span>
-                    {option.locked ? <span className="spot-plan-note">課金が必要です</span> : null}
+                    {option.locked ? <span className="spot-plan-note">Coming Soon</span> : null}
                   </button>
                 );
               })}
@@ -380,16 +414,6 @@ export const SpotForm = ({
               </div>
             </div>
             <div className="form-group">
-              <label htmlFor="imageUrl">写真URL (任意)</label>
-              <input
-                id="imageUrl"
-                className="input"
-                value={imageUrl}
-                onChange={(event) => setImageUrl(event.target.value)}
-                placeholder="Firebase Storage のURL"
-              />
-            </div>
-            <div className="form-group">
               <label htmlFor="imageFile">写真をアップロード (任意)</label>
               <input
                 id="imageFile"
@@ -399,20 +423,90 @@ export const SpotForm = ({
               />
               {imagePreview && <img src={imagePreview} alt="選択中の画像プレビュー" className="image-preview" />}
             </div>
-            <div className="form-group">
-              <label>選択中の位置</label>
-              {selectedLocation ? (
-                <div className="location-preview">
-                  <span>
-                    Lat: {selectedLocation.lat.toFixed(5)}, Lng: {selectedLocation.lng.toFixed(5)}
-                  </span>
-                  <button type="button" className="button subtle" onClick={onLocationReset}>
-                    クリア
-                  </button>
+            <div className="form-row">
+              <div className="form-group">
+                <label>連絡方法</label>
+                <div className="contact-radio-group">
+                  <label>
+                    <input type="radio" value="phone" checked={contactType === "phone"} onChange={() => setContactType("phone")} /> 電話番号
+                  </label>
+                  <label>
+                    <input type="radio" value="email" checked={contactType === "email"} onChange={() => setContactType("email")} /> メール
+                  </label>
                 </div>
-              ) : (
-                <p className="hint">前のステップで位置を選択してください。</p>
-              )}
+                <input
+                  type="text"
+                  className="input"
+                  value={contactValue}
+                  onChange={(event) => setContactValue(event.target.value)}
+                  placeholder={contactType === "phone" ? "090-1234-5678" : "contact@example.com"}
+                  required
+                />
+              </div>
+              <div className="form-group">
+                <label htmlFor="locationDetails">場所詳細</label>
+                <input
+                  id="locationDetails"
+                  className="input"
+                  value={locationDetails}
+                  onChange={(event) => setLocationDetails(event.target.value)}
+                  placeholder="◯◯ビル 7F ガーデンルーム"
+                  required
+                />
+              </div>
+            </div>
+            <div className="form-group">
+              <label htmlFor="homepageUrl">公式ホームページ (任意)</label>
+              <input
+                id="homepageUrl"
+                className="input"
+                value={homepageUrl}
+                onChange={(event) => setHomepageUrl(event.target.value)}
+                placeholder="https://example.com"
+              />
+            </div>
+            <div className="form-group">
+              <label>公式SNSリンク (任意)</label>
+              <div className="sns-input-grid">
+                <input
+                  type="url"
+                  className="input"
+                  value={snsLinks.x}
+                  onChange={(event) => setSnsLinks((prev) => ({ ...prev, x: event.target.value }))}
+                  placeholder="X (Twitter) のURL"
+                />
+                <input
+                  type="url"
+                  className="input"
+                  value={snsLinks.instagram}
+                  onChange={(event) => setSnsLinks((prev) => ({ ...prev, instagram: event.target.value }))}
+                  placeholder="Instagram のURL"
+                />
+                <input
+                  type="url"
+                  className="input"
+                  value={snsLinks.youtube}
+                  onChange={(event) => setSnsLinks((prev) => ({ ...prev, youtube: event.target.value }))}
+                  placeholder="YouTube のURL"
+                />
+                <input
+                  type="url"
+                  className="input"
+                  value={snsLinks.facebook}
+                  onChange={(event) => setSnsLinks((prev) => ({ ...prev, facebook: event.target.value }))}
+                  placeholder="Facebook のURL"
+                />
+              </div>
+            </div>
+            <div className="form-group">
+              <label htmlFor="hashtags">ハッシュタグ (任意)</label>
+              <input
+                id="hashtags"
+                className="input"
+                value={hashtags}
+                onChange={(event) => setHashtags(event.target.value)}
+                placeholder="#shibuya #live #popup"
+              />
             </div>
             {statusMessage ? <p className="spot-status success">{statusMessage}</p> : null}
             {formErrors.length > 0 ? (
@@ -435,7 +529,6 @@ export const SpotForm = ({
     setCategory("live");
     setStartTime(toDatetimeLocal(new Date()));
     setEndTime(toDatetimeLocal(new Date(Date.now() + 60 * 60 * 1000)));
-    setImageUrl("");
     setImageFile(null);
     setImagePreview((current) => {
       if (current) {
@@ -443,6 +536,12 @@ export const SpotForm = ({
       }
       return null;
     });
+    setContactType("phone");
+    setContactValue("");
+    setLocationDetails("");
+    setHomepageUrl("");
+    setSnsLinks({ x: "", instagram: "", youtube: "", facebook: "" });
+    setHashtags("");
     setFormErrors([]);
     setSelectedPlan("short_term");
     setStep(0);
@@ -476,7 +575,6 @@ export const SpotForm = ({
         }
         setImageFile(file);
         setImagePreview(URL.createObjectURL(file));
-        setImageUrl("");
         return;
       }
 
@@ -510,16 +608,20 @@ export const SpotForm = ({
       errors.push("終了時刻は開始時刻より後に設定してください。");
     }
 
-    if (imageUrl.trim() && !isValidHttpUrl(imageUrl.trim())) {
-      errors.push("写真URLは http(s):// から始まる形式で入力してください。");
-    }
-
     if (imageFile && imageFile.size > MAX_IMAGE_SIZE_BYTES) {
       errors.push(`画像ファイルは${MAX_IMAGE_SIZE_MB}MB以下にしてください。`);
     }
 
+    if (!contactValue.trim()) {
+      errors.push("連絡先を入力してください。");
+    }
+
+    if (!locationDetails.trim()) {
+      errors.push("場所の詳細を入力してください。");
+    }
+
     return errors;
-  }, [authToken, description, endTime, imageFile, imageUrl, selectedLocation, startTime, title]);
+  }, [authToken, description, endTime, imageFile, selectedLocation, startTime, title, contactValue, locationDetails]);
 
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -548,9 +650,29 @@ export const SpotForm = ({
         } catch (uploadError) {
           throw new Error("画像のアップロードに失敗しました。再度お試しください。");
         }
-      } else if (imageUrl.trim()) {
-        uploadedImageUrl = imageUrl.trim();
       }
+
+      if (!contactValue.trim()) {
+        throw new Error("連絡先を入力してください");
+      }
+      if (!locationDetails.trim()) {
+        throw new Error("場所の詳細を入力してください");
+      }
+
+      const contact =
+        contactType === "phone"
+          ? { phone: contactValue.trim() }
+          : {
+              email: contactValue.trim()
+            };
+
+      const extraLinks = [
+        homepageUrl ? { label: "公式サイト", url: homepageUrl.trim() } : null,
+        snsLinks.x ? { label: "X", url: snsLinks.x.trim() } : null,
+        snsLinks.instagram ? { label: "Instagram", url: snsLinks.instagram.trim() } : null,
+        snsLinks.youtube ? { label: "YouTube", url: snsLinks.youtube.trim() } : null,
+        snsLinks.facebook ? { label: "Facebook", url: snsLinks.facebook.trim() } : null
+      ].filter((link): link is { label: string; url: string } => Boolean(link && link.url));
 
       const payload = {
         title,
@@ -560,7 +682,11 @@ export const SpotForm = ({
         lng,
         startTime: toIsoString(startTime),
         endTime: toIsoString(endTime),
-        imageUrl: uploadedImageUrl
+        imageUrl: uploadedImageUrl,
+        contact,
+        locationDetails: locationDetails.trim(),
+        externalLinks: extraLinks,
+        hashtags: hashtags.trim()
       };
 
       const response = await fetch("/api/spots", {
@@ -590,14 +716,15 @@ export const SpotForm = ({
     }
   };
 
+  const stepTitles: string[] = ["位置を選択", "プランを選択", "詳細を記入"];
+
   return (
     <form className="spot-wizard" onSubmit={handleSubmit}>
       <div className="spot-wizard-header">
         <div>
-          <h2>スポットを投稿</h2>
+          <h2>{stepTitles[step] ?? "位置を選択"}</h2>
           <p className="spot-wizard-subtitle">位置・プラン・詳細を順番に入力して投稿できます。</p>
         </div>
-        <span className="spot-step-label">{stepLabels[step] ?? ""}</span>
       </div>
 
       <div
