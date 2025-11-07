@@ -11,7 +11,8 @@ import { CategoryTabs } from "./components/CategoryTabs";
 import { SpotListView } from "./components/SpotListView";
 import { SpotDetailSheet } from "./components/SpotDetailSheet";
 import { SearchOverlay } from "./components/SearchOverlay";
-import { InAppNotification, InAppNotifications } from "./components/InAppNotifications";
+import { InAppNotifications } from "./components/InAppNotifications";
+import type { InAppNotification } from "./components/InAppNotifications";
 import { PopularSpotsPanel } from "./components/PopularSpotsPanel";
 import { PromotionBanner } from "./components/PromotionBanner";
 import { AdminDashboard } from "./components/AdminDashboard";
@@ -23,6 +24,7 @@ import { useSpotFeed } from "./hooks/useSpotFeed";
 import { useProfile } from "./hooks/useProfile";
 import { usePopularSpots } from "./hooks/usePopularSpots";
 import { usePromotions } from "./hooks/usePromotions";
+import { useLayoutMetrics } from "./hooks/useLayoutMetrics";
 import { auth, db } from "./lib/firebase";
 import { mockSpots } from "./mockData";
 import { Coordinates, Spot, SpotCategory, ViewMode, PageMode } from "./types";
@@ -161,6 +163,7 @@ function App() {
   const navigate = useNavigate();
   const location = useLocation();
   const [, setSearchParams] = useSearchParams();
+  const layoutRootRef = useRef<HTMLDivElement | null>(null);
   const initialCategoryKeys = useMemo(() => loadStoredCategoryKeys(), []);
   const [viewMode, setViewMode] = useState<ViewMode>(() => {
     if (typeof window === "undefined") return "map";
@@ -249,6 +252,7 @@ function App() {
   const [billingError, setBillingError] = useState<string | null>(null);
   const [hasAdminClaim, setHasAdminClaim] = useState(false);
   const [isAdminPanelOpen, setAdminPanelOpen] = useState(false);
+  const [isNotificationsOpen, setNotificationsOpen] = useState(false);
   const profileRefreshTimeoutRef = useRef<number | null>(null);
   const supportMailto = `mailto:${SUPPORT_EMAIL}`;
 
@@ -659,10 +663,17 @@ function App() {
     navigate("/spots/new");
   }, [navigate, requireAuth]);
 
+  const goToMapViewRef = useRef<() => Promise<void>>(() => Promise.resolve());
+  const goToMapView = useCallback(() => goToMapViewRef.current(), []);
+
   const handleModeToggle = useCallback(() => {
-    const nextMode: ViewMode = viewMode === "map" ? "list" : "map";
-    applyViewModeToQuery(nextMode);
-  }, [applyViewModeToQuery, viewMode]);
+    if (viewMode === "map") {
+      applyViewModeToQuery("list");
+      return;
+    }
+
+    void goToMapView();
+  }, [applyViewModeToQuery, goToMapView, viewMode]);
 
   const handleRefreshSpots = useCallback(async () => {
     trackEvent("spot_feed_refresh", {});
@@ -797,11 +808,13 @@ function App() {
       setSelectedLocation(null);
       setActiveSpot(normalizedSpot);
       setFocusCoordinates({ lat: normalizedSpot.lat, lng: normalizedSpot.lng });
-      applyViewModeToQuery("map");
-      navigate("/spots");
+      void (async () => {
+        await goToMapView();
+        navigate("/spots");
+      })();
       void mutateSpots();
     },
-    [applyViewModeToQuery, currentUser, mutateSpots, navigate]
+    [currentUser, goToMapView, mutateSpots, navigate]
   );
 
   const handleSpotCreateClose = useCallback(() => {
@@ -879,9 +892,9 @@ function App() {
     setSearchValue("");
     setSearchInput("");
     setFocusCoordinates(null);
-    applyViewModeToQuery("map");
+    void goToMapView();
     triggerMessage("渋谷周辺の最新イベントへ戻りました");
-  }, [applyViewModeToQuery, navigate, triggerMessage]);
+  }, [goToMapView, navigate, triggerMessage]);
 
   const handleLanguageClick = useCallback(() => {
     triggerMessage("多言語対応は近日公開予定です");
@@ -903,26 +916,25 @@ function App() {
       if (!currentUser) {
         setAuthModalOpen(true);
       }
+      setNotificationsOpen(false);
       return;
     }
     trackEvent("admin_dashboard_open", {});
+    setNotificationsOpen(false);
     setAdminPanelOpen(true);
   }, [authToken, currentUser, hasAdminClaim, triggerMessage]);
 
   const handleNotificationsClick = useCallback(() => {
-    if (notifications.length === 0) {
-      triggerMessage("新しい通知はありません");
-    } else {
-      markNotificationsAsRead(notifications.filter((notification) => notification.source === "remote"));
-      setNotifications([]);
-      triggerMessage("通知をクリアしました");
-    }
-  }, [markNotificationsAsRead, notifications, triggerMessage]);
+    setNotificationsOpen((open) => !open);
+  }, []);
 
   const handleNotificationDismiss = useCallback(
     (notification: InAppNotification) => {
       markNotificationsAsRead([notification]);
       setNotifications((current) => current.filter((item) => item.id !== notification.id));
+      if (notifications.length <= 1) {
+        setNotificationsOpen(false);
+      }
     },
     [markNotificationsAsRead]
   );
@@ -938,6 +950,7 @@ function App() {
       } else {
         triggerMessage("通知を確認しました");
       }
+      setNotificationsOpen(false);
     },
     [handlePromotionSelect, handleSpotSelect, markNotificationsAsRead, triggerMessage]
   );
@@ -945,6 +958,7 @@ function App() {
   const handleNotificationDismissAll = useCallback(() => {
     markNotificationsAsRead(notifications.filter((notification) => notification.source === "remote"));
     setNotifications([]);
+    setNotificationsOpen(false);
   }, [markNotificationsAsRead, notifications]);
 
   const handleAccountPanelOpen = useCallback(() => {
@@ -1181,6 +1195,8 @@ function App() {
   const pageMode: PageMode = normalizedPath === "/spots/trending" ? "trending" : "home";
   const isHomePage = pageMode === "home" && normalizedPath.startsWith("/spots");
   const isMapHomeView = isHomePage && viewMode === "map";
+  const isListModeActive = isHomePage && viewMode === "list";
+  const homeMainAriaLabel = viewMode === "map" ? "スポットマップ" : "スポット一覧";
   const spotCreateHeaderActions = currentUser ? (
     <button type="button" className="button secondary" onClick={handleAccountPanelOpen}>
       アカウント
@@ -1191,6 +1207,100 @@ function App() {
     </button>
   );
 
+  const [isListHeaderHidden, setListHeaderHidden] = useState(false);
+  const mainRef = useRef<HTMLElement | null>(null);
+
+  useLayoutMetrics(layoutRootRef, {
+    dependencies: [isHomePage, viewMode, isMapHomeView]
+  });
+
+  const exitListMode = useCallback(() => {
+    setListHeaderHidden(false);
+  }, []);
+
+  useEffect(() => {
+    goToMapViewRef.current = async () => {
+      exitListMode();
+      applyViewModeToQuery("map");
+    };
+  }, [applyViewModeToQuery, exitListMode]);
+
+  useEffect(() => {
+    const mainEl = mainRef.current;
+
+    if (!isHomePage) {
+      document.body.classList.remove("mode-list");
+      if (mainEl) {
+        mainEl.style.overflow = "";
+        mainEl.style.blockSize = "";
+        mainEl.style.minBlockSize = "";
+      }
+      return () => {
+        document.body.classList.remove("mode-list");
+      };
+    }
+
+    if (viewMode === "list") {
+      document.body.classList.add("mode-list");
+      if (mainEl) {
+        mainEl.style.overflow = "visible";
+        mainEl.style.blockSize = "auto";
+        mainEl.style.minBlockSize = "auto";
+      }
+    } else {
+      document.body.classList.remove("mode-list");
+      if (mainEl) {
+        mainEl.style.overflow = "";
+        mainEl.style.blockSize = "";
+        mainEl.style.minBlockSize = "";
+      }
+    }
+
+    return () => {
+      if (viewMode === "list") {
+        document.body.classList.remove("mode-list");
+      }
+    };
+  }, [isHomePage, viewMode]);
+
+  useEffect(() => {
+    if (!isListModeActive) {
+      setListHeaderHidden(false);
+      return;
+    }
+
+    let lastScrollY = typeof window !== 'undefined' ? window.scrollY : 0;
+    let ticking = false;
+
+    const update = () => {
+      ticking = false;
+      const currentY = window.scrollY;
+      const delta = currentY - lastScrollY;
+
+      if (currentY <= 24) {
+        setListHeaderHidden(false);
+      } else if (delta > 6) {
+        setListHeaderHidden(true);
+      } else if (delta < -6) {
+        setListHeaderHidden(false);
+      }
+
+      lastScrollY = currentY;
+    };
+
+    const handleScroll = () => {
+      if (!ticking) {
+        ticking = true;
+        window.requestAnimationFrame(update);
+      }
+    };
+
+    window.addEventListener('scroll', handleScroll, { passive: true });
+
+    return () => {
+      window.removeEventListener('scroll', handleScroll);
+    };
+  }, [isListModeActive]);
   const mainLayout = (
     <div className="app-shell">
       <SidebarNav
@@ -1210,7 +1320,17 @@ function App() {
         showAdminButton={hasAdminClaim}
         onAdminClick={handleAdminClick}
       />
-      <div className={`layout-column ${isMapHomeView ? "map-view" : ""}`.trim()}>
+      <div
+        ref={layoutRootRef}
+        className={[
+          "layout-column",
+          isMapHomeView ? "map-view" : "",
+          isListModeActive ? "list-mode" : "",
+          isListModeActive && isListHeaderHidden ? "list-header-hidden" : ""
+        ]
+          .filter(Boolean)
+          .join(" ")}
+      >
         <HeaderBar
           currentUser={currentUser}
           notificationsCount={notificationsCount}
@@ -1233,7 +1353,11 @@ function App() {
           <div className="category-spacer" aria-hidden="true" />
         )}
         {isHomePage ? (
-          <div className={`content-area ${viewMode}`.trim()}>
+          <main
+            ref={mainRef}
+            className={`app-main content-area ${viewMode}`.trim()}
+            aria-label={homeMainAriaLabel}
+          >
             {viewMode === "map" ? (
               <MapView
                 initialView={DEFAULT_HOME_VIEW}
@@ -1256,9 +1380,9 @@ function App() {
                 {MOBILE_SCROLL_FOOTER}
               </>
             )}
-          </div>
+          </main>
         ) : (
-          <div className="content-area trending">
+          <main className="app-main content-area trending" aria-label="トレンドとプロモーション">
             <div className="trending-content">
               <header className="trending-header">
                 <h2>トレンド & プロモーション</h2>
@@ -1279,7 +1403,7 @@ function App() {
               />
             </div>
             {MOBILE_SCROLL_FOOTER}
-          </div>
+          </main>
         )}
         <ActionBar
           pageMode={pageMode}
@@ -1287,9 +1411,6 @@ function App() {
           onSpotClick={handleSpotAction}
           onSelectPage={handleSelectPage}
           onModeToggle={handleModeToggle}
-          onRefresh={handleRefreshSpots}
-          showAdmin={hasAdminClaim}
-          onAdminClick={handleAdminClick}
         />
       </div>
     </div>
@@ -1530,8 +1651,12 @@ function App() {
       <InAppNotifications
         notifications={notifications}
         onSelect={handleNotificationSelect}
-        onDismiss={handleNotificationDismiss}
-        onDismissAll={handleNotificationDismissAll}
+      isOpen={isNotificationsOpen}
+      hasAdminAccess={hasAdminClaim}
+      onDismiss={handleNotificationDismiss}
+      onDismissAll={handleNotificationDismissAll}
+      onAdminClick={handleAdminClick}
+      onClose={() => setNotificationsOpen(false)}
       />
 
       <SearchOverlay

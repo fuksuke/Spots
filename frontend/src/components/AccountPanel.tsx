@@ -393,8 +393,12 @@ export const AccountPanel = ({
     );
   };
 
+  if (!isOpen) {
+    return null;
+  }
+
   return (
-    <div className={`floating-panel account-panel ${isOpen ? "open" : ""}`.trim()} role="dialog" aria-hidden={!isOpen}>
+    <div className="floating-panel account-panel open" role="dialog" aria-modal="true">
       <div className="floating-scrim" aria-hidden="true" onClick={onClose} />
       <section className="floating-body account-card" role="document">
         <header className="account-card-header">

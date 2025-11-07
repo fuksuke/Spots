@@ -2,6 +2,16 @@ import { useMemo, useState } from "react";
 
 import type { Spot } from "../types";
 import { mockSpots } from "../mockData";
+import { Icon } from "./Icon";
+import { Avatar } from "./Avatar";
+
+const CATEGORY_ACCENT: Record<Spot["category"], string> = {
+  live: "#ef4444",
+  event: "#f59e0b",
+  cafe: "#10b981",
+  coupon: "#8b5cf6",
+  sports: "#3b82f6"
+};
 
 const formatLocation = (spot: Spot) => {
   if (spot.locationName && spot.locationName.trim()) {
@@ -130,13 +140,32 @@ export const SpotListView = ({ spots, isLoading, error, onSpotSelect }: SpotList
           const scheduleLabel = formatEventSchedule(spot.startTime, spot.endTime ?? null);
           const { likes, views } = formatPopularity(spot);
           const hostLabel = spot.ownerDisplayName?.trim() || spot.ownerId || "未設定";
+          const locationLabel = formatLocation(spot);
+          const priceLabel = formatPrice(spot);
+          const description = spot.summary?.trim() || spot.description;
+          const viewLabel = views.toLocaleString("ja-JP");
+          const likesLabel = likes.toLocaleString("ja-JP");
+          const tagCandidates: string[] = [];
+          tagCandidates.push(`#${spot.category}`);
+          if (spot.locationName) {
+            const compactLocation = spot.locationName.replace(/\s+/g, "");
+            if (compactLocation.length > 0) {
+              tagCandidates.push(`#${compactLocation}`);
+            }
+          }
+          if (spot.ownerDisplayName) {
+            const compactHost = spot.ownerDisplayName.replace(/\s+/g, "");
+            if (compactHost.length > 0 && tagCandidates.length < 3) {
+              tagCandidates.push(`#${compactHost}`);
+            }
+          }
 
           return (
             <article
               key={spot.id}
               role="listitem"
               tabIndex={0}
-              className="spot-list-card"
+              className="spot-list-card spot-mobile-card"
               onClick={() => onSpotSelect?.(spot)}
               onKeyDown={(event) => {
                 if (event.key === 'Enter') {
@@ -144,45 +173,69 @@ export const SpotListView = ({ spots, isLoading, error, onSpotSelect }: SpotList
                 }
               }}
             >
-              <div className="spot-card-media" aria-hidden={Boolean(image)}>
-                {image ? (
-                  <img src={image} alt="" loading="lazy" />
-                ) : (
-                  <div className={`spot-card-placeholder ${spot.category}`.trim()}>{spot.category.toUpperCase()}</div>
-                )}
-              </div>
-              <div className="spot-card-body">
-                <header className="spot-card-header">
-                  <h3 className="spot-card-title">{spot.title}</h3>
-                  <div className="spot-card-tags">
-                    <span className="spot-tag">#{spot.category}</span>
-                    {spot.ownerPhoneVerified ? <span className="spot-tag verified">Verified</span> : null}
-                  </div>
-                </header>
-                <p className="spot-card-description">{spot.description}</p>
-                <dl className="spot-card-meta">
-                  <div>
-                    <dt>開催時間</dt>
-                    <dd>{scheduleLabel}</dd>
-                  </div>
-                  <div>
-                    <dt>場所</dt>
-                    <dd>{formatLocation(spot)}</dd>
-                  </div>
-                  <div>
-                    <dt>料金</dt>
-                    <dd>{formatPrice(spot)}</dd>
-                  </div>
-                  <div>
-                    <dt>ホスト</dt>
-                    <dd>{hostLabel}</dd>
-                  </div>
-                </dl>
-                <div className="spot-card-stats" aria-label="人気指標">
-                  <span>👍 {likes}</span>
-                  <span>👀 {views}</span>
+              <header className="spot-mobile-card__title" aria-label="イベント名">
+                <span className="spot-mobile-card__avatar" aria-hidden="true">
+                  <Avatar name={spot.ownerDisplayName ?? spot.ownerId} photoUrl={spot.ownerPhotoUrl ?? null} size={32} />
+                </span>
+                <h3>{spot.title}</h3>
+              </header>
+              <section className="spot-mobile-card__meta" aria-label="イベント概要">
+                <div className="spot-mobile-card__thumb" aria-hidden={image ? undefined : true}>
+                  {image ? (
+                    <img src={image} alt="" loading="lazy" />
+                  ) : (
+                    <span>{spot.category.toUpperCase()}</span>
+                  )}
                 </div>
-              </div>
+                <ul className="spot-mobile-card__facts">
+                  <li>
+                    <span className="spot-mobile-card__fact-icon">
+                      <Icon name="calendarSimple" size={18} />
+                    </span>
+                    <span>{scheduleLabel}</span>
+                  </li>
+                  <li>
+                    <span className="spot-mobile-card__fact-icon">
+                      <Icon name="mapLight" size={18} />
+                    </span>
+                    <span>{locationLabel}</span>
+                  </li>
+                  <li>
+                    <span className="spot-mobile-card__fact-icon">
+                      <Icon name="currencyJpyFill" size={18} />
+                    </span>
+                    <span>{priceLabel}</span>
+                  </li>
+                  <li>
+                    <span className="spot-mobile-card__fact-icon">
+                      <Icon name="userFill" size={18} />
+                    </span>
+                    <span>{hostLabel}</span>
+                  </li>
+                </ul>
+              </section>
+              <section className="spot-mobile-card__detail clamp-2" aria-label="イベント詳細">
+                {description}
+              </section>
+              <footer className="spot-mobile-card__footer">
+                <div className="spot-mobile-card__tags" aria-label="タグ">
+                  {tagCandidates.map((tag) => (
+                    <span key={tag} className="spot-mobile-card__tag">
+                      {tag}
+                    </span>
+                  ))}
+                </div>
+                <div className="spot-mobile-card__metrics" aria-label="閲覧数といいね">
+                  <span>
+                    <Icon name="eyesFill" size={16} />
+                    {viewLabel}
+                  </span>
+                  <span>
+                    <Icon name="heart" size={16} />
+                    {likesLabel}
+                  </span>
+                </div>
+              </footer>
             </article>
           );
         })}
