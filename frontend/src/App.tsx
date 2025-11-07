@@ -1041,24 +1041,6 @@ function App() {
     }
   }, [triggerMessage]);
 
-  const updateSpotLocally = useCallback(
-    (spotId: string, updates: Partial<Spot>) => {
-      void mutateSpots(
-        (current) => {
-          if (!current) return current;
-          return current.map((item) => (item.id === spotId ? { ...item, ...updates } : item));
-        },
-        { revalidate: false }
-      );
-      setActiveSpot((current) => (current && current.id === spotId ? { ...current, ...updates } : current));
-    },
-    [mutateSpots]
-  );
-
-  const revalidateSpots = useCallback(() => {
-    void mutateSpots();
-  }, [mutateSpots]);
-
   const startCheckout = useCallback(
     async (plan: "tier_b" | "tier_a") => {
       if (!currentUser || !authToken) {
@@ -1635,17 +1617,9 @@ function App() {
       <SpotDetailSheet
         spot={activeSpot}
         isOpen={Boolean(activeSpot)}
-        authToken={authToken}
-        currentUser={currentUser}
         onClose={() => setActiveSpot(null)}
         onNotify={handleNotify}
         onShare={handleShareSpot}
-        onSpotUpdated={updateSpotLocally}
-        onRequireAuth={() => {
-          setAuthModalOpen(true);
-        }}
-        onRevalidateSpots={revalidateSpots}
-        onFeedback={triggerMessage}
       />
 
       <InAppNotifications

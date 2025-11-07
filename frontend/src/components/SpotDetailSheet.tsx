@@ -1,11 +1,10 @@
-import { User } from "firebase/auth";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { PointerEvent as ReactPointerEvent, WheelEvent as ReactWheelEvent } from "react";
 
 import { Avatar } from "./Avatar";
 import { Icon } from "./Icon";
-import { SpotCommentsSection } from "./SpotCommentsSection";
-import { Comment, Spot, SpotExternalLink } from "../types";
+import { SpotMediaGallery } from "./SpotMediaGallery";
+import { Spot, SpotExternalLink } from "../types";
 
 const clamp = (value: number, min: number, max: number) => Math.min(Math.max(value, min), max);
 const PEEK_TRANSLATE = 45;
@@ -20,29 +19,17 @@ const WHEEL_SETTLE_DELAY_MS = 140;
 export type SpotDetailSheetProps = {
   spot: Spot | null;
   isOpen: boolean;
-  authToken?: string;
-  currentUser: User | null;
   onClose: () => void;
   onNotify?: (spot: Spot) => void;
   onShare?: (spot: Spot) => void;
-  onSpotUpdated?: (spotId: string, updates: Partial<Spot>) => void;
-  onRequireAuth?: () => void;
-  onRevalidateSpots?: () => void;
-  onFeedback?: (message: string) => void;
 };
 
 export const SpotDetailSheet = ({
   spot,
   isOpen,
-  authToken,
-  currentUser,
   onClose,
   onNotify,
-  onShare,
-  onSpotUpdated,
-  onRequireAuth,
-  onRevalidateSpots,
-  onFeedback
+  onShare
 }: SpotDetailSheetProps) => {
   const timeRange = useMemo(() => {
     if (!spot) return "";
@@ -192,24 +179,6 @@ export const SpotDetailSheet = ({
       wheelActiveRef.current = false;
     };
   }, [clearWheelSettleTimeout]);
-
-  const applySpotUpdate = useCallback(
-    (updates: Partial<Spot>) => {
-      if (spot) {
-        onSpotUpdated?.(spot.id, updates);
-      }
-    },
-    [onSpotUpdated, spot]
-  );
-
-  const handleCommentCreated = useCallback(
-    (_comment: Comment) => {
-      applySpotUpdate({ commentsCount: (spot?.commentsCount ?? 0) + 1 });
-      onRevalidateSpots?.();
-      onFeedback?.("コメントを追加しました");
-    },
-    [applySpotUpdate, onFeedback, onRevalidateSpots, spot]
-  );
 
   const isInteractiveElement = useCallback((target: EventTarget | null) => {
     const element = target as HTMLElement | null;
@@ -592,12 +561,26 @@ export const SpotDetailSheet = ({
     };
   }, [closeSheet, isOpen]);
 
-  const isOwner = spot && currentUser ? spot.ownerId === currentUser.uid : false;
-
   const handleDirections = useCallback(() => {
     if (!spot) return;
     const url = `https://www.google.com/maps/dir/?api=1&destination=${spot.lat},${spot.lng}`;
     window.open(url, "_blank", "noopener,noreferrer");
+  }, [spot]);
+
+  const mediaGalleryUrls = useMemo(() => {
+    if (!spot) return [];
+    const urls: string[] = [];
+    if (Array.isArray(spot.mediaUrls)) {
+      spot.mediaUrls.forEach((url) => {
+        if (typeof url === "string" && url.trim().length > 0) {
+          urls.push(url);
+        }
+      });
+    }
+    if (urls.length === 0 && typeof spot.imageUrl === "string" && spot.imageUrl.trim().length > 0) {
+      urls.push(spot.imageUrl);
+    }
+    return urls;
   }, [spot]);
 
   const externalLinks = useMemo<SpotExternalLink[]>(() => {
@@ -667,6 +650,10 @@ export const SpotDetailSheet = ({
               style={{ overflowY: sheetTranslate <= 0 ? "auto" : "hidden" }}
             >
               <div className="sheet-content">
+                {mediaGalleryUrls.length > 0 ? (
+                  <SpotMediaGallery title={spot.title} mediaUrls={mediaGalleryUrls} />
+                ) : null}
+
                 <section className="sheet-section">
                   <header className="sheet-section-header">
                     <div className="sheet-section-heading">
@@ -700,14 +687,6 @@ export const SpotDetailSheet = ({
                   </section>
                 ) : null}
 
-                <section className="sheet-section comments">
-                  <SpotCommentsSection
-                    spot={spot}
-                    authToken={authToken}
-                    onCommentCreated={handleCommentCreated}
-                    onRequireAuth={onRequireAuth}
-                  />
-                </section>
               </div>
             </div>
           </>
