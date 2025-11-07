@@ -540,13 +540,10 @@ function App() {
   const useMockTiles = import.meta.env.VITE_USE_MOCK_TILES === "true";
 
   const spots = useMemo(() => {
-    if (useMockTiles) {
-      if (Array.isArray(spotData) && spotData && spotData.length > 0) {
-        return spotData;
-      }
-      return mockSpots;
+    if (Array.isArray(spotData) && spotData.length > 0) {
+      return spotData;
     }
-    return spotData ?? [];
+    return useMockTiles ? mockSpots : [];
   }, [spotData, useMockTiles]);
 
   const filteredByCategory = useMemo(() => {
@@ -616,6 +613,12 @@ function App() {
       setNotifications((current) => [...current, ...newNotifications]);
     }
   }, [spots, currentUser, userProfile?.followedUserIds]);
+
+  useEffect(() => {
+    if (viewMode === "list" && activeSpot) {
+      setActiveSpot(null);
+    }
+  }, [viewMode, activeSpot]);
 
   const handleSelectLocation = useCallback((coords: Coordinates) => {
     setSelectedLocation(coords);
@@ -1638,9 +1641,6 @@ function App() {
         onNotify={handleNotify}
         onShare={handleShareSpot}
         onSpotUpdated={updateSpotLocally}
-        onProfileMutate={() => {
-          void mutateProfile();
-        }}
         onRequireAuth={() => {
           setAuthModalOpen(true);
         }}

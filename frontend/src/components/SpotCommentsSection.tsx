@@ -1,7 +1,6 @@
 import { FormEvent, useCallback, useEffect, useMemo, useState } from "react";
 import { Comment, CommentLikeMutationResult, Spot } from "../types";
 import { useSpotComments } from "../hooks/useSpotComments";
-import { uploadImageFile } from "../lib/storage";
 
 export type SpotCommentsSectionProps = {
   spot: Spot;
@@ -25,9 +24,6 @@ export const SpotCommentsSection = ({ spot, authToken, onCommentCreated, onRequi
   const sortedComments = useMemo(() => comments, [comments]);
 
   const [text, setText] = useState("");
-  const [imageUrl, setImageUrl] = useState("");
-  const [imageFile, setImageFile] = useState<File | null>(null);
-  const [imagePreview, setImagePreview] = useState<string | null>(null);
   const [statusMessage, setStatusMessage] = useState<string | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -35,39 +31,10 @@ export const SpotCommentsSection = ({ spot, authToken, onCommentCreated, onRequi
 
   useEffect(() => {
     setText("");
-    setImageUrl("");
-    setImageFile(null);
-    setImagePreview((current) => {
-      if (current) {
-        URL.revokeObjectURL(current);
-      }
-      return null;
-    });
     setStatusMessage(null);
     setErrorMessage(null);
     setPendingCommentLikeIds(new Set());
   }, [spot.id]);
-
-  useEffect(() => {
-    return () => {
-      if (imagePreview) {
-        URL.revokeObjectURL(imagePreview);
-      }
-    };
-  }, [imagePreview]);
-
-  const handleImageFileChange = useCallback((file: File | null) => {
-    setImageFile(file);
-    setImagePreview((current) => {
-      if (current) {
-        URL.revokeObjectURL(current);
-      }
-      return file ? URL.createObjectURL(file) : null;
-    });
-    if (file) {
-      setImageUrl("");
-    }
-  }, []);
 
   const handleSubmit = useCallback(
     async (event: FormEvent<HTMLFormElement>) => {
@@ -88,20 +55,8 @@ export const SpotCommentsSection = ({ spot, authToken, onCommentCreated, onRequi
 
       setIsSubmitting(true);
       try {
-        let uploadedImageUrl: string | undefined;
-        if (imageFile) {
-          try {
-            uploadedImageUrl = await uploadImageFile(imageFile, "comments");
-          } catch (uploadError) {
-            throw new Error("画像のアップロードに失敗しました。再度お試しください。");
-          }
-        } else if (imageUrl.trim()) {
-          uploadedImageUrl = imageUrl.trim();
-        }
-
         const payload = {
-          text: text.trim(),
-          imageUrl: uploadedImageUrl
+          text: text.trim()
         };
 
         const response = await fetch(`/api/spots/${spot.id}/comments`, {
@@ -145,8 +100,6 @@ export const SpotCommentsSection = ({ spot, authToken, onCommentCreated, onRequi
         onCommentCreated?.(comment);
         setStatusMessage("コメントを投稿しました。");
         setText("");
-        setImageUrl("");
-        handleImageFileChange(null);
       } catch (submitError) {
         const message = submitError instanceof Error ? submitError.message : "予期せぬエラーが発生しました";
         setErrorMessage(message);
@@ -154,7 +107,7 @@ export const SpotCommentsSection = ({ spot, authToken, onCommentCreated, onRequi
         setIsSubmitting(false);
       }
     },
-    [authToken, handleImageFileChange, imageFile, imageUrl, mutate, onCommentCreated, onRequireAuth, spot.id, text]
+    [authToken, mutate, onCommentCreated, onRequireAuth, spot.id, text]
   );
 
   const handleToggleCommentLike = useCallback(
@@ -243,7 +196,6 @@ export const SpotCommentsSection = ({ spot, authToken, onCommentCreated, onRequi
                   <time dateTime={comment.timestamp}>{date.toLocaleString("ja-JP")}</time>
                 </div>
                 <p className="comment-text">{comment.text}</p>
-                {comment.imageUrl && <img src={comment.imageUrl} alt="コメント画像" className="comment-image" loading="lazy" />}
                 <button
                   type="button"
                   className={`button subtle like-button ${comment.likedByViewer ? "active" : ""}`}
@@ -274,15 +226,6 @@ export const SpotCommentsSection = ({ spot, authToken, onCommentCreated, onRequi
             rows={3}
             required
           />
-        </label>
-        <label className="form-group">
-          <span>画像URL（任意）</span>
-          <input className="input" value={imageUrl} onChange={(event) => setImageUrl(event.target.value)} placeholder="https://" />
-        </label>
-        <label className="form-group">
-          <span>画像をアップロード（任意）</span>
-          <input type="file" accept="image/*" onChange={(event) => handleImageFileChange(event.target.files?.[0] ?? null)} />
-          {imagePreview && <img src={imagePreview} alt="選択中の画像プレビュー" className="image-preview" />}
         </label>
         {statusMessage && <p className="status success">{statusMessage}</p>}
         {errorMessage && <p className="status error">{errorMessage}</p>}

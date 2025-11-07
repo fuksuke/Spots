@@ -5,7 +5,7 @@ import type { PointerEvent as ReactPointerEvent, WheelEvent as ReactWheelEvent }
 import { Avatar } from "./Avatar";
 import { Icon } from "./Icon";
 import { SpotCommentsSection } from "./SpotCommentsSection";
-import { Comment, FavoriteMutationResult, FollowMutationResult, LikeMutationResult, Spot, SpotExternalLink } from "../types";
+import { Comment, Spot, SpotExternalLink } from "../types";
 
 const clamp = (value: number, min: number, max: number) => Math.min(Math.max(value, min), max);
 const PEEK_TRANSLATE = 45;
@@ -17,12 +17,6 @@ const DRAG_ACTIVATION_THRESHOLD = 6;
 const WHEEL_PULL_SENSITIVITY = 0.55;
 const WHEEL_SETTLE_DELAY_MS = 140;
 
-type PendingFlags = {
-  like: boolean;
-  favorite: boolean;
-  follow: boolean;
-};
-
 export type SpotDetailSheetProps = {
   spot: Spot | null;
   isOpen: boolean;
@@ -32,7 +26,6 @@ export type SpotDetailSheetProps = {
   onNotify?: (spot: Spot) => void;
   onShare?: (spot: Spot) => void;
   onSpotUpdated?: (spotId: string, updates: Partial<Spot>) => void;
-  onProfileMutate?: () => void;
   onRequireAuth?: () => void;
   onRevalidateSpots?: () => void;
   onFeedback?: (message: string) => void;
@@ -47,7 +40,6 @@ export const SpotDetailSheet = ({
   onNotify,
   onShare,
   onSpotUpdated,
-  onProfileMutate,
   onRequireAuth,
   onRevalidateSpots,
   onFeedback
@@ -64,8 +56,6 @@ export const SpotDetailSheet = ({
     return `${formatter.format(new Date(spot.startTime))} - ${formatter.format(new Date(spot.endTime))}`;
   }, [spot]);
 
-  const [pending, setPending] = useState<PendingFlags>({ like: false, favorite: false, follow: false });
-  const [actionError, setActionError] = useState<string | null>(null);
   const sheetRef = useRef<HTMLElement | null>(null);
   const closeTimeoutRef = useRef<number | null>(null);
   const dragStateRef = useRef<{ startY: number; startTranslate: number; pointerId: number | null }>({
@@ -96,28 +86,6 @@ export const SpotDetailSheet = ({
   const wheelActiveRef = useRef(false);
   const wheelSettleTimeoutRef = useRef<number | null>(null);
   const [isDragging, setIsDragging] = useState(false);
-  const mediaScrollRef = useRef<HTMLDivElement | null>(null);
-  const mediaItems = useMemo(() => {
-    if (!spot) return [] as string[];
-    if (spot.mediaUrls && spot.mediaUrls.length > 0) {
-      return spot.mediaUrls;
-    }
-    if (spot.imageUrl) {
-      return [spot.imageUrl];
-    }
-    return [] as string[];
-  }, [spot]);
-  const [activeMediaIndex, setActiveMediaIndex] = useState(0);
-
-  useEffect(() => {
-    setActiveMediaIndex(0);
-  }, [spot?.id]);
-
-  useEffect(() => {
-    const container = mediaScrollRef.current;
-    if (!container) return;
-    container.scrollTo({ left: 0, behavior: "auto" });
-  }, [spot?.id]);
 
   useEffect(() => {
     return () => {
@@ -127,11 +95,6 @@ export const SpotDetailSheet = ({
       }
     };
   }, []);
-
-  useEffect(() => {
-    setPending({ like: false, favorite: false, follow: false });
-    setActionError(null);
-  }, [spot?.id, isOpen]);
 
   useEffect(() => {
     if (!isOpen) {
@@ -157,6 +120,12 @@ export const SpotDetailSheet = ({
       scrollAreaRef.current?.scrollTo({ top: 0, behavior: "auto" });
     }
   }, [spot?.id, isOpen]);
+
+  useEffect(() => {
+    if (sheetTranslate > 0) {
+      scrollAreaRef.current?.scrollTo({ top: 0, behavior: "auto" });
+    }
+  }, [sheetTranslate]);
 
   useEffect(() => {
     latestTranslateRef.current = sheetTranslate;
@@ -224,15 +193,6 @@ export const SpotDetailSheet = ({
     };
   }, [clearWheelSettleTimeout]);
 
-  const ensureAuthenticated = useCallback(() => {
-    if (!authToken) {
-      setActionError("この操作にはログインが必要です。");
-      onRequireAuth?.();
-      return false;
-    }
-    return true;
-  }, [authToken, onRequireAuth]);
-
   const applySpotUpdate = useCallback(
     (updates: Partial<Spot>) => {
       if (spot) {
@@ -242,121 +202,6 @@ export const SpotDetailSheet = ({
     [onSpotUpdated, spot]
   );
 
-  const handleToggleLike = useCallback(async () => {
-    if (!spot) return;
-    if (!ensureAuthenticated()) {
-      return;
-    }
-    setPending((flags) => ({ ...flags, like: true }));
-    setActionError(null);
-    const isLiked = spot.likedByViewer ?? false;
-    const endpoint = isLiked ? "/api/unlike_spot" : "/api/like_spot";
-
-    try {
-      const response = await fetch(endpoint, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${authToken}`
-        },
-        body: JSON.stringify({ spot_id: spot.id })
-      });
-
-      if (!response.ok) {
-        const body = await response.json().catch(() => ({}));
-        throw new Error(body.message ?? "いいね操作に失敗しました");
-      }
-
-      const result = (await response.json()) as LikeMutationResult;
-      applySpotUpdate({ likes: result.likes, likedByViewer: result.liked });
-      onRevalidateSpots?.();
-      if (result.liked) {
-        onFeedback?.("いいねしました");
-      }
-    } catch (error) {
-      const message = error instanceof Error ? error.message : "予期せぬエラーが発生しました";
-      setActionError(message);
-    } finally {
-      setPending((flags) => ({ ...flags, like: false }));
-    }
-  }, [applySpotUpdate, authToken, ensureAuthenticated, onFeedback, onRevalidateSpots, spot]);
-
-  const handleToggleFavorite = useCallback(async () => {
-    if (!spot) return;
-    if (!ensureAuthenticated()) {
-      return;
-    }
-    setPending((flags) => ({ ...flags, favorite: true }));
-    setActionError(null);
-    const isFavorite = spot.favoritedByViewer ?? false;
-    const endpoint = isFavorite ? "/api/unfavorite_spot" : "/api/favorite_spot";
-
-    try {
-      const response = await fetch(endpoint, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${authToken}`
-        },
-        body: JSON.stringify({ spot_id: spot.id })
-      });
-
-      if (!response.ok) {
-        const body = await response.json().catch(() => ({}));
-        throw new Error(body.message ?? "お気に入り操作に失敗しました");
-      }
-
-      const result = (await response.json()) as FavoriteMutationResult;
-      applySpotUpdate({ favoritedByViewer: result.favorited });
-      onRevalidateSpots?.();
-      onFeedback?.(result.favorited ? "お気に入りに追加しました" : "お気に入りを解除しました");
-    } catch (error) {
-      const message = error instanceof Error ? error.message : "予期せぬエラーが発生しました";
-      setActionError(message);
-    } finally {
-      setPending((flags) => ({ ...flags, favorite: false }));
-    }
-  }, [applySpotUpdate, authToken, ensureAuthenticated, onFeedback, onRevalidateSpots, spot]);
-
-  const handleToggleFollow = useCallback(async () => {
-    if (!spot) return;
-    if (!ensureAuthenticated()) {
-      return;
-    }
-    setPending((flags) => ({ ...flags, follow: true }));
-    setActionError(null);
-    const ownerId = spot.ownerId;
-    const isFollowing = spot.followedByViewer ?? false;
-    const endpoint = isFollowing ? "/api/unfollow_user" : "/api/follow_user";
-
-    try {
-      const response = await fetch(endpoint, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${authToken}`
-        },
-        body: JSON.stringify({ target_user_id: ownerId })
-      });
-
-      if (!response.ok) {
-        const body = await response.json().catch(() => ({}));
-        throw new Error(body.message ?? "フォロー操作に失敗しました");
-      }
-
-      const result = (await response.json()) as FollowMutationResult;
-      applySpotUpdate({ followedByViewer: result.following });
-      onProfileMutate?.();
-      onRevalidateSpots?.();
-      onFeedback?.(result.following ? "フォローしました" : "フォローを解除しました");
-    } catch (error) {
-      const message = error instanceof Error ? error.message : "予期せぬエラーが発生しました";
-      setActionError(message);
-    } finally {
-      setPending((flags) => ({ ...flags, follow: false }));
-    }
-  }, [applySpotUpdate, authToken, ensureAuthenticated, onFeedback, onProfileMutate, onRevalidateSpots, spot]);
-
   const handleCommentCreated = useCallback(
     (_comment: Comment) => {
       applySpotUpdate({ commentsCount: (spot?.commentsCount ?? 0) + 1 });
@@ -365,51 +210,6 @@ export const SpotDetailSheet = ({
     },
     [applySpotUpdate, onFeedback, onRevalidateSpots, spot]
   );
-
-  const scrollToMediaIndex = useCallback(
-    (index: number) => {
-      const container = mediaScrollRef.current;
-      if (!container || mediaItems.length === 0) return;
-      const targetIndex = clamp(index, 0, mediaItems.length - 1);
-      const { width } = container.getBoundingClientRect();
-      container.scrollTo({ left: width * targetIndex, behavior: "smooth" });
-      setActiveMediaIndex(targetIndex);
-    },
-    [mediaItems.length]
-  );
-
-  const handlePrevMedia = useCallback(() => {
-    if (mediaItems.length < 2) return;
-    const nextIndex = activeMediaIndex === 0 ? mediaItems.length - 1 : activeMediaIndex - 1;
-    scrollToMediaIndex(nextIndex);
-  }, [activeMediaIndex, mediaItems.length, scrollToMediaIndex]);
-
-  const handleNextMedia = useCallback(() => {
-    if (mediaItems.length < 2) return;
-    const nextIndex = activeMediaIndex === mediaItems.length - 1 ? 0 : activeMediaIndex + 1;
-    scrollToMediaIndex(nextIndex);
-  }, [activeMediaIndex, mediaItems.length, scrollToMediaIndex]);
-
-  useEffect(() => {
-    const container = mediaScrollRef.current;
-    if (!container || mediaItems.length < 2) return;
-
-    const handleScroll = () => {
-      const { width } = container.getBoundingClientRect();
-      if (width <= 0) return;
-      const tentativeIndex = Math.round(container.scrollLeft / width);
-      setActiveMediaIndex((current) => {
-        const normalized = clamp(tentativeIndex, 0, mediaItems.length - 1);
-        return current === normalized ? current : normalized;
-      });
-    };
-
-    const opts: AddEventListenerOptions = { passive: true };
-    container.addEventListener("scroll", handleScroll, opts);
-    return () => {
-      container.removeEventListener("scroll", handleScroll, opts);
-    };
-  }, [mediaItems.length]);
 
   const isInteractiveElement = useCallback((target: EventTarget | null) => {
     const element = target as HTMLElement | null;
@@ -542,17 +342,19 @@ export const SpotDetailSheet = ({
       if (scrollDragState.pointerId !== event.pointerId) return;
 
       const container = event.currentTarget;
-      if (container.scrollTop > SCROLL_TOP_EPSILON) {
+      const atTop = container.scrollTop <= SCROLL_TOP_EPSILON;
+      if (!atTop) {
         return;
       }
 
       const deltaY = event.clientY - scrollDragState.startY;
-      if (deltaY <= 0) {
+      const deltaX = event.clientX - scrollDragState.startX;
+      if (Math.abs(deltaY) < Math.abs(deltaX)) {
         return;
       }
 
-      const deltaX = event.clientX - scrollDragState.startX;
-      if (Math.abs(deltaY) < Math.abs(deltaX)) {
+      const isExpanded = latestTranslateRef.current <= 0;
+      if (isExpanded && deltaY < 0) {
         return;
       }
 
@@ -585,6 +387,10 @@ export const SpotDetailSheet = ({
       if (dragStateRef.current.pointerId === event.pointerId) {
         handlePointerEnd(event);
         resetScrollDragState();
+        return;
+      }
+
+      if (latestTranslateRef.current <= 0) {
         return;
       }
 
@@ -654,12 +460,13 @@ export const SpotDetailSheet = ({
       }
 
       const deltaY = touch.clientY - touchState.startY;
-      if (deltaY <= 0) {
+      const deltaX = touch.clientX - touchState.startX;
+      if (Math.abs(deltaY) < Math.abs(deltaX)) {
         return;
       }
 
-      const deltaX = touch.clientX - touchState.startX;
-      if (Math.abs(deltaY) < Math.abs(deltaX)) {
+      const isExpanded = latestTranslateRef.current <= 0;
+      if (isExpanded && deltaY < 0) {
         return;
       }
 
@@ -717,18 +524,37 @@ export const SpotDetailSheet = ({
       if (!isOpen) return;
       if (dragStateRef.current.pointerId !== null) return;
       const container = event.currentTarget;
-      if (container.scrollTop > SCROLL_TOP_EPSILON) {
-        return;
-      }
-      if (event.deltaY >= 0) {
-        return;
-      }
+      const atTop = container.scrollTop <= SCROLL_TOP_EPSILON;
       const sheetEl = sheetRef.current;
       if (!sheetEl) return;
 
       const sheetHeight = sheetEl.getBoundingClientRect().height || 1;
-      const deltaPercent = ((-event.deltaY) / sheetHeight) * 100 * WHEEL_PULL_SENSITIVITY;
-      const next = clamp(latestTranslateRef.current + deltaPercent, 0, 100);
+      const magnitude = Math.abs(event.deltaY);
+      if (magnitude === 0) {
+        return;
+      }
+
+      const deltaPercent = (magnitude / sheetHeight) * 100 * WHEEL_PULL_SENSITIVITY;
+      let next = latestTranslateRef.current;
+
+      if (event.deltaY < 0) {
+        if (next <= 0) {
+          return;
+        }
+        next = clamp(next - deltaPercent, 0, 100);
+      } else {
+        if (!atTop && next <= 0) {
+          return;
+        }
+        next = clamp(next + deltaPercent, 0, 100);
+      }
+
+      if (next === latestTranslateRef.current) {
+        return;
+      }
+
+      event.preventDefault();
+      container.scrollTop = 0;
       setSheetTranslate(next);
       latestTranslateRef.current = next;
 
@@ -767,9 +593,6 @@ export const SpotDetailSheet = ({
   }, [closeSheet, isOpen]);
 
   const isOwner = spot && currentUser ? spot.ownerId === currentUser.uid : false;
-  const likeLabel = spot?.likedByViewer ? "いいね済み" : "いいね";
-  const favoriteLabel = spot?.favoritedByViewer ? "保存済み" : "保存";
-  const followLabel = spot?.followedByViewer ? "フォロー中" : "フォロー";
 
   const handleDirections = useCallback(() => {
     if (!spot) return;
@@ -785,58 +608,6 @@ export const SpotDetailSheet = ({
       icon: link.icon ?? null
     }));
   }, [spot]);
-
-  const renderMedia = () => {
-    if (!spot) return null;
-    const images = mediaItems.length > 0 ? mediaItems : [spot.imageUrl].filter(Boolean) as string[];
-    if (images.length === 0) {
-      return (
-        <div className="sheet-media single" aria-label="イベント画像">
-          <div className="media-title-fallback">
-            <p>{spot.title}</p>
-          </div>
-        </div>
-      );
-    }
-
-    if (images.length === 1) {
-      return (
-        <div className="sheet-media single" aria-label="イベント画像">
-          <img src={images[0]} alt={spot.title} loading="lazy" />
-        </div>
-      );
-    }
-
-    return (
-      <div className="sheet-media carousel" aria-roledescription="carousel">
-        <div className="media-scroll" ref={mediaScrollRef} aria-live="polite">
-          {images.map((url, index) => (
-            <figure className="media-slide" key={`${url}-${index}`} aria-label={`${index + 1}/${images.length}`}>
-              <img src={url} alt={`${spot.title} ${index + 1}`} loading="lazy" />
-            </figure>
-          ))}
-        </div>
-        <button type="button" className="media-nav prev" onClick={handlePrevMedia} aria-label="前の画像">
-          ‹
-        </button>
-        <button type="button" className="media-nav next" onClick={handleNextMedia} aria-label="次の画像">
-          ›
-        </button>
-        <div className="media-indicators" role="tablist" aria-label="画像選択">
-          {images.map((_, index) => (
-            <button
-              key={index}
-              type="button"
-              role="tab"
-              aria-selected={activeMediaIndex === index}
-              className={`indicator ${activeMediaIndex === index ? "active" : ""}`.trim()}
-              onClick={() => scrollToMediaIndex(index)}
-            />
-          ))}
-        </div>
-      </div>
-    );
-  };
 
   const sheetMode = sheetTranslate <= EXPAND_THRESHOLD ? "expanded" : sheetTranslate >= 99 ? "closed" : "peek";
 
@@ -893,9 +664,8 @@ export const SpotDetailSheet = ({
               onPointerUp={handleScrollablePointerEnd}
               onPointerCancel={handleScrollablePointerEnd}
               onWheel={handleScrollableWheel}
+              style={{ overflowY: sheetTranslate <= 0 ? "auto" : "hidden" }}
             >
-              {renderMedia()}
-
               <div className="sheet-content">
                 <section className="sheet-section">
                   <header className="sheet-section-header">
@@ -907,38 +677,6 @@ export const SpotDetailSheet = ({
                     <p className="sheet-period">{timeRange}</p>
                   </header>
                   <p className="sheet-description">{spot.description}</p>
-                </section>
-
-                <section className="sheet-section">
-                  <div className="sheet-actions-row">
-                    <button
-                      type="button"
-                      className={`action-chip ${spot.likedByViewer ? "active" : ""}`.trim()}
-                      onClick={() => void handleToggleLike()}
-                      disabled={pending.like}
-                    >
-                      👍 {likeLabel} ({spot.likes})
-                    </button>
-                    <button
-                      type="button"
-                      className={`action-chip ${spot.favoritedByViewer ? "active" : ""}`.trim()}
-                      onClick={() => void handleToggleFavorite()}
-                      disabled={pending.favorite}
-                    >
-                      ⭐ {favoriteLabel}
-                    </button>
-                    {!isOwner && (
-                      <button
-                        type="button"
-                        className={`action-chip ${spot.followedByViewer ? "active" : ""}`.trim()}
-                        onClick={() => void handleToggleFollow()}
-                        disabled={pending.follow}
-                      >
-                        🤝 {followLabel}
-                      </button>
-                    )}
-                  </div>
-                  {actionError && <p className="status error">{actionError}</p>}
                 </section>
 
                 <section className="sheet-section">

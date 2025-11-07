@@ -76,11 +76,11 @@ type SpotListViewProps = {
 };
 
 export const SpotListView = ({ spots, isLoading, error, onSpotSelect }: SpotListViewProps) => {
-  const useMock = import.meta.env.VITE_USE_MOCK_TILES === 'true';
+  const useMockTiles = import.meta.env.VITE_USE_MOCK_TILES === 'true';
   const baseData = spots.length > 0 ? spots : mockSpots;
-  const listData = useMock ? baseData : spots;
-  const loadingState = useMock ? false : isLoading;
-  const errorState = useMock ? null : error;
+  const listData = useMockTiles ? baseData : spots;
+  const loadingState = useMockTiles ? false : isLoading;
+  const errorState = useMockTiles ? null : error;
   const [sortKey, setSortKey] = useState<SortKey>("startTime");
   const sortedSpots = useMemo(() => {
     const list = [...listData];
