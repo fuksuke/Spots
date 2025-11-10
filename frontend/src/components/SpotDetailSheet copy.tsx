@@ -19,7 +19,7 @@ const EXPAND_THRESHOLD = 18;
 const CLOSE_THRESHOLD = 70;
 const CLOSE_ANIMATION_MS = 240;
 const SCROLL_TOP_EPSILON = 2;
-const DRAG_ACTIVATION_THRESHOLD = 4;
+const DRAG_ACTIVATION_THRESHOLD = 6;
 const WHEEL_PULL_SENSITIVITY = 0.55;
 const WHEEL_SETTLE_DELAY_MS = 140;
 
@@ -446,7 +446,7 @@ export const SpotDetailSheet = ({
       if (!touch) return;
 
       if (dragStateRef.current.pointerId === touchState.identifier) {
-        if (event.cancelable) event.preventDefault();
+        event.preventDefault();
         updateDragFromClientY(touch.clientY);
         return;
       }
@@ -478,7 +478,7 @@ export const SpotDetailSheet = ({
         active: true
       };
       startDrag(touch.identifier, touch.clientY);
-      if (event.cancelable) event.preventDefault();
+      event.preventDefault();
       updateDragFromClientY(touch.clientY);
     };
 
@@ -595,17 +595,6 @@ export const SpotDetailSheet = ({
     window.open(url, "_blank", "noopener,noreferrer");
   }, [spot]);
 
-  /**
-   * Launch Apple Maps with the destination pre-filled. Many users on iOS
-   * prefer Apple Maps so we offer this alongside Google Maps. When no
-   * location data is present the button simply does nothing.
-   */
-  const handleAppleDirections = useCallback(() => {
-    if (!spot) return;
-    const url = `https://maps.apple.com/?daddr=${spot.lat},${spot.lng}`;
-    window.open(url, "_blank", "noopener,noreferrer");
-  }, [spot]);
-
   const handleSubmitReport = useCallback(
     async (event: FormEvent<HTMLFormElement>) => {
       event.preventDefault();
@@ -666,21 +655,10 @@ export const SpotDetailSheet = ({
     return null;
   }, [spot?.contact]);
   const detailItems = useMemo(() => {
-    /**
-     * Build a list of detail entries to show beneath the description. Each entry
-     * includes a type which will determine the icon, a unique key, and
-     * arbitrary React content. We include contact information, location
-     * information, and any pricing information when available. New types
-     * should be reflected in the rendering logic below with appropriate icons.
-     */
-    const items: Array<{ type: "contact" | "location" | "price"; content: ReactNode; key: string }> = [];
+    const items: Array<{ type: "contact" | "location"; content: ReactNode; key: string }> = [];
     if (contactEntry) {
       const content = contactEntry.href ? (
-        <a
-          href={contactEntry.href}
-          target={contactEntry.href.startsWith("http") ? "_blank" : undefined}
-          rel="noopener noreferrer"
-        >
+        <a href={contactEntry.href} target={contactEntry.href.startsWith("http") ? "_blank" : undefined} rel="noopener noreferrer">
           {contactEntry.value}
         </a>
       ) : (
@@ -691,15 +669,8 @@ export const SpotDetailSheet = ({
     if (spot?.locationDetails) {
       items.push({ type: "location", content: spot.locationDetails, key: "location" });
     }
-    // Add a pricing row if the spot exposes pricing details. The mock data
-    // stores pricing information under the `pricing` field with a `label`
-    // property (e.g. "無料", "¥600"). When present we show that label.
-    if ((spot as any)?.pricing?.label) {
-      const priceLabel: string = (spot as any).pricing.label;
-      items.push({ type: "price", content: priceLabel, key: "price" });
-    }
     return items;
-  }, [contactEntry, spot?.locationDetails, spot]);
+  }, [contactEntry, spot?.locationDetails]);
 
   const externalLinks = useMemo<SpotExternalLink[]>(() => {
     if (!spot || !spot.externalLinks) return [];
@@ -803,83 +774,63 @@ export const SpotDetailSheet = ({
                   <header className="sheet-section-header">
                     <div className="sheet-heading-row">
                       <div className="sheet-section-heading">
-                        <div className="sheet-event-titles">
-                          <h2 className="sheet-event-title" id={`spot-detail-${spot.id}`}>
-                            {spot.title}
-                          </h2>
-                          {(spot as any)?.titleReading ? (
-                            <p className="sheet-event-subtitle">{(spot as any).titleReading as any}</p>
-                          ) : null}
-                        </div>
+                        <h2 className="sheet-event-title" id={`spot-detail-${spot.id}`}>
+                          {spot.title}
+                        </h2>
                       </div>
-                      <div className="sheet-statistics">
-                        <button type="button" className="sheet-like-button" aria-label="いいね" data-prevent-drag>
-                          <Icon name="heart" size={18} color={spot.likedByViewer ? "#ef4444" : "#cbd5f5"} />
-                          <span>{(spot.likes ?? 0).toLocaleString("ja-JP")}</span>
-                        </button>
-                        <div className="sheet-view-count" aria-label="見たよ">
-                          <Icon name="eyesFill" size={18} />
-                          <span>{(spot.viewCount ?? 0).toLocaleString("ja-JP")}</span>
-                        </div>
-                      </div>
+                      <button type="button" className="sheet-like-button" aria-label="いいね" data-prevent-drag>
+                        <Icon name="heart" size={18} color={spot.likedByViewer ? "#ef4444" : "#cbd5f5"} />
+                        <span>{(spot.likes ?? 0).toLocaleString("ja-JP")}</span>
+                      </button>
                     </div>
                     <p className="sheet-period">{timeRange}</p>
-                    {/**
-                     * Display the marketing catch copy. In the provided mock data
-                     * this text is stored in the `speechBubble` field. If that
-                     * property is present, we show it as a prominent callout.
-                     */}
-                    {(() => {
-                      const copy = (spot as any)?.speechBubble;
-                      return copy ? <p className="sheet-catchcopy">{copy}</p> : null;
-                    })()}
                   </header>
                   <p className="sheet-description">{spot.description}</p>
                 </section>
 
                 <section className="sheet-section">
-                  <div className="sheet-map-buttons">
-                    <button
-                      type="button"
-                      className="button map-google"
-                      onClick={handleDirections}
-                    >
-                      Google Mapで経路を検索
+                  <div className="sheet-action-row">
+                    <button type="button" className="button primary directions" onClick={handleDirections}>
+                      Google マップで経路を表示
                     </button>
-                    <button
-                      type="button"
-                      className="button map-apple"
-                      onClick={handleAppleDirections}
-                    >
-                      Apple Mapで経路を検索
-                    </button>
+                    <div className="sheet-share-wrapper" data-prevent-drag>
+                      <button
+                        type="button"
+                        className="button secondary share-toggle"
+                        onClick={() => setIsShareMenuOpen((prev) => !prev)}
+                      >
+                        共有
+                      </button>
+                      {isShareMenuOpen ? (
+                        <div className="sheet-share-menu">
+                          <button type="button" className="sheet-share-menu__native" onClick={() => spot && onShare?.(spot)}>
+                            端末で共有
+                          </button>
+                          <div className="sheet-share-menu__links">
+                            {shareMenuLinks.map((link) => (
+                              <a key={link.label} href={link.href} target="_blank" rel="noopener noreferrer">
+                                {link.label}
+                              </a>
+                            ))}
+                          </div>
+                        </div>
+                      ) : null}
+                    </div>
                   </div>
                 </section>
 
                 {detailItems.length > 0 ? (
                   <section className="sheet-section sheet-details">
-                    <h3>Detail</h3>
+                    <h3>詳細情報</h3>
                     <ul className="sheet-detail-list">
                       {detailItems.map((item) => (
                         <li key={item.key} className="detail-row">
                           <span className="detail-icon">
-                            {
-                              // Choose an icon based on the detail type. For contact we use the chat icon,
-                              // for location a map pin, and for price a ticket or money icon.
-                            }
-                            <Icon
-                              name={
-                                item.type === "contact"
-                                  ? "wechatLogo"
-                                  : /* Use the map icon for both location and price rows. The library
-                                     * may not expose a dedicated price/ticket icon, so falling back
-                                     * prevents runtime errors when an icon name is unknown. */
-                                    "mapLight"
-                              }
-                              size={18}
-                            />
+                            <Icon name={item.type === "contact" ? "wechatLogo" : "mapLight"} size={18} />
                           </span>
-                          <div className="detail-content">{item.content}</div>
+                          <div className="detail-content">
+                            {item.content}
+                          </div>
                         </li>
                       ))}
                     </ul>
@@ -901,23 +852,14 @@ export const SpotDetailSheet = ({
                   </section>
                 ) : null}
 
-                <section className="sheet-section">
-                  <div className="sheet-bottom-actions">
-                    <button
-                      type="button"
-                      className="button share"
-                      onClick={() => spot && onShare?.(spot)}
-                    >
-                      共有
-                    </button>
-                    <button
-                      type="button"
-                      className="button report"
-                      onClick={() => setIsReportModalOpen(true)}
-                    >
-                      通報
-                    </button>
-                  </div>
+                <section className="sheet-section sheet-report">
+                  <button
+                    type="button"
+                    className="button secondary report-trigger"
+                    onClick={() => setIsReportModalOpen(true)}
+                  >
+                    通報する
+                  </button>
                 </section>
 
               </div>

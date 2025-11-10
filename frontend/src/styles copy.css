@@ -19,186 +19,6 @@
   background: #f1f5f9;
 }
 
-/* --------------------------------------------------------------------
-   Custom additions for the Yokohama Illumination detail sheet. These rules
-   introduce new visual elements such as a catch copy callout, dual map
-   buttons, a compact social link bar and bottom actions for sharing and
-   reporting. The selectors are scoped under .spot-detail-sheet to avoid
-   collisions with other UI components.
-*/
-
-.spot-detail-sheet .sheet-catchcopy {
-  padding: 0.8rem 1rem;
-  border-radius: 16px;
-  background: #ffffff;
-  border: 1px solid rgba(203, 213, 225, 0.65);
-  font-weight: 700;
-  /* Increase catch copy text to draw more attention */
-  font-size: 1.2rem;
-  line-height: 1.4;
-  text-align: center;
-  color: #0f172a;
-}
-
-.spot-detail-sheet .sheet-map-buttons {
-  display: flex;
-  flex-direction: column;
-  gap: 0.75rem;
-}
-
-.spot-detail-sheet .sheet-map-buttons .button {
-  flex: 1 1 auto;
-  padding: 0.8rem 1rem;
-  border-radius: 16px;
-  font-weight: 600;
-  font-size: 0.95rem;
-  line-height: 1.2;
-  text-align: center;
-  color: #0f172a;
-}
-
-.spot-detail-sheet .button.map-google {
-  background: #6DFEB5;
-}
-
-.spot-detail-sheet .button.map-apple {
-  background: #FFA989;
-}
-
-.spot-detail-sheet .sheet-social-icons {
-  display: flex;
-  flex-direction: row;
-  gap: 1rem;
-  align-items: center;
-}
-
-.spot-detail-sheet .sheet-social-icons a {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 44px;
-  height: 44px;
-  border-radius: 12px;
-  background: rgba(15, 23, 42, 0.05);
-  color: #0f172a;
-  transition: background 0.2s ease;
-}
-
-.spot-detail-sheet .sheet-social-icons a:hover {
-  background: rgba(15, 23, 42, 0.1);
-}
-
-.spot-detail-sheet .sheet-bottom-actions {
-  display: flex;
-  flex-direction: row;
-  gap: 0.5rem;
-}
-
-.spot-detail-sheet .sheet-bottom-actions .button {
-  flex: 1 1 0;
-  padding: 0.75rem 1rem;
-  border-radius: 16px;
-  font-weight: 600;
-  font-size: 0.95rem;
-  text-align: center;
-  background: #f3f4f6;
-  color: #0f172a;
-}
-
-.spot-detail-sheet .sheet-bottom-actions .button:hover {
-  background: #e5e7eb;
-}
-
-/* Statistics group containing likes and view counts */
-.spot-detail-sheet .sheet-statistics {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.5rem;
-}
-
-/* View count pill: styled similarly to the like button but not interactive */
-.spot-detail-sheet .sheet-view-count {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.35rem;
-  padding: 0.35rem 0.75rem;
-  border-radius: 999px;
-  color: #0f172a;
-  font-size: 0.85rem;
-  font-weight: 600;
-  cursor: default;
-}
-
-/* Support for optional subtitle under the main title */
-.spot-detail-sheet .sheet-event-subtitle {
-  margin: 0;
-  font-size: 0.82rem;
-  color: rgba(71, 85, 105, 0.8);
-  line-height: 1.2;
-}
-
-/* Overlay the top bar on top of media when present */
-.spot-detail-sheet .sheet-content.has-media .sheet-top-bar {
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  z-index: 2;
-  padding: 0.6rem 0.8rem;
-  background: linear-gradient(rgba(0, 0, 0, 0.5), rgba(0, 0, 0, 0));
-  border-bottom: none;
-  color: #ffffff;
-}
-
-.spot-detail-sheet .sheet-content.has-media .sheet-top-bar .sheet-owner-name {
-  color: #ffffff;
-}
-
-.spot-detail-sheet .sheet-content.has-media .sheet-top-bar .icon-button {
-  color: #ffffff;
-  background: rgba(255, 255, 255, 0.15);
-  border-radius: 50%;
-}
-
-/* Refine details section to match screenshot styling */
-.spot-detail-sheet .sheet-section.sheet-details {
-  background: none;
-  border-radius: 0;
-  padding: 0;
-}
-
-.spot-detail-sheet .sheet-section.sheet-details .sheet-detail-list {
-  gap: 0.6rem;
-}
-
-.spot-detail-sheet .sheet-section.sheet-details .detail-row {
-  display: flex;
-  align-items: center;
-  gap: 0.6rem;
-  background: #f3f4f6;
-  border-radius: 12px;
-  padding: 0.7rem 0.8rem;
-}
-
-.spot-detail-sheet .sheet-section.sheet-details .detail-icon {
-  width: 28px;
-  height: 28px;
-  border-radius: 50%;
-  background: #ffffff;
-  border: 1px solid #e5e7eb;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  color: #0f172a;
-  flex: 0 0 auto;
-}
-
-.spot-detail-sheet .sheet-section.sheet-details .detail-content {
-  flex: 1 1 auto;
-  font-size: 0.95rem;
-  color: rgba(15, 23, 42, 0.9);
-}
-
 @supports not (height: 100dvh) {
   :root {
     --app-height: 100svh;
@@ -807,10 +627,10 @@ button {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  gap: 0.8rem;
-  padding: 0.6rem 0;
-  border-bottom: none;
-  margin-bottom: 0.5rem;
+  gap: 1rem;
+  padding-bottom: 0.5rem;
+  border-bottom: 1px solid rgba(226, 232, 240, 0.9);
+  margin-bottom: 0;
   cursor: inherit;
   touch-action: none;
 }
@@ -837,16 +657,10 @@ button {
 }
 
 .spot-detail-sheet .sheet-top-bar .icon-button {
-  width: 32px;
-  height: 32px;
-  font-size: 0.8rem;
+  width: 24px;
+  height: 24px;
+  font-size: 0.65rem;
   cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  border-radius: 50%;
-  background: #f3f4f6;
-  color: #0f172a;
 }
 
 .spot-detail-sheet .spot-owner-verified {
@@ -895,6 +709,7 @@ button {
   border: none;
   border-radius: 999px;
   padding: 0.35rem 0.75rem;
+  background: rgba(15, 23, 42, 0.04);
   color: #0f172a;
   font-weight: 600;
   font-size: 0.85rem;
@@ -908,7 +723,7 @@ button {
 
 .spot-detail-sheet .sheet-event-title {
   margin: 0;
-  font-size: 1.25rem;
+  font-size: clamp(1.35rem, 2.4vw, 1.75rem);
   color: #0f172a;
   line-height: 1.2;
 }
@@ -1102,6 +917,7 @@ button {
 }
 
 .spot-detail-sheet .sheet-section.sheet-details {
+  background: rgba(148, 163, 184, 0.14);
   border-radius: 18px;
   padding: 1rem;
 }
@@ -1243,7 +1059,7 @@ button {
 
 .spot-detail-sheet .sheet-links {
   list-style: none;
-  padding: 1rem;
+  padding: 0;
   margin: 0;
   display: flex;
   flex-direction: column;
