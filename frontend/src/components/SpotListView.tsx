@@ -302,7 +302,8 @@ export const SpotListView = ({ spots, isLoading, error, onSpotSelect }: SpotList
                           </div>
                         </div>
                       </div>
-                      {/* Metrics row: view count and like button */}
+                      {/* Page indicators: center below the image */}
+                      {/* Metrics row: page indicators on the left, then view/like counts */}
                       <div className="card-metrics" onClick={(e) => e.stopPropagation()}>
                         <div className="page-indicators">
                           {(() => {
