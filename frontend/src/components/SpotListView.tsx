@@ -202,7 +202,7 @@ export const SpotListView = ({ spots, isLoading, error, onSpotSelect }: SpotList
                 key={spot.id}
                 role="listitem"
                 tabIndex={0}
-                className="spot-list-card spot-mobile-card"
+                className="spot-list-card spot-mobile-card new-card"
                 onClick={() => {
                   onSpotSelect?.(spot);
                   setExpandedSpotId((prev) => (prev === spot.id ? null : spot.id));
@@ -223,9 +223,9 @@ export const SpotListView = ({ spots, isLoading, error, onSpotSelect }: SpotList
               >
                 {(() => {
                   const isExpanded = expandedSpotId === spot.id;
-                  // Build a catch copy: use summary if present, otherwise the first sentence of description.
+                  // Build a catch copy: use speechBubble if present, otherwise the first sentence of description.
                   const catchCopy = (() => {
-                    if (spot.summary && spot.summary.trim()) return spot.summary.trim();
+                    if (spot.speechBubble && spot.speechBubble.trim()) return spot.speechBubble.trim();
                     if (spot.description) {
                       const firstSentence = spot.description.split(/[。.!！\?？]/)[0];
                       return firstSentence.trim();
@@ -234,7 +234,7 @@ export const SpotListView = ({ spots, isLoading, error, onSpotSelect }: SpotList
                   })();
                   // Prepare full and truncated descriptions.
                   const fullDesc = spot.description ?? '';
-                  const truncatedDesc = fullDesc.length > 120 ? fullDesc.slice(0, 120) + '…' : fullDesc;
+                  const truncatedDesc = fullDesc.length > 55 ? fullDesc.slice(0, 55) + '…' : fullDesc;
                   // Prepare map search queries.
                   const query = encodeURIComponent(`${spot.title} ${spot.locationName ?? ''}`);
                     // Compose URLs for external map apps.
@@ -250,126 +250,195 @@ export const SpotListView = ({ spots, isLoading, error, onSpotSelect }: SpotList
                     return [title, ''];
                   };
                   const [mainTitle, subTitle] = parseTitle(spot.title);
+                  // Determine all images for this spot
+                  const images = getAllImages(spot);
+                  const idx = imageIndexMap[spot.id] ?? 0;
+                  const validIdx = Math.min(Math.max(idx, 0), images.length - 1);
+                  const src = images[validIdx] ?? null;
+                  // Determine updated like state and counts using local likedMap
+                  const isLikedLocal = likedMap[spot.id] ?? false;
+                  const displayLikesNumberLocal = likes + (isLikedLocal ? 1 : 0);
+                  const likesLabelUpdated = displayLikesNumberLocal.toLocaleString("ja-JP");
+                  // Build contact entry and detail items
+                  const contactEntry = (() => {
+                    const anyContact = (spot as any).contact;
+                    if (!anyContact) return null;
+                    const { phone, email, sns } = anyContact;
+                    if (phone) {
+                      return { value: phone as string, href: `tel:${(phone as string).replace(/\s+/g, "")}` };
+                    }
+                    if (email) {
+                      return { value: email as string, href: `mailto:${email as string}` };
+                    }
+                    if (sns) {
+                      const first = Object.entries(sns).find(([, url]) => Boolean(url));
+                      if (first) {
+                        const [keyStr, url] = first;
+                        if (url) {
+                          return { value: `${keyStr.toUpperCase()}: ${url}`, href: url as string };
+                        }
+                      }
+                    }
+                    return null;
+                  })();
+                  const detailItems: Array<{ type: "contact" | "location" | "price"; content: any; key: string; href?: string }> = [];
+                  if (contactEntry) {
+                    detailItems.push({ type: "contact", content: contactEntry.value, key: "contact", href: contactEntry.href });
+                  }
+                  if (spot.locationDetails) {
+                    detailItems.push({ type: "location", content: spot.locationDetails, key: "location" });
+                  } else if (locationLabel) {
+                    detailItems.push({ type: "location", content: locationLabel, key: "location" });
+                  }
+                  const pricing = (spot as any).pricing;
+                  if (pricing && pricing.label) {
+                    detailItems.push({ type: "price", content: pricing.label, key: "price" });
+                  }
 
                   return (
                     <>
-                      {/* Header: owner info only */}
-                      <header className="spot-card-header" onClick={(e) => e.stopPropagation()}>
-                        <div className="spot-card-owner">
-                          <Avatar name={spot.ownerDisplayName ?? spot.ownerId} photoUrl={spot.ownerPhotoUrl ?? null} size={32} />
-                          <span className="spot-card-owner-name">{spot.ownerDisplayName ?? spot.ownerId}</span>
-                        </div>
-                      </header>
-                      {/* Title block separated from the header by a divider */}
-                      <div className="spot-card-title-block" onClick={(e) => e.stopPropagation()}>
-                        <h3 className="spot-card-title">{mainTitle}</h3>
-                        {subTitle && <p className="spot-card-subtitle">{subTitle}</p>}
-                      </div>
-                      {/* Image and basic details */}
-                      <div className="card-details" onClick={(e) => e.stopPropagation()}>
-                        <div className="card-image">
-                          {(() => {
-                            // Determine all images for this spot
-                            const images = getAllImages(spot);
-                            const idx = imageIndexMap[spot.id] ?? 0;
-                            const validIdx = Math.min(Math.max(idx, 0), images.length - 1);
-                            const src = images[validIdx] ?? null;
-                            if (src) {
-                              return <img src={src} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />;
-                            }
-                            // Fallback: show category abbreviation with colored background when no images exist
-                            return (
-                              <span style={{ display: 'grid', placeItems: 'center', width: '100%', height: '100%', fontWeight: 700, color: '#ffffff', background: '#818cf8' }}>{spot.category.toUpperCase()}</span>
-                            );
-                          })()}
-                        </div>
-                        <div className="card-detail-list">
-                          <div className="card-detail-item">
-                            <div className="detail-icon"><Icon name="calendarSimple" size={16} /></div>
-                            <div className="detail-content">{scheduleLabel}</div>
+                      {/* Modern card layout inspired by SpotDetailSheet */}
+                      {/* Hero section with image, page indicators and social overlay */}
+                      <div className="modern-hero">
+                        <div className="modern-hero-image">
+                          {src ? (
+                            <img src={src} alt="" />
+                          ) : (
+                            <span style={{ display: 'grid', placeItems: 'center', width: '100%', height: '100%', fontWeight: 700, color: '#ffffff', background: '#818cf8' }}>
+                              {spot.category.toUpperCase()}
+                            </span>
+                          )}
+                          {/* Page indicators overlayed at bottom center of the hero image */}
+                          <div className="modern-hero-indicators">
+                            {(() => {
+                              const images = getAllImages(spot);
+                              const count = images.length > 0 ? images.length : 1;
+                              return Array.from({ length: count }, (_, idx) => (
+                                <span
+                                  key={idx}
+                                  className={(imageIndexMap[spot.id] ?? 0) === idx ? 'active' : ''}
+                                  onClick={(evt) => {
+                                    evt.stopPropagation();
+                                    setImageIndexMap((prev) => ({ ...prev, [spot.id]: idx }));
+                                  }}
+                                ></span>
+                              ));
+                            })()}
                           </div>
-                          <div className="card-detail-item">
-                            <div className="detail-icon"><Icon name="mapLight" size={16} /></div>
-                            <div className="detail-content">{locationLabel}</div>
-                          </div>
-                          <div className="card-detail-item">
-                            <div className="detail-icon"><Icon name="currencyJpyFill" size={16} /></div>
-                            <div className="detail-content">{priceLabel}</div>
-                          </div>
-                          <div className="card-detail-item">
-                            <div className="detail-icon"><Icon name="userFill" size={16} /></div>
-                            <div className="detail-content">{hostLabel}</div>
-                          </div>
-                        </div>
-                      </div>
-                      {/* Page indicators: center below the image */}
-                      {/* Metrics row: page indicators on the left, then view/like counts */}
-                      <div className="card-metrics" onClick={(e) => e.stopPropagation()}>
-                        <div className="page-indicators">
-                          {(() => {
-                            const images = getAllImages(spot);
-                            const count = images.length > 0 ? images.length : 1;
-                            return Array.from({ length: count }, (_, idx) => (
-                              <span
-                                key={idx}
-                                className={(imageIndexMap[spot.id] ?? 0) === idx ? 'active' : ''}
-                                onClick={(evt) => {
-                                  evt.stopPropagation();
-                                  setImageIndexMap((prev) => ({ ...prev, [spot.id]: idx }));
-                                }}
-                              ></span>
-                            ));
-                          })()}
-                        </div>
-                        <div className="metrics">
-                          <div className="metric view">
-                            <Icon name="eyesFill" size={18} />
-                            {viewLabel}
-                          </div>
-                          <div
-                            className={"metric like" + (isLiked ? " liked" : "")}
+                          {/* Social overlay button */}
+                          <button
+                            type="button"
+                            className="modern-hero-social"
+                            aria-label="Instagram"
                             onClick={(e) => {
                               e.stopPropagation();
-                              e.preventDefault();
-                              setLikedMap((prev) => ({ ...prev, [spot.id]: !isLiked }));
                             }}
                           >
-                            <Icon name="heart" size={18} />
-                            {likesLabel}
-                          </div>
+                            <Icon name="camera" size={22} />
+                          </button>
+                        </div>
+                        {/* Owner bar overlayed on top of the image */}
+                        <div className="modern-hero-owner">
+                          <Avatar name={spot.ownerDisplayName ?? spot.ownerId} photoUrl={spot.ownerPhotoUrl ?? null} size={36} />
+                          <span className="owner-name">{spot.ownerDisplayName ?? spot.ownerId}</span>
                         </div>
                       </div>
-                      {/* Catch copy callout */}
-                      {catchCopy && <div className="card-catchcopy">{catchCopy}</div>}
-                      {/* Description and optional "more" link */}
-                      {fullDesc && (
-                        <>
-                          <p className="card-description">{isExpanded ? fullDesc : truncatedDesc}</p>
-                          {!isExpanded && (
-                            <div className="card-more-link-wrapper">
-                              <span className="card-more-link">…もっと見る</span>
+                      {/* Content area containing title, stats, schedule, catch copy, and description */}
+                      <div className="modern-content">
+                        <div className="modern-title-row">
+                          <div className="modern-titles">
+                            <h3 className="modern-title">{mainTitle}</h3>
+                            {subTitle && <p className="modern-subtitle">{subTitle}</p>}
+                          </div>
+                          <div className="modern-stats">
+                            <div className="metric view">
+                              <Icon name="eyesFill" size={18} />
+                              {viewLabel}
                             </div>
-                          )}
-                        </>
-                      )}
-                      {/* Expanded-only extra actions */}
-                      {isExpanded && (
-                        <div className="expanded-extra">
-                          <div className="map-buttons">
-                            <a href={googleMapsUrl} target="_blank" rel="noopener noreferrer" className="google">Google Mapで検索</a>
-                            <a href={appleMapsUrl} target="_blank" rel="noopener noreferrer" className="apple">Apple Mapで検索</a>
-                          </div>
-                          <div className="social-icons">
-                            <button type="button" aria-label="Instagram" onClick={(e) => e.stopPropagation()}><Icon name="camera" size={24} /></button>
-                            <button type="button" aria-label="X" onClick={(e) => e.stopPropagation()}><Icon name="camera" size={24} /></button>
-                            <button type="button" aria-label="YouTube" onClick={(e) => e.stopPropagation()}><Icon name="camera" size={24} /></button>
-                          </div>
-                          <div className="bottom-actions">
-                            <button onClick={(e) => e.stopPropagation()}>共有</button>
-                            <button onClick={(e) => e.stopPropagation()}>通報</button>
+                            <div
+                              className={"metric like" + (isLikedLocal ? ' liked' : '')}
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                e.preventDefault();
+                                setLikedMap((prev) => ({ ...prev, [spot.id]: !isLikedLocal }));
+                              }}
+                            >
+                              <Icon name="heart" size={18} />
+                              {likesLabelUpdated}
+                            </div>
                           </div>
                         </div>
-                      )}
+                        <div className="modern-schedule">{scheduleLabel}</div>
+                        {catchCopy && <div className="modern-catchcopy">{catchCopy}</div>}
+                        {fullDesc && (
+                          <>
+                            <p className="modern-description">{isExpanded ? fullDesc : truncatedDesc}</p>
+                            {!isExpanded && (
+                              <div className="modern-more-link-wrapper">
+                                <span className="modern-more-link">…もっと見る</span>
+                              </div>
+                            )}
+                          </>
+                        )}
+                        {isExpanded && (
+                          <>
+                            <div className="modern-map-buttons">
+                              <a href={googleMapsUrl} target="_blank" rel="noopener noreferrer" className="modern-google">
+                                Google Mapで経路を検索
+                              </a>
+                              <a href={appleMapsUrl} target="_blank" rel="noopener noreferrer" className="modern-apple">
+                                Apple Mapで経路を検索
+                              </a>
+                            </div>
+                            {detailItems.length > 0 && (
+                              <>
+                                <div className="modern-section-title">詳細</div>
+                                <div className="modern-detail-list">
+                                  {detailItems.map((item) => (
+                                    <div className="modern-detail-item" key={item.key}>
+                                      <div className="detail-icon">
+                                        {item.type === 'location' && <Icon name="mapLight" size={20} />}
+                                        {item.type === 'contact' && <Icon name="userFill" size={20} />}
+                                        {item.type === 'price' && <Icon name="currencyJpyFill" size={20} />}
+                                      </div>
+                                      {item.href ? (
+                                        <a href={item.href} className="detail-content" onClick={(e) => e.stopPropagation()}>
+                                          {item.content}
+                                        </a>
+                                      ) : (
+                                        <div className="detail-content">{item.content}</div>
+                                      )}
+                                    </div>
+                                  ))}
+                                </div>
+                              </>
+                            )}
+                            <div className="modern-section-title">URLs</div>
+                            <div className="modern-social-icons">
+                              <button type="button" aria-label="Instagram" onClick={(e) => e.stopPropagation()}>
+                                <Icon name="camera" size={24} />
+                              </button>
+                              <button type="button" aria-label="X" onClick={(e) => e.stopPropagation()}>
+                                <Icon name="camera" size={24} />
+                              </button>
+                              <button type="button" aria-label="YouTube" onClick={(e) => e.stopPropagation()}>
+                                <Icon name="camera" size={24} />
+                              </button>
+                              <button type="button" aria-label="Web" onClick={(e) => e.stopPropagation()}>
+                                <Icon name="camera" size={24} />
+                              </button>
+                            </div>
+                            <div className="modern-bottom-actions">
+                              <button type="button" onClick={(e) => e.stopPropagation()}>
+                                共有
+                              </button>
+                              <button type="button" onClick={(e) => e.stopPropagation()}>
+                                通報
+                              </button>
+                            </div>
+                          </>
+                        )}
+                      </div>
                     </>
                   );
                 })()}

@@ -2933,8 +2933,297 @@ select.input:focus {
   padding: clamp(1rem, 2.6vw, 1.4rem);
   width: 100%;
   background: #ffffff;
-  border-radius: 18px;
+  /* Remove rounding from card corners for list view cards */
+  border-radius: 0;
   border: 1px solid rgba(148, 163, 184, 0.18);
+}
+
+/*
+ * Override spacing and padding for cards using the new modern layout.
+ * The modern design handles its own internal spacing, so remove the
+ * default padding and gap applied to .spot-mobile-card. Keep the
+ * border radius and border styling for consistent card outlines.
+ */
+.spot-list-card.spot-mobile-card.new-card {
+  padding: 0;
+  gap: 0;
+}
+
+/* Modern card layout styles inspired by the SpotDetailSheet design.
+   These rules control the hero image, overlay elements, content
+   structure, and expanded sections. */
+.spot-list-view .modern-hero {
+  position: relative;
+  width: 100%;
+  overflow: hidden;
+  /* Flatten top corners to match the non-rounded card design */
+  /* Remove rounding from the hero section */
+  border-radius: 0;
+}
+.spot-list-view .modern-hero-image {
+  position: relative;
+  width: 100%;
+  height: clamp(200px, 40vw, 240px);
+  overflow: hidden;
+}
+.spot-list-view .modern-hero-image img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+.spot-list-view .modern-hero-indicators {
+  position: absolute;
+  bottom: 0.4rem;
+  left: 0;
+  right: 0;
+  display: flex;
+  justify-content: center;
+  gap: 0.25rem;
+  pointer-events: all;
+}
+.spot-list-view .modern-hero-indicators span {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: rgba(148, 163, 184, 0.5);
+  cursor: pointer;
+}
+.spot-list-view .modern-hero-indicators span.active {
+  width: 12px;
+  height: 12px;
+  background: rgba(148, 163, 184, 0.9);
+}
+.spot-list-view .modern-hero-social {
+  position: absolute;
+  bottom: 0.4rem;
+  right: 0.5rem;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.15);
+  border: none;
+  color: #ffffff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+}
+.spot-list-view .modern-hero-social:hover {
+  background: rgba(255, 255, 255, 0.25);
+}
+.spot-list-view .modern-hero-owner {
+  position: absolute;
+  top: 0.4rem;
+  left: 0.5rem;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  color: #ffffff;
+  z-index: 2;
+  font-weight: 600;
+}
+.spot-list-view .modern-hero-owner .owner-name {
+  font-size: 0.95rem;
+}
+.spot-list-view .modern-content {
+  padding: 0.9rem 1rem 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+.spot-list-view .modern-title-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 1rem;
+}
+.spot-list-view .modern-titles {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+}
+.spot-list-view .modern-title {
+  margin: 0;
+  font-size: 1.15rem;
+  font-weight: 700;
+  color: #0f172a;
+}
+.spot-list-view .modern-subtitle {
+  margin: 0;
+  font-size: 0.85rem;
+  color: rgba(71, 85, 105, 0.8);
+}
+.spot-list-view .modern-stats {
+  display: flex;
+  gap: 0.8rem;
+  align-items: center;
+}
+.spot-list-view .modern-stats .metric {
+  /* Display metrics vertically with icon on top and number below */
+  display: inline-flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.15rem;
+  font-size: 0.85rem;
+  font-weight: 600;
+  border-radius: 999px;
+  /* Slightly adjust padding to accommodate vertical layout */
+  padding: 0.3rem 0.4rem;
+}
+.spot-list-view .modern-stats .metric.view {
+  color: #0f172a;
+}
+.spot-list-view .modern-stats .metric.like {
+  color: #ef4444;
+  cursor: pointer;
+}
+.spot-list-view .modern-stats .metric.like.liked {
+  color: #dc2626;
+}
+.spot-list-view .modern-schedule {
+  font-size: 0.85rem;
+  color: rgba(100, 116, 139, 1);
+}
+.spot-list-view .modern-catchcopy {
+  padding: 0.8rem 1rem;
+  border-radius: 16px;
+  background: #ffffff;
+  border: 3px solid rgba(175, 175, 175, 0.8);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+  font-weight: 900;
+  font-size: 1.3rem;
+  line-height: 1.4;
+  text-align: center;
+  color: #0f172a;
+  text-shadow: 0.5px 0.5px 0px rgba(0, 0, 0, 0.2);
+}
+.spot-list-view .modern-description {
+  color: #475569;
+  font-size: 0.9rem;
+  line-height: 1.6;
+  white-space: pre-wrap;
+}
+.spot-list-view .modern-more-link {
+  color: #3b82f6;
+  cursor: pointer;
+  text-decoration: none;
+  font-size: 0.9rem;
+}
+
+/* Container for the “もっと見る” link when a description is truncated */
+.spot-list-view .modern-more-link-wrapper {
+  margin-top: -1.5rem;
+  display: flex;
+  justify-content: flex-end;
+}
+.spot-list-view .modern-map-buttons {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  margin-top: 0.6rem;
+}
+.spot-list-view .modern-map-buttons a {
+  text-decoration: none;
+  padding: 0.8rem 1rem;
+  border-radius: 16px;
+  font-weight: 600;
+  font-size: 0.95rem;
+  line-height: 1.2;
+  text-align: center;
+  color: #0f172a;
+}
+.spot-list-view .modern-google {
+  background: #6DFEB5;
+}
+.spot-list-view .modern-apple {
+  background: #FFA989;
+}
+.spot-list-view .modern-detail-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+  margin-top: 0.6rem;
+}
+.spot-list-view .modern-detail-item {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  background: #f3f4f6;
+  border-radius: 12px;
+  padding: 0.7rem 0.8rem;
+}
+.spot-list-view .modern-detail-item .detail-icon {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: #ffffff;
+  border: 1px solid #e5e7eb;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: #0f172a;
+  flex: 0 0 auto;
+}
+.spot-list-view .modern-detail-item .detail-content {
+  flex: 1 1 auto;
+  font-size: 0.95rem;
+  color: rgba(15, 23, 42, 0.9);
+}
+/* When the detail content is an anchor itself, ensure consistent styling */
+.spot-list-view .modern-detail-item a.detail-content {
+  color: rgba(15, 23, 42, 0.9);
+  text-decoration: underline;
+}
+.spot-list-view .modern-social-icons {
+  display: flex;
+  gap: 1rem;
+  margin-top: 0.8rem;
+}
+.spot-list-view .modern-social-icons button {
+  width: 44px;
+  height: 44px;
+  border-radius: 12px;
+  background: rgba(15, 23, 42, 0.05);
+  border: none;
+  color: #0f172a;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+}
+.spot-list-view .modern-social-icons button:hover {
+  background: rgba(15, 23, 42, 0.1);
+}
+.spot-list-view .modern-bottom-actions {
+  display: flex;
+  gap: 0.5rem;
+  margin-top: 0.8rem;
+}
+.spot-list-view .modern-bottom-actions button {
+  flex: 1;
+  /* Reduce padding for a more compact appearance */
+  padding: 0.4rem 0.6rem;
+  border-radius: 16px;
+  background: #f3f4f6;
+  color: #0f172a;
+  font-weight: 600;
+  font-size: 0.95rem;
+  border: none;
+  cursor: pointer;
+}
+.spot-list-view .modern-bottom-actions button:hover {
+  background: #e5e7eb;
+}
+
+/* Section titles for detail and URLs within the modern expanded card */
+.spot-list-view .modern-section-title {
+  margin-top: 0.9rem;
+  margin-bottom: 0.4rem;
+  font-weight: 700;
+  font-size: 0.95rem;
+  color: #0f172a;
 }
 
 .spot-list-card.spot-mobile-card::before {
