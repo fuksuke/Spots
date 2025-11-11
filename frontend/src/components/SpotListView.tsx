@@ -130,6 +130,33 @@ export const SpotListView = ({ spots, isLoading, error, onSpotSelect }: SpotList
   // contains multiple images, clicking on the page indicators will update
   // this map to display the corresponding image.
   const [imageIndexMap, setImageIndexMap] = useState<Record<string, number>>({});
+  const [touchStart, setTouchStart] = useState(0);
+  const [touchEnd, setTouchEnd] = useState(0);
+  const [isSwiping, setIsSwiping] = useState(false);
+
+  const handleTouchStart = (e: React.TouchEvent) => {
+    setTouchStart(e.targetTouches[0].clientX);
+    setIsSwiping(true);
+  };
+
+  const handleTouchMove = (e: React.TouchEvent) => {
+    if (isSwiping) {
+      setTouchEnd(e.targetTouches[0].clientX);
+    }
+  };
+
+  const handleTouchEnd = (spotId: string, images: string[]) => {
+    if (isSwiping) {
+      const swipeDistance = touchStart - touchEnd;
+      if (Math.abs(swipeDistance) > 50) {
+        const newIndex = (imageIndexMap[spotId] || 0) + (swipeDistance > 0 ? 1 : -1);
+        if (newIndex >= 0 && newIndex < images.length) {
+          setImageIndexMap((prev) => ({ ...prev, [spotId]: newIndex }));
+        }
+      }
+      setIsSwiping(false);
+    }
+  };
 
   // Sort the list according to the selected key.
   const sortedSpots = useMemo(() => {
@@ -298,9 +325,19 @@ export const SpotListView = ({ spots, isLoading, error, onSpotSelect }: SpotList
                   return (
                     <>
                       {/* Modern card layout inspired by SpotDetailSheet */}
+                      {/* Card header displaying the owner information */}
+                      <div className="modern-card-header">
+                        <Avatar name={spot.ownerDisplayName ?? spot.ownerId} photoUrl={spot.ownerPhotoUrl ?? null} size={36} />
+                        <span className="owner-name">{spot.ownerDisplayName ?? spot.ownerId}</span>
+                      </div>
                       {/* Hero section with image, page indicators and social overlay */}
                       <div className="modern-hero">
-                        <div className="modern-hero-image">
+                        <div
+                          className="modern-hero-image"
+                          onTouchStart={handleTouchStart}
+                          onTouchMove={handleTouchMove}
+                          onTouchEnd={() => handleTouchEnd(spot.id, images)}
+                        >
                           {src ? (
                             <img src={src} alt="" />
                           ) : (
@@ -336,11 +373,6 @@ export const SpotListView = ({ spots, isLoading, error, onSpotSelect }: SpotList
                           >
                             <Icon name="camera" size={22} />
                           </button>
-                        </div>
-                        {/* Owner bar overlayed on top of the image */}
-                        <div className="modern-hero-owner">
-                          <Avatar name={spot.ownerDisplayName ?? spot.ownerId} photoUrl={spot.ownerPhotoUrl ?? null} size={36} />
-                          <span className="owner-name">{spot.ownerDisplayName ?? spot.ownerId}</span>
                         </div>
                       </div>
                       {/* Content area containing title, stats, schedule, catch copy, and description */}

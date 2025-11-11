@@ -2933,20 +2933,14 @@ select.input:focus {
   padding: clamp(1rem, 2.6vw, 1.4rem);
   width: 100%;
   background: #ffffff;
-  /* Remove rounding from card corners for list view cards */
-  border-radius: 0;
-  border: 1px solid rgba(148, 163, 184, 0.18);
+  /* border-radius: 0; */
+  border-top: 1px solid rgba(148, 163, 184, 0.18);
 }
 
-/*
- * Override spacing and padding for cards using the new modern layout.
- * The modern design handles its own internal spacing, so remove the
- * default padding and gap applied to .spot-mobile-card. Keep the
- * border radius and border styling for consistent card outlines.
- */
 .spot-list-card.spot-mobile-card.new-card {
   padding: 0;
   gap: 0;
+  border-bottom: 1px solid rgba(148, 163, 184, 0.18);
 }
 
 /* Modern card layout styles inspired by the SpotDetailSheet design.
@@ -3012,6 +3006,24 @@ select.input:focus {
 .spot-list-view .modern-hero-social:hover {
   background: rgba(255, 255, 255, 0.25);
 }
+
+/* Header bar inside each modern card showing the owner information. This header
+   appears above the hero image and provides a consistent location for the
+   avatar and owner name. The styling uses a light background and a subtle
+   bottom border to separate it from the image below. */
+.spot-list-view .modern-card-header {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.6rem 0.8rem;
+  background: #ffffff;
+  border-bottom: 1px solid rgba(148, 163, 184, 0.25);
+}
+.spot-list-view .modern-card-header .owner-name {
+  font-size: 1rem;
+  font-weight: 600;
+  color: #0f172a;
+}
 .spot-list-view .modern-hero-owner {
   position: absolute;
   top: 0.4rem;
@@ -3036,16 +3048,11 @@ select.input:focus {
   display: flex;
   justify-content: space-between;
   align-items: flex-start;
-  gap: 1rem;
-}
-.spot-list-view .modern-titles {
-  display: flex;
-  flex-direction: column;
-  gap: 0.15rem;
+  gap: 1.15rem;
 }
 .spot-list-view .modern-title {
   margin: 0;
-  font-size: 1.15rem;
+  font-size: 1.05rem;
   font-weight: 700;
   color: #0f172a;
 }
@@ -3070,7 +3077,7 @@ select.input:focus {
   font-weight: 600;
   border-radius: 999px;
   /* Slightly adjust padding to accommodate vertical layout */
-  padding: 0.3rem 0.4rem;
+  /* padding: 0.3rem 0.4rem; */
 }
 .spot-list-view .modern-stats .metric.view {
   color: #0f172a;
@@ -3083,21 +3090,24 @@ select.input:focus {
   color: #dc2626;
 }
 .spot-list-view .modern-schedule {
-  font-size: 0.85rem;
+  font-size: 0.9rem;
+  text-decoration: underline 1px rgba(100, 116, 139, 0.4);
   color: rgba(100, 116, 139, 1);
+  margin-top: -0.4rem;
 }
 .spot-list-view .modern-catchcopy {
-  padding: 0.8rem 1rem;
-  border-radius: 16px;
+  padding: 0.5rem 0.7rem;
+  margin-top: 0.4rem;
+  border-radius: 10px;
   background: #ffffff;
-  border: 3px solid rgba(175, 175, 175, 0.8);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+  border: 2px solid rgba(167, 167, 167, 0.8);
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.5);
   font-weight: 900;
   font-size: 1.3rem;
   line-height: 1.4;
   text-align: center;
   color: #0f172a;
-  text-shadow: 0.5px 0.5px 0px rgba(0, 0, 0, 0.2);
+  -webkit-text-stroke: 0.4px #0f172a; /* Add text-stroke for bolder text */
 }
 .spot-list-view .modern-description {
   color: #475569;
@@ -3158,12 +3168,10 @@ select.input:focus {
   width: 28px;
   height: 28px;
   border-radius: 50%;
-  background: #ffffff;
-  border: 1px solid #e5e7eb;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  color: #0f172a;
+  color: #6d6d6d;
   flex: 0 0 auto;
 }
 .spot-list-view .modern-detail-item .detail-content {
@@ -3198,13 +3206,13 @@ select.input:focus {
 }
 .spot-list-view .modern-bottom-actions {
   display: flex;
-  gap: 0.5rem;
-  margin-top: 0.8rem;
+  gap: 0.3rem;
+  margin-top: 1.2rem;
+  margin-bottom: 2rem;
 }
 .spot-list-view .modern-bottom-actions button {
   flex: 1;
-  /* Reduce padding for a more compact appearance */
-  padding: 0.4rem 0.6rem;
+  padding: 0.5rem 1.2rem;
   border-radius: 16px;
   background: #f3f4f6;
   color: #0f172a;
