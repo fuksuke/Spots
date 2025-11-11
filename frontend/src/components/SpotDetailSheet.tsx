@@ -27,6 +27,7 @@ export type SpotDetailSheetProps = {
   spot: Spot | null;
   isOpen: boolean;
   onClose: () => void;
+  onLike?: (spotId: string) => void;
   onNotify?: (spot: Spot) => void;
   onShare?: (spot: Spot) => void;
   onOverlayToggle?: (open: boolean) => void;
@@ -36,6 +37,7 @@ export const SpotDetailSheet = ({
   spot,
   isOpen,
   onClose,
+  onLike,
   onNotify,
   onShare,
   onOverlayToggle
@@ -813,7 +815,7 @@ export const SpotDetailSheet = ({
                         </div>
                       </div>
                       <div className="sheet-statistics">
-                        <button type="button" className="sheet-like-button" aria-label="いいね" data-prevent-drag>
+                        <button type="button" className={`sheet-like-button ${spot.likedByViewer ? 'liked' : ''}`} aria-label="いいね" data-prevent-drag onClick={() => spot && onLike?.(spot.id)}>
                           <Icon name="heart" size={18} color={spot.likedByViewer ? "#ef4444" : "#cbd5f5"} />
                           <span>{(spot.likes ?? 0).toLocaleString("ja-JP")}</span>
                         </button>
@@ -858,7 +860,7 @@ export const SpotDetailSheet = ({
 
                 {detailItems.length > 0 ? (
                   <section className="sheet-section sheet-details">
-                    <h3>Detail</h3>
+                    <h3>詳細</h3>
                     <ul className="sheet-detail-list">
                       {detailItems.map((item) => (
                         <li key={item.key} className="detail-row">

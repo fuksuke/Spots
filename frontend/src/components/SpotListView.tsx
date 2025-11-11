@@ -5,14 +5,8 @@ import { mockSpots } from "../mockData";
 import { Icon } from "./Icon";
 import { Avatar } from "./Avatar";
 
-const CATEGORY_ACCENT: Record<Spot["category"], string> = {
-  live: "#ef4444",
-  event: "#f59e0b",
-  cafe: "#10b981",
-  coupon: "#8b5cf6",
-  sports: "#3b82f6"
-};
-
+// Format the location. If a custom locationName exists it is used, otherwise
+// the latitude/longitude are formatted.
 const formatLocation = (spot: Spot) => {
   if (spot.locationName && spot.locationName.trim()) {
     return spot.locationName;
@@ -20,6 +14,7 @@ const formatLocation = (spot: Spot) => {
   return `緯度 ${spot.lat.toFixed(3)}, 経度 ${spot.lng.toFixed(3)}`;
 };
 
+// Format a price string based on pricing information.
 const formatPrice = (spot: Spot) => {
   const pricing = spot.pricing;
   if (!pricing) return "無料";
@@ -31,7 +26,7 @@ const formatPrice = (spot: Spot) => {
   return pricing.label ?? "有料";
 };
 
-
+// Create a human friendly date/time range label for an event.
 const formatEventSchedule = (startTime: string, endTime?: string | null) => {
   const start = new Date(startTime);
   if (Number.isNaN(start.getTime())) {
@@ -57,6 +52,7 @@ const formatEventSchedule = (startTime: string, endTime?: string | null) => {
   return label;
 };
 
+// Extract likes and views from a spot. If undefined, treat as zero.
 const formatPopularity = (spot: Spot) => {
   const likes = spot.likes ?? 0;
   const views = spot.viewCount ?? 0;
@@ -64,6 +60,48 @@ const formatPopularity = (spot: Spot) => {
     likes,
     views
   };
+};
+
+// Determine a primary image for a spot. Prefer the first item in mediaUrls,
+// then media array, falling back to imageUrl. Returns null if no image is found.
+const getPrimaryImage = (spot: Spot): string | null => {
+  const anySpot = spot as any;
+  if (Array.isArray(anySpot.mediaUrls) && anySpot.mediaUrls.length > 0) {
+    return anySpot.mediaUrls[0] as string;
+  }
+  if (Array.isArray(anySpot.media) && anySpot.media.length > 0) {
+    const first = anySpot.media[0];
+    if (typeof first === 'string') return first;
+    if (first && typeof first.url === 'string') return first.url;
+  }
+  return spot.imageUrl ?? null;
+};
+
+// Extract all available image URLs for a spot. This helper returns an array
+// containing every media URL associated with the spot in the order of
+// preference: mediaUrls array, media array (string or object with a url
+// property), and falls back to imageUrl if no other media is present.
+const getAllImages = (spot: Spot): string[] => {
+  const anySpot = spot as any;
+  const result: string[] = [];
+  if (Array.isArray(anySpot.mediaUrls) && anySpot.mediaUrls.length > 0) {
+    for (const url of anySpot.mediaUrls) {
+      if (typeof url === 'string') result.push(url);
+    }
+  }
+  if (Array.isArray(anySpot.media) && anySpot.media.length > 0) {
+    for (const item of anySpot.media) {
+      if (typeof item === 'string') {
+        result.push(item);
+      } else if (item && typeof item.url === 'string') {
+        result.push(item.url);
+      }
+    }
+  }
+  if (result.length === 0 && spot.imageUrl) {
+    result.push(spot.imageUrl);
+  }
+  return result;
 };
 
 type SortKey = "startTime" | "popularity" | "price" | "newest";
@@ -76,12 +114,24 @@ type SpotListViewProps = {
 };
 
 export const SpotListView = ({ spots, isLoading, error, onSpotSelect }: SpotListViewProps) => {
+  // Optionally substitute mock data if configured via environment variable.
   const useMockTiles = import.meta.env.VITE_USE_MOCK_TILES === 'true';
   const baseData = spots.length > 0 ? spots : mockSpots;
   const listData = useMockTiles ? baseData : spots;
   const loadingState = useMockTiles ? false : isLoading;
   const errorState = useMockTiles ? null : error;
+
   const [sortKey, setSortKey] = useState<SortKey>("startTime");
+  const [expandedSpotId, setExpandedSpotId] = useState<string | null>(null);
+  // Map of liked state per spot id. This is only stored locally on the client.
+  const [likedMap, setLikedMap] = useState<Record<string, boolean>>({});
+
+  // Track which image index is currently shown for each spot. When a card
+  // contains multiple images, clicking on the page indicators will update
+  // this map to display the corresponding image.
+  const [imageIndexMap, setImageIndexMap] = useState<Record<string, number>>({});
+
+  // Sort the list according to the selected key.
   const sortedSpots = useMemo(() => {
     const list = [...listData];
     switch (sortKey) {
@@ -109,137 +159,224 @@ export const SpotListView = ({ spots, isLoading, error, onSpotSelect }: SpotList
   if (loadingState) {
     return <div className="list-placeholder">イベントを読み込み中...</div>;
   }
-
   if (errorState) {
     return <div className="list-placeholder error">イベントを読み込めませんでした。</div>;
   }
-
   if (sortedSpots.length === 0) {
     return <div className="list-placeholder">該当するイベントが見つかりません。</div>;
   }
 
   return (
-    <div className="spot-list-view">
-      <div className="spot-list-toolbar" role="toolbar" aria-label="並び替え">
-        <label className="spot-sort-control">
-          <span>並び替え</span>
-          <div className="sort-select">
-            <select value={sortKey} onChange={(event) => setSortKey(event.target.value as SortKey)}>
-              <option value="startTime">開始時間</option>
-              <option value="popularity">人気順</option>
-              <option value="price">価格順</option>
-              <option value="newest">新着順</option>
-            </select>
-          </div>
-        </label>
-      </div>
+    <>
+      <div className="spot-list-view">
+        <div className="spot-list-toolbar" role="toolbar" aria-label="並び替え">
+          <label className="spot-sort-control">
+            <span>並び替え</span>
+            <div className="sort-select">
+              <select value={sortKey} onChange={(event) => setSortKey(event.target.value as SortKey)}>
+                <option value="startTime">開始時間</option>
+                <option value="popularity">人気順</option>
+                <option value="price">価格順</option>
+                <option value="newest">新着順</option>
+              </select>
+            </div>
+          </label>
+        </div>
 
-      <div className="spot-list" role="list" aria-label="イベントリスト">
-        {sortedSpots.map((spot) => {
-          const image = spot.imageUrl;
-          const scheduleLabel = formatEventSchedule(spot.startTime, spot.endTime ?? null);
-          const { likes, views } = formatPopularity(spot);
-          const hostLabel = spot.ownerDisplayName?.trim() || spot.ownerId || "未設定";
-          const locationLabel = formatLocation(spot);
-          const priceLabel = formatPrice(spot);
-          const description = spot.summary?.trim() || spot.description;
-          const viewLabel = views.toLocaleString("ja-JP");
-          const likesLabel = likes.toLocaleString("ja-JP");
-          const tagCandidates: string[] = [];
-          tagCandidates.push(`#${spot.category}`);
-          if (spot.locationName) {
-            const compactLocation = spot.locationName.replace(/\s+/g, "");
-            if (compactLocation.length > 0) {
-              tagCandidates.push(`#${compactLocation}`);
-            }
-          }
-          if (spot.ownerDisplayName) {
-            const compactHost = spot.ownerDisplayName.replace(/\s+/g, "");
-            if (compactHost.length > 0 && tagCandidates.length < 3) {
-              tagCandidates.push(`#${compactHost}`);
-            }
-          }
+        <div className="spot-list" role="list" aria-label="イベントリスト">
+          {sortedSpots.map((spot) => {
+            // Compute labels and derived values up front for clarity.
+            const scheduleLabel = formatEventSchedule(spot.startTime, spot.endTime ?? null);
+            const { likes, views } = formatPopularity(spot);
+            const hostLabel = spot.ownerDisplayName?.trim() || spot.ownerId || "未設定";
+            const locationLabel = formatLocation(spot);
+            const priceLabel = formatPrice(spot);
+            const viewLabel = views.toLocaleString("ja-JP");
+            // Determine like state and display likes accordingly.
+            const isLiked = likedMap[spot.id] ?? false;
+            const displayLikesNumber = likes + (isLiked ? 1 : 0);
+            const likesLabel = displayLikesNumber.toLocaleString("ja-JP");
 
-          return (
-            <article
-              key={spot.id}
-              role="listitem"
-              tabIndex={0}
-              className="spot-list-card spot-mobile-card"
-              onClick={() => onSpotSelect?.(spot)}
-              onKeyDown={(event) => {
-                if (event.key === 'Enter') {
+            return (
+              <article
+                key={spot.id}
+                role="listitem"
+                tabIndex={0}
+                className="spot-list-card spot-mobile-card"
+                onClick={() => {
                   onSpotSelect?.(spot);
-                }
-              }}
-            >
-              <header className="spot-mobile-card__title" aria-label="イベント名">
-                <span className="spot-mobile-card__avatar" aria-hidden="true">
-                  <Avatar name={spot.ownerDisplayName ?? spot.ownerId} photoUrl={spot.ownerPhotoUrl ?? null} size={32} />
-                </span>
-                <h3>{spot.title}</h3>
-              </header>
-              <section className="spot-mobile-card__meta" aria-label="イベント概要">
-                <div className="spot-mobile-card__thumb" aria-hidden={image ? undefined : true}>
-                  {image ? (
-                    <img src={image} alt="" loading="lazy" />
-                  ) : (
-                    <span>{spot.category.toUpperCase()}</span>
-                  )}
-                </div>
-                <ul className="spot-mobile-card__facts">
-                  <li>
-                    <span className="spot-mobile-card__fact-icon">
-                      <Icon name="calendarSimple" size={18} />
-                    </span>
-                    <span>{scheduleLabel}</span>
-                  </li>
-                  <li>
-                    <span className="spot-mobile-card__fact-icon">
-                      <Icon name="mapLight" size={18} />
-                    </span>
-                    <span>{locationLabel}</span>
-                  </li>
-                  <li>
-                    <span className="spot-mobile-card__fact-icon">
-                      <Icon name="currencyJpyFill" size={18} />
-                    </span>
-                    <span>{priceLabel}</span>
-                  </li>
-                  <li>
-                    <span className="spot-mobile-card__fact-icon">
-                      <Icon name="userFill" size={18} />
-                    </span>
-                    <span>{hostLabel}</span>
-                  </li>
-                </ul>
-              </section>
-              <section className="spot-mobile-card__detail clamp-2" aria-label="イベント詳細">
-                {description}
-              </section>
-              <footer className="spot-mobile-card__footer">
-                <div className="spot-mobile-card__tags" aria-label="タグ">
-                  {tagCandidates.map((tag) => (
-                    <span key={tag} className="spot-mobile-card__tag">
-                      {tag}
-                    </span>
-                  ))}
-                </div>
-                <div className="spot-mobile-card__metrics" aria-label="閲覧数といいね">
-                  <span>
-                    <Icon name="eyesFill" size={16} />
-                    {viewLabel}
-                  </span>
-                  <span>
-                    <Icon name="heart" size={16} />
-                    {likesLabel}
-                  </span>
-                </div>
-              </footer>
-            </article>
-          );
-        })}
+                  setExpandedSpotId((prev) => (prev === spot.id ? null : spot.id));
+                  // Remove focus to avoid scroll jumps on expansion.
+                  if (document.activeElement instanceof HTMLElement) {
+                    document.activeElement.blur();
+                  }
+                }}
+                onKeyDown={(event) => {
+                  if (event.key === 'Enter') {
+                    onSpotSelect?.(spot);
+                    setExpandedSpotId((prev) => (prev === spot.id ? null : spot.id));
+                    if (document.activeElement instanceof HTMLElement) {
+                      document.activeElement.blur();
+                    }
+                  }
+                }}
+              >
+                {(() => {
+                  const isExpanded = expandedSpotId === spot.id;
+                  // Build a catch copy: use summary if present, otherwise the first sentence of description.
+                  const catchCopy = (() => {
+                    if (spot.summary && spot.summary.trim()) return spot.summary.trim();
+                    if (spot.description) {
+                      const firstSentence = spot.description.split(/[。.!！\?？]/)[0];
+                      return firstSentence.trim();
+                    }
+                    return spot.title;
+                  })();
+                  // Prepare full and truncated descriptions.
+                  const fullDesc = spot.description ?? '';
+                  const truncatedDesc = fullDesc.length > 120 ? fullDesc.slice(0, 120) + '…' : fullDesc;
+                  // Prepare map search queries.
+                  const query = encodeURIComponent(`${spot.title} ${spot.locationName ?? ''}`);
+                    // Compose URLs for external map apps.
+                  const googleMapsUrl = `https://www.google.com/maps/search/?api=1&query=${query}`;
+                  const appleMapsUrl = `https://maps.apple.com/?q=${query}`;
+                  // Note: page indicators are generated dynamically based on the number of images;
+                  // Split title into main and subtitle using parentheses. E.g., "ABC (日本語)".
+                  const parseTitle = (title: string): [string, string] => {
+                    const match = title.match(/(.+?)\s*\((.+)\)/);
+                    if (match) {
+                      return [match[1].trim(), match[2].trim()];
+                    }
+                    return [title, ''];
+                  };
+                  const [mainTitle, subTitle] = parseTitle(spot.title);
+
+                  return (
+                    <>
+                      {/* Header: owner info only */}
+                      <header className="spot-card-header" onClick={(e) => e.stopPropagation()}>
+                        <div className="spot-card-owner">
+                          <Avatar name={spot.ownerDisplayName ?? spot.ownerId} photoUrl={spot.ownerPhotoUrl ?? null} size={32} />
+                          <span className="spot-card-owner-name">{spot.ownerDisplayName ?? spot.ownerId}</span>
+                        </div>
+                      </header>
+                      {/* Title block separated from the header by a divider */}
+                      <div className="spot-card-title-block" onClick={(e) => e.stopPropagation()}>
+                        <h3 className="spot-card-title">{mainTitle}</h3>
+                        {subTitle && <p className="spot-card-subtitle">{subTitle}</p>}
+                      </div>
+                      {/* Image and basic details */}
+                      <div className="card-details" onClick={(e) => e.stopPropagation()}>
+                        <div className="card-image">
+                          {(() => {
+                            // Determine all images for this spot
+                            const images = getAllImages(spot);
+                            const idx = imageIndexMap[spot.id] ?? 0;
+                            const validIdx = Math.min(Math.max(idx, 0), images.length - 1);
+                            const src = images[validIdx] ?? null;
+                            if (src) {
+                              return <img src={src} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />;
+                            }
+                            // Fallback: show category abbreviation with colored background when no images exist
+                            return (
+                              <span style={{ display: 'grid', placeItems: 'center', width: '100%', height: '100%', fontWeight: 700, color: '#ffffff', background: '#818cf8' }}>{spot.category.toUpperCase()}</span>
+                            );
+                          })()}
+                        </div>
+                        <div className="card-detail-list">
+                          <div className="card-detail-item">
+                            <div className="detail-icon"><Icon name="calendarSimple" size={16} /></div>
+                            <div className="detail-content">{scheduleLabel}</div>
+                          </div>
+                          <div className="card-detail-item">
+                            <div className="detail-icon"><Icon name="mapLight" size={16} /></div>
+                            <div className="detail-content">{locationLabel}</div>
+                          </div>
+                          <div className="card-detail-item">
+                            <div className="detail-icon"><Icon name="currencyJpyFill" size={16} /></div>
+                            <div className="detail-content">{priceLabel}</div>
+                          </div>
+                          <div className="card-detail-item">
+                            <div className="detail-icon"><Icon name="userFill" size={16} /></div>
+                            <div className="detail-content">{hostLabel}</div>
+                          </div>
+                        </div>
+                      </div>
+                      {/* Metrics row: view count and like button */}
+                      <div className="card-metrics" onClick={(e) => e.stopPropagation()}>
+                        <div className="page-indicators">
+                          {(() => {
+                            const images = getAllImages(spot);
+                            const count = images.length > 0 ? images.length : 1;
+                            return Array.from({ length: count }, (_, idx) => (
+                              <span
+                                key={idx}
+                                className={(imageIndexMap[spot.id] ?? 0) === idx ? 'active' : ''}
+                                onClick={(evt) => {
+                                  evt.stopPropagation();
+                                  setImageIndexMap((prev) => ({ ...prev, [spot.id]: idx }));
+                                }}
+                              ></span>
+                            ));
+                          })()}
+                        </div>
+                        <div className="metrics">
+                          <div className="metric view">
+                            <Icon name="eyesFill" size={18} />
+                            {viewLabel}
+                          </div>
+                          <div
+                            className={"metric like" + (isLiked ? " liked" : "")}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              e.preventDefault();
+                              setLikedMap((prev) => ({ ...prev, [spot.id]: !isLiked }));
+                            }}
+                          >
+                            <Icon name="heart" size={18} />
+                            {likesLabel}
+                          </div>
+                        </div>
+                      </div>
+                      {/* Catch copy callout */}
+                      {catchCopy && <div className="card-catchcopy">{catchCopy}</div>}
+                      {/* Description and optional "more" link */}
+                      {fullDesc && (
+                        <>
+                          <p className="card-description">{isExpanded ? fullDesc : truncatedDesc}</p>
+                          {!isExpanded && (
+                            <div className="card-more-link-wrapper">
+                              <span className="card-more-link">…もっと見る</span>
+                            </div>
+                          )}
+                        </>
+                      )}
+                      {/* Expanded-only extra actions */}
+                      {isExpanded && (
+                        <div className="expanded-extra">
+                          <div className="map-buttons">
+                            <a href={googleMapsUrl} target="_blank" rel="noopener noreferrer" className="google">Google Mapで検索</a>
+                            <a href={appleMapsUrl} target="_blank" rel="noopener noreferrer" className="apple">Apple Mapで検索</a>
+                          </div>
+                          <div className="social-icons">
+                            <button type="button" aria-label="Instagram" onClick={(e) => e.stopPropagation()}><Icon name="camera" size={24} /></button>
+                            <button type="button" aria-label="X" onClick={(e) => e.stopPropagation()}><Icon name="camera" size={24} /></button>
+                            <button type="button" aria-label="YouTube" onClick={(e) => e.stopPropagation()}><Icon name="camera" size={24} /></button>
+                          </div>
+                          <div className="bottom-actions">
+                            <button onClick={(e) => e.stopPropagation()}>共有</button>
+                            <button onClick={(e) => e.stopPropagation()}>通報</button>
+                          </div>
+                        </div>
+                      )}
+                    </>
+                  );
+                })()}
+              </article>
+            );
+          })}
+        </div>
       </div>
-    </div>
+    </>
   );
 };

@@ -863,6 +863,44 @@ function App() {
     [triggerMessage]
   );
 
+  const handleLike = useCallback((spotId: string) => {
+    if (!requireAuth()) return;
+
+    // Optimistically update the UI
+    const updateSpot = (spot: Spot) => {
+      if (spot.id === spotId) {
+        return {
+          ...spot,
+          likedByViewer: !spot.likedByViewer,
+          likes: spot.likedByViewer ? (spot.likes ?? 1) - 1 : (spot.likes ?? 0) + 1,
+        };
+      }
+      return spot;
+    };
+
+    mutateSpots(
+      (currentSpots) => {
+        if (!currentSpots) return [];
+        return currentSpots.map(updateSpot);
+      },
+      { revalidate: false }
+    );
+
+    setActiveSpot(prev => prev ? updateSpot(prev) : null);
+
+    // Here you would also make an API call to persist the like
+    // For now, we'll just do the optimistic update.
+    // Example:
+    // fetch(`/api/spots/${spotId}/like`, {
+    //   method: 'POST',
+    //   headers: { Authorization: `Bearer ${authToken}` },
+    // }).catch(() => {
+    //   // Revert on error
+    //   mutateSpots(spots, { revalidate: false });
+    // });
+
+  }, [requireAuth, mutateSpots]);
+
   const handleSheetOverlayToggle = useCallback((open: boolean) => {
     setSheetModalOpen(open);
   }, []);
@@ -1647,6 +1685,7 @@ function App() {
         spot={activeSpot}
         isOpen={Boolean(activeSpot)}
         onClose={() => setActiveSpot(null)}
+        onLike={handleLike}
         onNotify={handleNotify}
         onShare={handleShareSpot}
         onOverlayToggle={handleSheetOverlayToggle}

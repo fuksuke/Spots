@@ -31,13 +31,14 @@
   padding: 0.8rem 1rem;
   border-radius: 16px;
   background: #ffffff;
-  border: 1px solid rgba(203, 213, 225, 0.65);
-  font-weight: 700;
-  /* Increase catch copy text to draw more attention */
-  font-size: 1.2rem;
+  border: 3px solid rgba(175, 175, 175, 0.8);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+  font-weight: 900;
+  font-size: 1.5rem;
   line-height: 1.4;
   text-align: center;
   color: #0f172a;
+  text-shadow: 0.5px 0.5px 0px rgba(0, 0, 0, 0.2);
 }
 
 .spot-detail-sheet .sheet-map-buttons {
@@ -118,10 +119,11 @@
 
 /* View count pill: styled similarly to the like button but not interactive */
 .spot-detail-sheet .sheet-view-count {
-  display: inline-flex;
+  display: flex;
+  flex-direction: column;
   align-items: center;
-  gap: 0.35rem;
-  padding: 0.35rem 0.75rem;
+  gap: 0.15rem;
+  padding: 0.1rem 0.4rem;
   border-radius: 999px;
   color: #0f172a;
   font-size: 0.85rem;
@@ -750,7 +752,7 @@ button {
   min-height: 0;
   overflow-y: auto;
   margin: 0 calc(-1 * var(--sheet-horizontal-padding));
-  padding: 0 calc(var(--sheet-horizontal-padding) + 0.75rem) clamp(3.5rem, 10vw, 4.5rem);
+  padding: 0 calc(var(--sheet-horizontal-padding) + 0.75rem) clamp(4.5rem, 12vw, 5.5rem);
   overscroll-behavior: contain;
   scrollbar-width: thin;
   scrollbar-color: rgba(148, 163, 184, 0.4) transparent;
@@ -783,7 +785,7 @@ button {
   touch-action: none;
   user-select: none;
   margin: 0 calc(-1 * var(--sheet-horizontal-padding));
-  padding: clamp(0.4rem, 1.8vw, 0.7rem) var(--sheet-horizontal-padding) 0;
+  padding: clamp(0.2rem, 1.2vw, 0.4rem) var(--sheet-horizontal-padding) 0;
 }
 
 .spot-detail-sheet .sheet-drag-region.dragging {
@@ -875,7 +877,7 @@ button {
 
 .spot-detail-sheet .sheet-heading-row {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   justify-content: space-between;
   gap: 0.75rem;
 }
@@ -889,13 +891,13 @@ button {
 }
 
 .spot-detail-sheet .sheet-like-button {
-  display: inline-flex;
+  display: flex;
+  flex-direction: column;
   align-items: center;
-  gap: 0.35rem;
+  gap: 0.15rem;
   border: none;
   border-radius: 999px;
-  padding: 0.35rem 0.75rem;
-  color: #0f172a;
+  padding: 0.1rem 0.4rem;
   font-weight: 600;
   font-size: 0.85rem;
   cursor: pointer;
@@ -904,6 +906,11 @@ button {
 
 .spot-detail-sheet .sheet-like-button:hover {
   background: rgba(239, 68, 68, 0.15);
+}
+
+.spot-detail-sheet .sheet-like-button.liked,
+.spot-detail-sheet .sheet-like-button.liked:hover {
+  background: transparent;
 }
 
 .spot-detail-sheet .sheet-event-title {
@@ -928,6 +935,10 @@ button {
 
 .spot-detail-sheet .sheet-content.no-media .sheet-section:first-of-type {
   margin-top: 0.75rem;
+}
+
+.spot-detail-sheet .sheet-content.has-media > .sheet-section:first-of-type {
+  margin-top: -0.9rem;
 }
 
 .spot-detail-sheet .sheet-media {
@@ -1103,7 +1114,6 @@ button {
 
 .spot-detail-sheet .sheet-section.sheet-details {
   border-radius: 18px;
-  padding: 1rem;
 }
 
 .spot-detail-sheet .sheet-section.sheet-details .detail-row {
@@ -4112,11 +4122,330 @@ select.input:focus {
   }
 
   .spot-detail-sheet .sheet-top-bar {
-    padding-bottom: 0.6rem;
+    padding-top: 0.01rem;
+    padding-bottom: 0.01rem;
     gap: 1rem;
   }
 
   .spot-detail-sheet .sheet-info {
     grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
   }
+}
+
+/* Custom mobile overrides for SpotDetailSheet */
+@media (max-width: 768px) {
+  .spot-detail-sheet .sheet-like-button,
+  .spot-detail-sheet .sheet-view-count {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.15rem;
+    padding: 0.1rem 0.4rem;
+  }
+
+  .spot-detail-sheet .sheet-scroll-container {
+    /* Add more padding at the bottom to avoid the action bar */
+    padding-bottom: clamp(5.5rem, 18vw, 6.5rem) !important;
+  }
+
+  .spot-detail-sheet .sheet-event-title {
+    font-size: clamp(1.1rem, 4.5vw, 1.4rem);
+  }
+}
+
+/*
+ * Styles for expandable cards in the mobile SpotListView.
+ * These rules replicate the design of the provided mockups,
+ * drawing inspiration from SpotDetailSheet for consistency.
+ * Each event card displays the owner header, title, event details
+ * in pill shapes, metrics, catch copy, description, and optional
+ * extra actions when expanded.
+ */
+
+/*
+ * The header of each card displays the owner information. To clearly
+ * separate it from the title block below (see SpotListView.tsx where
+ * the header and title block are adjacent siblings), add a subtle
+ * divider line. This matches the provided mock, where the owner row
+ * and event title are visually distinct.
+ */
+.spot-list-view .spot-card-header {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  /* We remove the direct border-bottom and instead draw the divider using
+   * a pseudo-element so it can extend across the card's horizontal
+   * padding. Padding and margin are retained for spacing. */
+  padding-bottom: 0.5rem;
+  margin-bottom: 0.5rem;
+  position: relative;
+}
+
+/* Add an ::after pseudo-element to draw a divider line that extends
+ * through the card's horizontal padding. We use the same clamp
+ * expression as the card's padding (clamp(1rem, 2.6vw, 1.4rem)) to
+ * calculate the negative offset and extended width. */
+.spot-list-view .spot-card-header::after {
+  content: "";
+  position: absolute;
+  left: calc(-1 * clamp(1rem, 2.6vw, 1.4rem));
+  bottom: 0;
+  width: calc(100% + 2 * clamp(1rem, 2.6vw, 1.4rem));
+  height: 2px;
+  background: rgba(148, 163, 184, 0.4);
+}
+
+/*
+ * The title block holds the main title and optional subtitle. Provide a
+ * little breathing room on top since the header now has a bottom border
+ * and bottom padding. Without this padding the text can appear too
+ * tightly packed against the divider line.
+ */
+.spot-list-view .spot-card-title-block {
+  padding-top: 0.25rem;
+}
+
+.spot-list-view .spot-card-owner {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.spot-list-view .spot-card-owner-name {
+  font-weight: 600;
+  color: #0f172a;
+  font-size: 0.9rem;
+}
+
+.spot-list-view .spot-card-title {
+  margin: 0;
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: #0f172a;
+  line-height: 1.3;
+}
+
+.spot-list-view .spot-card-subtitle {
+  margin: 0;
+  font-size: 0.85rem;
+  color: rgba(71, 85, 105, 0.9);
+  line-height: 1.2;
+}
+
+.spot-list-view .card-details {
+  display: flex;
+  /* Stretch both the image and detail list to match heights. When
+   * align-items is set to stretch (the default for flex), each child
+   * will expand to match the height of the tallest child. This allows
+   * the image (card-image) and the list of details (card-detail-list)
+   * to have the same height, mirroring the layout in the design
+   * reference. */
+  align-items: stretch;
+  gap: 0.75rem;
+  margin-top: 0.2rem;
+}
+
+.spot-list-view .card-image {
+  /* Keep a fixed width so the image maintains a consistent footprint
+   * relative to the card, but allow its height to grow to match the
+   * details column. Remove the enforced square aspect ratio so the
+   * height is determined by the tallest sibling in the flex row.
+   */
+  flex: 0 0 clamp(120px, 40vw, 180px);
+  aspect-ratio: auto;
+  border-radius: 14px;
+  overflow: hidden;
+  background: #f1f5f9;
+}
+
+.spot-list-view .card-detail-list {
+  flex: 1 1 auto;
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  /* Flex-grow ensures the detail list takes up the remaining horizontal
+   * space, while allowing its height to match its sibling via
+   * align-items: stretch on the parent. No need to distribute
+   * items vertically. */
+}
+
+.spot-list-view .card-detail-item {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  background: #f3f4f6;
+  border-radius: 12px;
+  padding: 0.7rem 0.8rem;
+  font-size: 0.85rem;
+  color: #0f172a;
+  border: 1px solid #e5e7eb;
+}
+
+.spot-list-view .card-detail-item .detail-icon {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: #ffffff;
+  border: 1px solid #e5e7eb;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: #0f172a;
+  flex: 0 0 auto;
+}
+
+.spot-list-view .card-detail-item .detail-content {
+  flex: 1 1 auto;
+  font-size: 0.9rem;
+  color: rgba(15, 23, 42, 0.9);
+}
+
+.spot-list-view .card-metrics {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: 0.6rem;
+}
+
+.spot-list-view .card-metrics .page-indicators {
+  display: flex;
+  gap: 0.25rem;
+}
+
+.spot-list-view .card-metrics .page-indicators span {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: rgba(148, 163, 184, 0.5);
+}
+
+/* Highlight the active page indicator by increasing its size and
+ * darkening its color. A larger dot clearly communicates the
+ * currently displayed image in the carousel. */
+.spot-list-view .card-metrics .page-indicators span.active {
+  width: 12px;
+  height: 12px;
+  background: rgba(148, 163, 184, 0.9);
+  border-radius: 50%;
+}
+
+.spot-list-view .card-metrics .metrics {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.spot-list-view .card-metrics .metric {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.15rem;
+  padding: 0.1rem 0.4rem;
+  border-radius: 999px;
+  font-size: 0.85rem;
+  font-weight: 600;
+}
+
+.spot-list-view .card-metrics .metric.view {
+  color: #0f172a;
+}
+
+.spot-list-view .card-metrics .metric.like {
+  color: #ef4444;
+  cursor: pointer;
+}
+
+.spot-list-view .card-catchcopy {
+  margin-top: 0.8rem;
+  padding: 0.8rem 1rem;
+  border-radius: 16px;
+  background: #ffffff;
+  border: 3px solid rgba(175, 175, 175, 0.8);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+  font-weight: 900;
+  font-size: 1.2rem;
+  line-height: 1.4;
+  text-align: center;
+  color: #0f172a;
+  text-shadow: 0.5px 0.5px 0px rgba(0, 0, 0, 0.2);
+}
+
+.spot-list-view .card-description {
+  margin-top: 0.6rem;
+  color: #475569;
+  font-size: 0.9rem;
+  line-height: 1.6;
+}
+
+.spot-list-view .card-more-link {
+  color: #3b82f6;
+  cursor: pointer;
+  text-decoration: none;
+  margin-left: 0.2rem;
+}
+
+.spot-list-view .expanded-extra {
+  margin-top: 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.spot-list-view .expanded-extra .map-buttons {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.spot-list-view .expanded-extra .map-buttons a {
+  text-decoration: none;
+  padding: 0.8rem 1rem;
+  border-radius: 16px;
+  font-weight: 600;
+  text-align: center;
+  color: #0f172a;
+}
+
+.spot-list-view .expanded-extra .map-buttons a.google {
+  background: #6dfeb5;
+}
+
+.spot-list-view .expanded-extra .map-buttons a.apple {
+  background: #ffa989;
+}
+
+.spot-list-view .expanded-extra .social-icons {
+  display: flex;
+  gap: 1rem;
+}
+
+.spot-list-view .expanded-extra .social-icons a {
+  display: inline-flex;
+  width: 44px;
+  height: 44px;
+  border-radius: 12px;
+  background: rgba(15, 23, 42, 0.05);
+  align-items: center;
+  justify-content: center;
+  color: #0f172a;
+}
+
+.spot-list-view .expanded-extra .bottom-actions {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.spot-list-view .expanded-extra .bottom-actions button {
+  flex: 1;
+  /* Reduce padding and border radius to make the share/report buttons more
+   * compact, matching the reference screenshot where they appear
+   * noticeably smaller than the map buttons. */
+  padding: 0.5rem 0.8rem;
+  border-radius: 14px;
+  background: #f3f4f6;
+  color: #0f172a;
+  font-weight: 600;
+  font-size: 0.85rem;
+  border: none;
+  cursor: pointer;
 }
