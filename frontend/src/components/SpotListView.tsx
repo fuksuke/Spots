@@ -261,7 +261,7 @@ export const SpotListView = ({ spots, isLoading, error, onSpotSelect }: SpotList
                   })();
                   // Prepare full and truncated descriptions.
                   const fullDesc = spot.description ?? '';
-                  const truncatedDesc = fullDesc.length > 55 ? fullDesc.slice(0, 55) + '…' : fullDesc;
+                  const truncatedDesc = fullDesc.length > 38 ? fullDesc.slice(0, 38) + '…' : fullDesc;
                   // Prepare map search queries.
                   const query = encodeURIComponent(`${spot.title} ${spot.locationName ?? ''}`);
                     // Compose URLs for external map apps.

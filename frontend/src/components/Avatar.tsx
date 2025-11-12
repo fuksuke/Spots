@@ -1,7 +1,6 @@
 type AvatarProps = {
   name?: string | null;
   photoUrl?: string | null;
-  size?: number;
 };
 
 const getInitials = (value?: string | null) => {
@@ -12,19 +11,16 @@ const getInitials = (value?: string | null) => {
   return initials || value.slice(0, 2).toUpperCase();
 };
 
-export const Avatar = ({ name, photoUrl, size = 32 }: AvatarProps) => {
+export const Avatar = ({ name, photoUrl }: AvatarProps) => {
   return photoUrl ? (
     <img
       className="avatar"
       src={photoUrl}
       alt={name ?? "ユーザー"}
-      width={size}
-      height={size}
-      style={{ width: size, height: size }}
       loading="lazy"
     />
   ) : (
-    <span className="avatar avatar-fallback" style={{ width: size, height: size }}>
+    <span className="avatar avatar-fallback">
       {getInitials(name)}
     </span>
   );
