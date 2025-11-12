@@ -816,7 +816,7 @@ export const SpotDetailSheet = ({
                       </div>
                       <div className="sheet-statistics">
                         <button type="button" className={`sheet-like-button ${spot.likedByViewer ? 'liked' : ''}`} aria-label="いいね" data-prevent-drag onClick={() => spot && onLike?.(spot.id)}>
-                          <Icon name="heart" size={18} color={spot.likedByViewer ? "#ef4444" : "#cbd5f5"} />
+                          <Icon name="heart" size={18} color={spot.likedByViewer ? "#ef4444" : "#0f172a"} />
                           <span>{(spot.likes ?? 0).toLocaleString("ja-JP")}</span>
                         </button>
                         <div className="sheet-view-count" aria-label="見たよ">

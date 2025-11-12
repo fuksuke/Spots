@@ -1,33 +1,10 @@
-import { FormEvent, useMemo } from "react";
-import { Spot } from "../types";
+import { FormEvent } from "react";
+// Spot やモックデータはこのコンポーネントでは使用しない
+import { Icon } from "./Icon";
 
 const popularQueries = ["ライブ", "フードトラック", "DJセット", "朝活", "限定グッズ"];
-const recommendedSpotsMock: Array<Pick<Spot, "id" | "title" | "category" | "imageUrl" | "likes" | "commentsCount">> = [
-  {
-    id: "rec-1",
-    title: "渋谷スクランブルDJナイト",
-    category: "event",
-    imageUrl: null,
-    likes: 128,
-    commentsCount: 24
-  },
-  {
-    id: "rec-2",
-    title: "ミッドナイトコーヒースタンド",
-    category: "cafe",
-    imageUrl: null,
-    likes: 87,
-    commentsCount: 12
-  },
-  {
-    id: "rec-3",
-    title: "スポーツバー パブリックビューイング",
-    category: "sports",
-    imageUrl: null,
-    likes: 64,
-    commentsCount: 9
-  }
-];
+
+// JSON から読み込んだスポット情報は検索結果の表示で使用しないため、このコンポーネントでは定義しない
 
 export type SearchOverlayProps = {
   isOpen: boolean;
@@ -43,7 +20,7 @@ export const SearchOverlay = ({ isOpen, query, history, onChange, onSubmit, onSe
   const trimmedQuery = query.trim();
   const hasHistory = history.length > 0;
 
-  const recommendationList = useMemo(() => recommendedSpotsMock, []);
+  // 推薦リストや検索結果の表示はモーダル外で行うため、ここでは計算しない
 
   const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -56,21 +33,16 @@ export const SearchOverlay = ({ isOpen, query, history, onChange, onSubmit, onSe
       <div className="search-sheet">
         <header className="search-header">
           <form className="search-bar" onSubmit={handleSubmit} role="search">
-            <span className="search-icon">🔍</span>
             <input
               autoFocus={isOpen}
               value={query}
               onChange={(event) => onChange(event.target.value)}
-              placeholder="スポットやイベントを検索"
-              aria-label="スポットを検索"
+              placeholder="検索"
+              aria-label="検索"
             />
-            {trimmedQuery && (
-              <button type="button" className="clear-button" onClick={() => onChange("")}>
-                クリア
-              </button>
-            )}
-            <button type="submit" className="submit-button">
-              検索
+            {/* 検索実行ボタンとして虫眼鏡アイコンを配置 */}
+            <button type="submit" className="search-button" aria-label="検索">
+              <Icon name="search" wrapperClassName="search-icon" />
             </button>
           </form>
           <button type="button" className="close-button" onClick={onClose} aria-label="閉じる">
@@ -96,29 +68,13 @@ export const SearchOverlay = ({ isOpen, query, history, onChange, onSubmit, onSe
               {history.slice(0, 5).map((item) => (
                 <button key={item} type="button" className="history-item" onClick={() => onSelectQuery(item)}>
                   <span className="history-text">{item}</span>
-                  <span className="history-icon">↻</span>
                 </button>
               ))}
             </div>
           </section>
         ) : null}
 
-        <section className="search-section">
-          <h3>おすすめスポット</h3>
-          <div className="recommend-list">
-            {recommendationList.map((spot) => (
-              <div key={spot.id} className="recommend-card" role="button" tabIndex={0} onClick={() => onSelectQuery(spot.title)}>
-                <div className="recommend-image" aria-hidden="true">
-                  {spot.imageUrl ? <img src={spot.imageUrl} alt="" /> : <span>{spot.category.toUpperCase()}</span>}
-                </div>
-                <div className="recommend-body">
-                  <p className="recommend-title">{spot.title}</p>
-                  <p className="recommend-meta">👍 {spot.likes} ・ 💬 {spot.commentsCount}</p>
-                </div>
-              </div>
-            ))}
-          </div>
-        </section>
+        {/* 検索結果やおすすめスポットは別画面で表示するため、ここでは非表示 */}
       </div>
     </div>
   );
