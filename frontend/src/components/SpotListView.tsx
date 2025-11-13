@@ -4,53 +4,17 @@ import type { Spot } from "../types";
 import { mockSpots } from "../mockData";
 import { Icon } from "./Icon";
 import { Avatar } from "./Avatar";
-
-// Format the location. If a custom locationName exists it is used, otherwise
-// the latitude/longitude are formatted.
-const formatLocation = (spot: Spot) => {
-  if (spot.locationName && spot.locationName.trim()) {
-    return spot.locationName;
-  }
-  return `緯度 ${spot.lat.toFixed(3)}, 経度 ${spot.lng.toFixed(3)}`;
-};
-
-// Format a price string based on pricing information.
-const formatPrice = (spot: Spot) => {
-  const pricing = spot.pricing;
-  if (!pricing) return "無料";
-  if (pricing.isFree) return pricing.label ?? "無料";
-  if (typeof pricing.amount === "number") {
-    const currency = pricing.currency ?? "¥";
-    return `${currency}${pricing.amount.toLocaleString()}`;
-  }
-  return pricing.label ?? "有料";
-};
-
-// Create a human friendly date/time range label for an event.
-const formatEventSchedule = (startTime: string, endTime?: string | null) => {
-  const start = new Date(startTime);
-  if (Number.isNaN(start.getTime())) {
-    return "日程未設定";
-  }
-
-  const end = endTime ? new Date(endTime) : null;
-  const hasValidEnd = end && !Number.isNaN(end.getTime());
-
-  const formatDate = (date: Date) =>
-    date.toLocaleDateString("ja-JP", { month: "2-digit", day: "2-digit" });
-
-  const formatTime = (date: Date) =>
-    date.toLocaleTimeString("ja-JP", { hour: "2-digit", minute: "2-digit", hour12: false });
-
-  let label = `${formatDate(start)} ${formatTime(start)}`;
-
-  if (hasValidEnd && end) {
-    const sameDay = formatDate(start) === formatDate(end);
-    label += sameDay ? `~${formatTime(end)}` : `~${formatDate(end)} ${formatTime(end)}`;
-  }
-
-  return label;
-};
+import { ModernHero, ModernHeroPlaceholder } from "./ModernHero";
+import { ModernDetailList } from "./ModernDetailList";
+import {
+  buildExternalLinks,
+  buildMapSearchUrls,
+  buildSpotCatchCopy,
+  buildSpotDetailItems,
+  collectSpotImages,
+  formatSpotSchedule,
+  splitSpotTitle
+} from "../lib/spotPresentation";
 
 // Extract likes and views from a spot. If undefined, treat as zero.
 const formatPopularity = (spot: Spot) => {
@@ -60,48 +24,6 @@ const formatPopularity = (spot: Spot) => {
     likes,
     views
   };
-};
-
-// Determine a primary image for a spot. Prefer the first item in mediaUrls,
-// then media array, falling back to imageUrl. Returns null if no image is found.
-const getPrimaryImage = (spot: Spot): string | null => {
-  const anySpot = spot as any;
-  if (Array.isArray(anySpot.mediaUrls) && anySpot.mediaUrls.length > 0) {
-    return anySpot.mediaUrls[0] as string;
-  }
-  if (Array.isArray(anySpot.media) && anySpot.media.length > 0) {
-    const first = anySpot.media[0];
-    if (typeof first === 'string') return first;
-    if (first && typeof first.url === 'string') return first.url;
-  }
-  return spot.imageUrl ?? null;
-};
-
-// Extract all available image URLs for a spot. This helper returns an array
-// containing every media URL associated with the spot in the order of
-// preference: mediaUrls array, media array (string or object with a url
-// property), and falls back to imageUrl if no other media is present.
-const getAllImages = (spot: Spot): string[] => {
-  const anySpot = spot as any;
-  const result: string[] = [];
-  if (Array.isArray(anySpot.mediaUrls) && anySpot.mediaUrls.length > 0) {
-    for (const url of anySpot.mediaUrls) {
-      if (typeof url === 'string') result.push(url);
-    }
-  }
-  if (Array.isArray(anySpot.media) && anySpot.media.length > 0) {
-    for (const item of anySpot.media) {
-      if (typeof item === 'string') {
-        result.push(item);
-      } else if (item && typeof item.url === 'string') {
-        result.push(item.url);
-      }
-    }
-  }
-  if (result.length === 0 && spot.imageUrl) {
-    result.push(spot.imageUrl);
-  }
-  return result;
 };
 
 type SortKey = "startTime" | "popularity" | "price" | "newest";
@@ -213,16 +135,10 @@ export const SpotListView = ({ spots, isLoading, error, onSpotSelect }: SpotList
         <div className="spot-list" role="list" aria-label="イベントリスト">
           {sortedSpots.map((spot) => {
             // Compute labels and derived values up front for clarity.
-            const scheduleLabel = formatEventSchedule(spot.startTime, spot.endTime ?? null);
+            const scheduleLabel = formatSpotSchedule(spot.startTime, spot.endTime ?? null);
             const { likes, views } = formatPopularity(spot);
-            const hostLabel = spot.ownerDisplayName?.trim() || spot.ownerId || "未設定";
-            const locationLabel = formatLocation(spot);
-            const priceLabel = formatPrice(spot);
             const viewLabel = views.toLocaleString("ja-JP");
             // Determine like state and display likes accordingly.
-            const isLiked = likedMap[spot.id] ?? false;
-            const displayLikesNumber = likes + (isLiked ? 1 : 0);
-            const likesLabel = displayLikesNumber.toLocaleString("ja-JP");
 
             return (
               <article
@@ -250,77 +166,24 @@ export const SpotListView = ({ spots, isLoading, error, onSpotSelect }: SpotList
               >
                 {(() => {
                   const isExpanded = expandedSpotId === spot.id;
-                  // Build a catch copy: use speechBubble if present, otherwise the first sentence of description.
-                  const catchCopy = (() => {
-                    if (spot.speechBubble && spot.speechBubble.trim()) return spot.speechBubble.trim();
-                    if (spot.description) {
-                      const firstSentence = spot.description.split(/[。.!！\?？]/)[0];
-                      return firstSentence.trim();
-                    }
-                    return spot.title;
-                  })();
+                  const catchCopy = buildSpotCatchCopy(spot);
                   // Prepare full and truncated descriptions.
                   const fullDesc = spot.description ?? '';
                   const truncatedDesc = fullDesc.length > 38 ? fullDesc.slice(0, 38) + '…' : fullDesc;
-                  // Prepare map search queries.
-                  const query = encodeURIComponent(`${spot.title} ${spot.locationName ?? ''}`);
-                    // Compose URLs for external map apps.
-                  const googleMapsUrl = `https://www.google.com/maps/search/?api=1&query=${query}`;
-                  const appleMapsUrl = `https://maps.apple.com/?q=${query}`;
-                  // Note: page indicators are generated dynamically based on the number of images;
-                  // Split title into main and subtitle using parentheses. E.g., "ABC (日本語)".
-                  const parseTitle = (title: string): [string, string] => {
-                    const match = title.match(/(.+?)\s*\((.+)\)/);
-                    if (match) {
-                      return [match[1].trim(), match[2].trim()];
-                    }
-                    return [title, ''];
-                  };
-                  const [mainTitle, subTitle] = parseTitle(spot.title);
-                  // Determine all images for this spot
-                  const images = getAllImages(spot);
+                  const mapUrls = buildMapSearchUrls(spot);
+                  const { mainTitle, subTitle } = splitSpotTitle(spot.title);
+                  const images = collectSpotImages(spot);
                   const idx = imageIndexMap[spot.id] ?? 0;
-                  const validIdx = Math.min(Math.max(idx, 0), images.length - 1);
+                  const imageCount = images.length > 0 ? images.length : 1;
+                  const validIdx = Math.min(Math.max(idx, 0), imageCount - 1);
                   const src = images[validIdx] ?? null;
                   // Determine updated like state and counts using local likedMap
                   const isLikedLocal = likedMap[spot.id] ?? false;
                   const displayLikesNumberLocal = likes + (isLikedLocal ? 1 : 0);
                   const likesLabelUpdated = displayLikesNumberLocal.toLocaleString("ja-JP");
                   // Build contact entry and detail items
-                  const contactEntry = (() => {
-                    const anyContact = (spot as any).contact;
-                    if (!anyContact) return null;
-                    const { phone, email, sns } = anyContact;
-                    if (phone) {
-                      return { value: phone as string, href: `tel:${(phone as string).replace(/\s+/g, "")}` };
-                    }
-                    if (email) {
-                      return { value: email as string, href: `mailto:${email as string}` };
-                    }
-                    if (sns) {
-                      const first = Object.entries(sns).find(([, url]) => Boolean(url));
-                      if (first) {
-                        const [keyStr, url] = first;
-                        if (url) {
-                          return { value: `${keyStr.toUpperCase()}: ${url}`, href: url as string };
-                        }
-                      }
-                    }
-                    return null;
-                  })();
-                  const detailItems: Array<{ type: "contact" | "location" | "price"; content: any; key: string; href?: string }> = [];
-                  if (contactEntry) {
-                    detailItems.push({ type: "contact", content: contactEntry.value, key: "contact", href: contactEntry.href });
-                  }
-                  if (spot.locationDetails) {
-                    detailItems.push({ type: "location", content: spot.locationDetails, key: "location" });
-                  } else if (locationLabel) {
-                    detailItems.push({ type: "location", content: locationLabel, key: "location" });
-                  }
-                  const pricing = (spot as any).pricing;
-                  if (pricing && pricing.label) {
-                    detailItems.push({ type: "price", content: pricing.label, key: "price" });
-                  }
+                  const detailItems = buildSpotDetailItems(spot);
+                  const externalLinks = buildExternalLinks(spot);
 
                   return (
                     <>
@@ -331,24 +194,17 @@ export const SpotListView = ({ spots, isLoading, error, onSpotSelect }: SpotList
                         <span className="owner-name">{spot.ownerDisplayName ?? spot.ownerId}</span>
                       </div>
                       {/* Hero section with image, page indicators and social overlay */}
-                      <div className="modern-hero">
-                        <div
-                          className="modern-hero-image"
-                          onTouchStart={handleTouchStart}
-                          onTouchMove={handleTouchMove}
-                          onTouchEnd={() => handleTouchEnd(spot.id, images)}
-                        >
-                          {src ? (
+                      <ModernHero
+                        media={
+                          src ? (
                             <img src={src} alt="" />
                           ) : (
-                            <span style={{ display: 'grid', placeItems: 'center', width: '100%', height: '100%', fontWeight: 700, color: '#ffffff', background: '#818cf8' }}>
-                              {spot.category.toUpperCase()}
-                            </span>
-                          )}
-                          {/* Page indicators overlayed at bottom center of the hero image */}
+                            <ModernHeroPlaceholder label={(spot.category ?? 'EVENT').toUpperCase()} />
+                          )
+                        }
+                        indicators={
                           <div className="modern-hero-indicators">
                             {(() => {
-                              const images = getAllImages(spot);
                               const count = images.length > 0 ? images.length : 1;
                               return Array.from({ length: count }, (_, idx) => (
                                 <span
@@ -362,7 +218,8 @@ export const SpotListView = ({ spots, isLoading, error, onSpotSelect }: SpotList
                               ));
                             })()}
                           </div>
-                          {/* Social overlay button */}
+                        }
+                        socialButton={
                           <button
                             type="button"
                             className="modern-hero-social"
@@ -373,8 +230,13 @@ export const SpotListView = ({ spots, isLoading, error, onSpotSelect }: SpotList
                           >
                             <Icon name="camera" size={22} />
                           </button>
-                        </div>
-                      </div>
+                        }
+                        imageProps={{
+                          onTouchStart: handleTouchStart,
+                          onTouchMove: handleTouchMove,
+                          onTouchEnd: () => handleTouchEnd(spot.id, images)
+                        }}
+                      />
                       {/* Content area containing title, stats, schedule, catch copy, and description */}
                       <div className="modern-content">
                         <div className="modern-title-row">
@@ -415,51 +277,42 @@ export const SpotListView = ({ spots, isLoading, error, onSpotSelect }: SpotList
                         {isExpanded && (
                           <>
                             <div className="modern-map-buttons">
-                              <a href={googleMapsUrl} target="_blank" rel="noopener noreferrer" className="modern-google">
+                              <a href={mapUrls.google} target="_blank" rel="noopener noreferrer" className="modern-google">
                                 Google Mapで経路を検索
                               </a>
-                              <a href={appleMapsUrl} target="_blank" rel="noopener noreferrer" className="modern-apple">
+                              <a href={mapUrls.apple} target="_blank" rel="noopener noreferrer" className="modern-apple">
                                 Apple Mapで経路を検索
                               </a>
                             </div>
                             {detailItems.length > 0 && (
                               <>
                                 <div className="modern-section-title">詳細</div>
-                                <div className="modern-detail-list">
-                                  {detailItems.map((item) => (
-                                    <div className="modern-detail-item" key={item.key}>
-                                      <div className="detail-icon">
-                                        {item.type === 'location' && <Icon name="mapLight" size={20} />}
-                                        {item.type === 'contact' && <Icon name="userFill" size={20} />}
-                                        {item.type === 'price' && <Icon name="currencyJpyFill" size={20} />}
-                                      </div>
-                                      {item.href ? (
-                                        <a href={item.href} className="detail-content" onClick={(e) => e.stopPropagation()}>
-                                          {item.content}
-                                        </a>
-                                      ) : (
-                                        <div className="detail-content">{item.content}</div>
-                                      )}
-                                    </div>
+                                <ModernDetailList
+                                  items={detailItems}
+                                  onLinkClick={(event) => {
+                                    event.stopPropagation();
+                                  }}
+                                />
+                              </>
+                            )}
+                            {externalLinks.length > 0 && (
+                              <>
+                                <div className="modern-section-title">関連リンク</div>
+                                <div className="modern-social-icons">
+                                  {externalLinks.map((link) => (
+                                    <a
+                                      key={`${link.label}-${link.url}`}
+                                      href={link.url}
+                                      target="_blank"
+                                      rel="noopener noreferrer"
+                                      onClick={(event) => event.stopPropagation()}
+                                    >
+                                      {link.label}
+                                    </a>
                                   ))}
                                 </div>
                               </>
                             )}
-                            <div className="modern-section-title">URLs</div>
-                            <div className="modern-social-icons">
-                              <button type="button" aria-label="Instagram" onClick={(e) => e.stopPropagation()}>
-                                <Icon name="camera" size={24} />
-                              </button>
-                              <button type="button" aria-label="X" onClick={(e) => e.stopPropagation()}>
-                                <Icon name="camera" size={24} />
-                              </button>
-                              <button type="button" aria-label="YouTube" onClick={(e) => e.stopPropagation()}>
-                                <Icon name="camera" size={24} />
-                              </button>
-                              <button type="button" aria-label="Web" onClick={(e) => e.stopPropagation()}>
-                                <Icon name="camera" size={24} />
-                              </button>
-                            </div>
                             <div className="modern-bottom-actions">
                               <button type="button" onClick={(e) => e.stopPropagation()}>
                                 共有

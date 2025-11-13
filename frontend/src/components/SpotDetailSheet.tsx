@@ -1,10 +1,19 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import type { FormEvent, PointerEvent as ReactPointerEvent, ReactNode, WheelEvent as ReactWheelEvent } from "react";
+import type { FormEvent, PointerEvent as ReactPointerEvent, WheelEvent as ReactWheelEvent } from "react";
 
 import { Avatar } from "./Avatar";
 import { Icon } from "./Icon";
 import { SpotMediaGallery } from "./SpotMediaGallery";
-import { Spot, SpotExternalLink } from "../types";
+import { ModernHero, ModernHeroPlaceholder } from "./ModernHero";
+import { ModernDetailList } from "./ModernDetailList";
+import { Spot } from "../types";
+import {
+  buildExternalLinks,
+  buildSpotCatchCopy,
+  buildSpotDetailItems,
+  formatSpotSchedule,
+  splitSpotTitle
+} from "../lib/spotPresentation";
 
 const clamp = (value: number, min: number, max: number) => Math.min(Math.max(value, min), max);
 const PEEK_TRANSLATE = 50;
@@ -22,40 +31,6 @@ const SCROLL_TOP_EPSILON = 2;
 const DRAG_ACTIVATION_THRESHOLD = 4;
 const WHEEL_PULL_SENSITIVITY = 0.55;
 const WHEEL_SETTLE_DELAY_MS = 140;
-
-const formatEventSchedule = (startTime?: string, endTime?: string | null) => {
-  if (!startTime) return "日程未設定";
-  const start = new Date(startTime);
-  if (Number.isNaN(start.getTime())) {
-    return "日程未設定";
-  }
-
-  const end = endTime ? new Date(endTime) : null;
-  const hasValidEnd = end && !Number.isNaN(end.getTime());
-
-  const formatDate = (date: Date) =>
-    date.toLocaleDateString("ja-JP", { month: "2-digit", day: "2-digit" });
-
-  const formatTime = (date: Date) =>
-    date.toLocaleTimeString("ja-JP", { hour: "2-digit", minute: "2-digit", hour12: false });
-
-  let label = `${formatDate(start)} ${formatTime(start)}`;
-
-  if (hasValidEnd && end) {
-    const sameDay = formatDate(start) === formatDate(end);
-    label += sameDay ? `~${formatTime(end)}` : `~${formatDate(end)} ${formatTime(end)}`;
-  }
-
-  return label;
-};
-
-const parseTitle = (title: string): [string, string] => {
-  const match = title.match(/(.+?)\s*\((.+)\)/);
-  if (match) {
-    return [match[1].trim(), match[2].trim()];
-  }
-  return [title, ""];
-};
 
 export type SpotDetailSheetProps = {
   spot: Spot | null;
@@ -107,7 +82,6 @@ export const SpotDetailSheet = ({
   const wheelActiveRef = useRef(false);
   const wheelSettleTimeoutRef = useRef<number | null>(null);
   const [isDragging, setIsDragging] = useState(false);
-  const [isShareMenuOpen, setIsShareMenuOpen] = useState(false);
   const [isReportModalOpen, setIsReportModalOpen] = useState(false);
   const [reportCategory, setReportCategory] = useState<string>(REPORT_CATEGORIES[0].value);
   const [reportDetails, setReportDetails] = useState("");
@@ -144,7 +118,6 @@ export const SpotDetailSheet = ({
       setSheetTranslate(PEEK_TRANSLATE);
       setIsDragging(false);
       scrollAreaRef.current?.scrollTo({ top: 0, behavior: "auto" });
-      setIsShareMenuOpen(false);
       setIsReportModalOpen(false);
       setReportDetails("");
       setReportCategory(REPORT_CATEGORIES[0].value);
@@ -670,91 +643,11 @@ export const SpotDetailSheet = ({
   }, [spot]);
 
   const hasMedia = mediaGalleryUrls.length > 0;
-  const contactEntry = useMemo(() => {
-    if (!spot?.contact) return null;
-    const { phone, email, sns } = spot.contact;
-    if (phone) {
-      return { label: "連絡先", value: phone, href: `tel:${phone.replace(/\s+/g, "")}` };
-    }
-    if (email) {
-      return { label: "連絡先", value: email, href: `mailto:${email}` };
-    }
-    if (sns) {
-      const first = Object.entries(sns).find(([, url]) => Boolean(url));
-      if (first) {
-        const [key, url] = first;
-        if (url) {
-          return { label: "連絡先", value: `${key.toUpperCase()}: ${url}`, href: url };
-        }
-      }
-    }
-    return null;
-  }, [spot?.contact]);
-  const detailItems = useMemo(() => {
-    /**
-     * Build a list of detail entries to show beneath the description. Each entry
-     * includes a type which will determine the icon, a unique key, and
-     * arbitrary React content. We include contact information, location
-     * information, and any pricing information when available. New types
-     * should be reflected in the rendering logic below with appropriate icons.
-     */
-    const items: Array<{ type: "contact" | "location" | "price"; content: ReactNode; key: string }> = [];
-    if (contactEntry) {
-      const content = contactEntry.href ? (
-        <a
-          href={contactEntry.href}
-          target={contactEntry.href.startsWith("http") ? "_blank" : undefined}
-          rel="noopener noreferrer"
-        >
-          {contactEntry.value}
-        </a>
-      ) : (
-        contactEntry.value
-      );
-      items.push({ type: "contact", content, key: "contact" });
-    }
-    if (spot?.locationDetails) {
-      items.push({ type: "location", content: spot.locationDetails, key: "location" });
-    }
-    // Add a pricing row if the spot exposes pricing details. The mock data
-    // stores pricing information under the `pricing` field with a `label`
-    // property (e.g. "無料", "¥600"). When present we show that label.
-    if ((spot as any)?.pricing?.label) {
-      const priceLabel: string = (spot as any).pricing.label;
-      items.push({ type: "price", content: priceLabel, key: "price" });
-    }
-    return items;
-  }, [contactEntry, spot?.locationDetails, spot]);
-
-  const externalLinks = useMemo<SpotExternalLink[]>(() => {
-    if (!spot || !spot.externalLinks) return [];
-    return spot.externalLinks.filter((link) => Boolean(link?.url)).map((link) => ({
-      label: link.label,
-      url: link.url,
-      icon: link.icon ?? null
-    }));
-  }, [spot]);
-
-  const scheduleLabel = useMemo(() => {
-    return formatEventSchedule(spot?.startTime, spot?.endTime ?? null);
-  }, [spot?.endTime, spot?.startTime]);
-
-  const [mainTitle, subTitle] = useMemo(() => {
-    if (!spot?.title) return ["", ""] as [string, string];
-    return parseTitle(spot.title);
-  }, [spot?.title]);
-
-  const catchCopy = useMemo(() => {
-    if (!spot) return "";
-    if (spot.speechBubble && spot.speechBubble.trim()) {
-      return spot.speechBubble.trim();
-    }
-    if (spot.description) {
-      const firstSentence = spot.description.split(/[。.!！\?？]/)[0];
-      return firstSentence.trim();
-    }
-    return spot.title;
-  }, [spot]);
+  const detailItems = useMemo(() => buildSpotDetailItems(spot), [spot]);
+  const externalLinks = useMemo(() => buildExternalLinks(spot), [spot]);
+  const scheduleLabel = useMemo(() => formatSpotSchedule(spot?.startTime, spot?.endTime ?? null), [spot?.endTime, spot?.startTime]);
+  const { mainTitle, subTitle } = useMemo(() => splitSpotTitle(spot?.title ?? ""), [spot?.title]);
+  const catchCopy = useMemo(() => buildSpotCatchCopy(spot), [spot]);
 
   const sheetMode = sheetTranslate <= EXPAND_THRESHOLD ? "expanded" : sheetTranslate >= 99 ? "closed" : "peek";
 
@@ -820,20 +713,20 @@ export const SpotDetailSheet = ({
               style={{ overflowY: sheetTranslate <= 0 ? "auto" : "hidden" }}
             >
               <div className={`sheet-content ${hasMedia ? "has-media" : "no-media"}`.trim()}>
-                <div className="modern-hero">
-                  <div className="modern-hero-image">
-                    {hasMedia ? (
+                <ModernHero
+                  media={
+                    hasMedia ? (
                       <SpotMediaGallery title={spot.title} mediaUrls={mediaGalleryUrls} />
                     ) : (
-                      <div className="modern-hero-placeholder">
-                        {(spot.category ?? "EVENT").toUpperCase()}
-                      </div>
-                    )}
+                      <ModernHeroPlaceholder label={(spot.category ?? "EVENT").toUpperCase()} />
+                    )
+                  }
+                  socialButton={
                     <button type="button" className="modern-hero-social" aria-label="Instagram">
                       <Icon name="camera" size={22} />
                     </button>
-                  </div>
-                </div>
+                  }
+                />
 
                 <div className="modern-content">
                   <div className="modern-title-row">
@@ -873,18 +766,7 @@ export const SpotDetailSheet = ({
                   {detailItems.length > 0 ? (
                     <>
                       <div className="modern-section-title">詳細</div>
-                      <div className="modern-detail-list">
-                        {detailItems.map((item) => (
-                          <div className="modern-detail-item" key={item.key}>
-                            <div className="detail-icon">
-                              {item.type === "location" && <Icon name="mapLight" size={20} />}
-                              {item.type === "contact" && <Icon name="userFill" size={20} />}
-                              {item.type === "price" && <Icon name="currencyJpyFill" size={20} />}
-                            </div>
-                            <div className="detail-content">{item.content}</div>
-                          </div>
-                        ))}
-                      </div>
+                      <ModernDetailList items={detailItems} />
                     </>
                   ) : null}
                   {externalLinks.length > 0 ? (

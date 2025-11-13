@@ -25,46 +25,15 @@ import { useProfile } from "./hooks/useProfile";
 import { usePopularSpots } from "./hooks/usePopularSpots";
 import { usePromotions } from "./hooks/usePromotions";
 import { useLayoutMetrics } from "./hooks/useLayoutMetrics";
+import { useCategoryTabs } from "./hooks/useCategoryTabs";
+import type { CategoryKey } from "./hooks/useCategoryTabs";
+import { useSearchHistory } from "./hooks/useSearchHistory";
+import { useBillingReturn } from "./hooks/useBillingReturn";
 import { auth, db } from "./lib/firebase";
 import { mockSpots } from "./mockData";
 import { Coordinates, Spot, SpotCategory, ViewMode, PageMode } from "./types";
 
 const AuthPanel = lazy(() => import("./components/AuthPanel").then((module) => ({ default: module.AuthPanel })));
-
-type CategoryKey =
-  | "top"
-  | "coupon"
-  | "entertainment"
-  | "sports"
-  | "gourmet"
-  | "live"
-  | "art"
-  | "family"
-  | "nightlife"
-  | "shopping";
-
-type CategoryConfig = {
-  label: string;
-  color: string;
-  spotCategory: SpotCategory | "all";
-};
-
-const CATEGORY_CONFIG: Record<CategoryKey, CategoryConfig> = {
-  top: { label: "トップ", color: "#0ea5e9", spotCategory: "all" },
-  gourmet: { label: "グルメ", color: "#f97316", spotCategory: "cafe" },
-  entertainment: { label: "エンタメ", color: "#f59e0b", spotCategory: "event" },
-  sports: { label: "スポーツ", color: "#22d3ee", spotCategory: "sports" },
-  coupon: { label: "クーポン", color: "#6366f1", spotCategory: "coupon" },
-  live: { label: "ライブ", color: "#ef4444", spotCategory: "live" },
-  art: { label: "アート", color: "#a855f7", spotCategory: "event" },
-  family: { label: "ファミリー", color: "#14b8a6", spotCategory: "event" },
-  nightlife: { label: "ナイトライフ", color: "#1d4ed8", spotCategory: "live" },
-  shopping: { label: "ショッピング", color: "#f59e0b", spotCategory: "coupon" }
-};
-
-const INITIAL_CATEGORY_KEYS: CategoryKey[] = ["top", "gourmet", "entertainment", "sports", "coupon", "live"];
-const CATEGORY_DISPLAY_ORDER: CategoryKey[] = [...INITIAL_CATEGORY_KEYS, "art", "family", "nightlife", "shopping"];
-const CATEGORY_STORAGE_KEY = "category-tabs:v1";
 
 const DEFAULT_HOME_VIEW: MapViewProps['initialView'] = {
   longitude: 139.7016,
@@ -87,58 +56,6 @@ const MOBILE_SCROLL_FOOTER = (
   </footer>
 );
 
-const isCategoryKey = (value: unknown): value is CategoryKey =>
-  typeof value === "string" && CATEGORY_DISPLAY_ORDER.includes(value as CategoryKey);
-
-const normalizeCategoryKeys = (keys: CategoryKey[]): CategoryKey[] => {
-  const allowedKeys = new Set(CATEGORY_DISPLAY_ORDER);
-  const uniqueKeys: CategoryKey[] = [];
-  keys.forEach((key) => {
-    if (allowedKeys.has(key) && !uniqueKeys.includes(key)) {
-      uniqueKeys.push(key);
-    }
-  });
-  if (!uniqueKeys.includes("top")) {
-    uniqueKeys.unshift("top");
-  }
-  const ordered = CATEGORY_DISPLAY_ORDER.filter((key) => uniqueKeys.includes(key));
-  return ordered.length > 0 ? ordered : INITIAL_CATEGORY_KEYS;
-};
-
-const loadStoredCategoryKeys = (): CategoryKey[] => {
-  if (typeof window === "undefined") {
-    return INITIAL_CATEGORY_KEYS;
-  }
-  try {
-    const raw = window.localStorage.getItem(CATEGORY_STORAGE_KEY);
-    if (!raw) {
-      return INITIAL_CATEGORY_KEYS;
-    }
-    const parsed = JSON.parse(raw) as unknown;
-    if (!Array.isArray(parsed)) {
-      return INITIAL_CATEGORY_KEYS;
-    }
-    const filtered = parsed.filter((item): item is CategoryKey => isCategoryKey(item));
-    if (filtered.length === 0) {
-      return INITIAL_CATEGORY_KEYS;
-    }
-    return normalizeCategoryKeys(filtered as CategoryKey[]);
-  } catch (error) {
-    console.warn("Failed to load stored category tabs", error);
-    return INITIAL_CATEGORY_KEYS;
-  }
-};
-
-const persistCategoryKeys = (keys: CategoryKey[]) => {
-  if (typeof window === "undefined") {
-    return;
-  }
-  try {
-    window.localStorage.setItem(CATEGORY_STORAGE_KEY, JSON.stringify(keys));
-  } catch (error) {
-    console.warn("Failed to persist category tabs", error);
-  }
-};
 
 type NotificationDoc = {
   body?: string;
@@ -154,17 +71,12 @@ type NotificationDoc = {
 
 const SUPPORT_EMAIL = "support@shibuya-livemap.local";
 
-const mapCategoryKeyToSpotCategory = (key: CategoryKey): SpotCategory | "all" | null => {
-  const config = CATEGORY_CONFIG[key];
-  return config?.spotCategory ?? null;
-};
 
 function App() {
   const navigate = useNavigate();
   const location = useLocation();
   const [, setSearchParams] = useSearchParams();
   const layoutRootRef = useRef<HTMLDivElement | null>(null);
-  const initialCategoryKeys = useMemo(() => loadStoredCategoryKeys(), []);
   const [viewMode, setViewMode] = useState<ViewMode>(() => {
     if (typeof window === "undefined") return "map";
     try {
@@ -174,21 +86,19 @@ function App() {
       return "map";
     }
   });
-  const [categoryKeys, setCategoryKeys] = useState<CategoryKey[]>(initialCategoryKeys);
-  const [activeCategoryKey, setActiveCategoryKey] = useState<CategoryKey>(initialCategoryKeys[0] ?? "top");
-  const [categoryFilter, setCategoryFilter] = useState<SpotCategory | "all">(
-    mapCategoryKeyToSpotCategory(initialCategoryKeys[0] ?? "top") ?? "all"
-  );
-  const categoryOptions = useMemo(
-    () => categoryKeys.map((key) => ({ key, label: CATEGORY_CONFIG[key].label, color: CATEGORY_CONFIG[key].color })),
-    [categoryKeys]
-  );
-  const availableCategoryOptions = useMemo(
-    () => CATEGORY_DISPLAY_ORDER.map((key) => ({ key, label: CATEGORY_CONFIG[key].label, color: CATEGORY_CONFIG[key].color })),
-    []
-  );
-  const [isCategoryManagerOpen, setCategoryManagerOpen] = useState(false);
-  const [categoryDraftKeys, setCategoryDraftKeys] = useState<CategoryKey[]>(initialCategoryKeys);
+  const {
+    categoryOptions,
+    availableCategoryOptions,
+    activeCategoryKey,
+    categoryFilter,
+    categoryDraftKeys,
+    isCategoryManagerOpen,
+    selectCategory,
+    openCategoryManager,
+    closeCategoryManager,
+    toggleCategoryDraft,
+    saveCategoryDraft
+  } = useCategoryTabs();
 
   useEffect(() => {
     const params = new URLSearchParams(location.search);
@@ -209,27 +119,16 @@ function App() {
     [location.search, setSearchParams]
   );
 
-  useEffect(() => {
-    persistCategoryKeys(categoryKeys);
-  }, [categoryKeys]);
-
-  useEffect(() => {
-    setCategoryDraftKeys(categoryKeys);
-  }, [categoryKeys]);
-  const [searchValue, setSearchValue] = useState("");
-  const [searchInput, setSearchInput] = useState("");
-  const [isSearchOverlayOpen, setSearchOverlayOpen] = useState(false);
-  const [recentSearches, setRecentSearches] = useState<string[]>(() => {
-    if (typeof window === "undefined") return [];
-    try {
-      const stored = window.localStorage.getItem("search-history");
-      if (!stored) return [];
-      const parsed = JSON.parse(stored);
-      return Array.isArray(parsed) ? (parsed.filter((item) => typeof item === "string") as string[]) : [];
-    } catch {
-      return [];
-    }
-  });
+  const {
+    searchValue,
+    searchInput,
+    recentSearches,
+    isSearchOverlayOpen,
+    setSearchInput,
+    openSearchOverlay,
+    closeSearchOverlay,
+    applySearch: applySearchRaw
+  } = useSearchHistory();
   const [isAuthModalOpen, setAuthModalOpen] = useState(false);
   const [isAccountPanelOpen, setAccountPanelOpen] = useState(false);
   const [selectedLocation, setSelectedLocation] = useState<Coordinates | null>(null);
@@ -435,65 +334,7 @@ function App() {
     return () => unsubscribe();
   }, [currentUser]);
 
-  useEffect(() => {
-    if (typeof window === "undefined") return;
-    const url = new URL(window.location.href);
-    const params = url.searchParams;
-
-    let didUpdate = false;
-    let shouldRefreshProfile = false;
-
-    const billingStatus = params.get("billing");
-    if (billingStatus) {
-      didUpdate = true;
-      switch (billingStatus) {
-        case "success": {
-          triggerMessage("決済が完了しました。設定を更新しています。");
-          trackEvent("billing_checkout_complete", {});
-          shouldRefreshProfile = true;
-          break;
-        }
-        case "cancel": {
-          triggerMessage("Checkoutをキャンセルしました。");
-          trackEvent("billing_checkout_cancel", {});
-          break;
-        }
-        case "error": {
-          triggerMessage("決済処理でエラーが発生しました。時間をおいて再度お試しください。");
-          trackEvent("billing_checkout_error", { result: billingStatus });
-          break;
-        }
-        default: {
-          triggerMessage("決済状況を確認できませんでした。");
-          trackEvent("billing_checkout_unknown", { result: billingStatus });
-        }
-      }
-      params.delete("billing");
-    }
-
-    const portalStatus = params.get("portal");
-    if (portalStatus) {
-      didUpdate = true;
-      if (portalStatus === "done") {
-        triggerMessage("Stripeポータルからの変更を反映します。");
-        shouldRefreshProfile = true;
-      } else {
-        triggerMessage("Stripeポータルの処理で問題が発生しました。");
-      }
-      trackEvent("billing_portal_return", { status: portalStatus });
-      params.delete("portal");
-    }
-
-    if (shouldRefreshProfile) {
-      scheduleProfileRefresh();
-    }
-
-    if (didUpdate) {
-      const nextSearch = params.toString();
-      const newUrl = `${url.pathname}${nextSearch ? `?${nextSearch}` : ""}${url.hash}`;
-      window.history.replaceState({}, document.title, newUrl);
-    }
-  }, [scheduleProfileRefresh, triggerMessage]);
+  useBillingReturn({ onMessage: triggerMessage, onRefreshProfile: scheduleProfileRefresh });
 
   useEffect(() => {
     if (!currentUser || !authToken) return;
@@ -715,96 +556,58 @@ function App() {
   const handleCategorySelect = useCallback(
     (key: string) => {
       const categoryKey = key as CategoryKey;
-      if (!categoryKeys.includes(categoryKey)) {
+      const applied = selectCategory(categoryKey);
+      if (!applied) {
         triggerMessage("このカテゴリは近日公開予定です。");
-        return;
       }
-      setActiveCategoryKey(categoryKey);
-      const mapped = mapCategoryKeyToSpotCategory(categoryKey);
-      if (mapped) {
-        setCategoryFilter(mapped);
-        return;
-      }
-      triggerMessage("このカテゴリは近日公開予定です。");
     },
-    [categoryKeys, triggerMessage]
+    [selectCategory, triggerMessage]
   );
 
   const handleCategoryManagerOpen = useCallback(() => {
-    setCategoryDraftKeys(categoryKeys);
-    setCategoryManagerOpen(true);
-  }, [categoryKeys]);
+    openCategoryManager();
+  }, [openCategoryManager]);
 
   const handleCategoryManagerClose = useCallback(() => {
-    setCategoryManagerOpen(false);
-  }, []);
+    closeCategoryManager();
+  }, [closeCategoryManager]);
 
-  const handleCategoryDraftToggle = useCallback((key: CategoryKey) => {
-    if (key === "top") {
-      return;
-    }
-    setCategoryDraftKeys((current) =>
-      current.includes(key) ? current.filter((item) => item !== key) : [...current, key]
-    );
-  }, []);
+  const handleCategoryDraftToggle = useCallback(
+    (key: CategoryKey) => {
+      toggleCategoryDraft(key);
+    },
+    [toggleCategoryDraft]
+  );
 
   const handleCategoryManagerSave = useCallback(() => {
-    const normalized = normalizeCategoryKeys(categoryDraftKeys);
-    setCategoryKeys(normalized);
-    setCategoryDraftKeys(normalized);
-    if (!normalized.includes(activeCategoryKey)) {
-      const fallbackKey = normalized[0] ?? "top";
-      setActiveCategoryKey(fallbackKey);
-      setCategoryFilter(mapCategoryKeyToSpotCategory(fallbackKey) ?? "all");
-    }
-    setCategoryManagerOpen(false);
+    saveCategoryDraft();
     triggerMessage("カテゴリを更新しました");
-  }, [categoryDraftKeys, activeCategoryKey, triggerMessage]);
+  }, [saveCategoryDraft, triggerMessage]);
 
   const handleSearchToggle = useCallback(() => {
-    setSearchOverlayOpen(true);
-    setSearchInput(searchValue);
-  }, [searchValue]);
+    openSearchOverlay();
+  }, [openSearchOverlay]);
 
-  const handleSearchChange = useCallback((value: string) => {
-    setSearchInput(value);
-  }, []);
-
-  const closeSearchOverlay = useCallback(() => {
-    setSearchOverlayOpen(false);
-    setSearchInput(searchValue);
-  }, [searchValue]);
-
-  const persistRecentSearches = useCallback((entries: string[]) => {
-    try {
-      if (typeof window !== "undefined") {
-        window.localStorage.setItem("search-history", JSON.stringify(entries));
-      }
-    } catch {
-      /* ignore */
-    }
-  }, []);
+  const handleSearchChange = useCallback(
+    (value: string) => {
+      setSearchInput(value);
+    },
+    [setSearchInput]
+  );
 
   const applySearch = useCallback(
     (value: string, showMessage = true) => {
-      const trimmed = value.trim();
-      setSearchInput(trimmed);
-      setSearchValue(trimmed);
-      setSearchOverlayOpen(false);
-      if (trimmed) {
-        setRecentSearches((current) => {
-          const next = [trimmed, ...current.filter((item) => item !== trimmed)].slice(0, 8);
-          persistRecentSearches(next);
-          return next;
-        });
-        if (showMessage) {
-          triggerMessage(`"${trimmed}" の結果を表示します`);
-        }
-      } else if (showMessage && searchValue) {
+      const result = applySearchRaw(value, showMessage);
+      if (!showMessage) {
+        return;
+      }
+      if (result.status === "applied" && result.query) {
+        triggerMessage(`"${result.query}" の結果を表示します`);
+      } else if (result.status === "cleared") {
         triggerMessage("検索条件をクリアしました");
       }
     },
-    [persistRecentSearches, searchValue, triggerMessage]
+    [applySearchRaw, triggerMessage]
   );
 
   const handleSpotCreated = useCallback(
@@ -946,14 +749,12 @@ function App() {
 
   const handleLogoClick = useCallback(() => {
     navigate("/spots");
-    setActiveCategoryKey("top");
-    setCategoryFilter("all");
-    setSearchValue("");
-    setSearchInput("");
+    selectCategory("top");
+    applySearchRaw("", false);
     setFocusCoordinates(null);
     void goToMapView();
     triggerMessage("渋谷周辺の最新イベントへ戻りました");
-  }, [goToMapView, navigate, triggerMessage]);
+  }, [applySearchRaw, goToMapView, navigate, selectCategory, setFocusCoordinates, triggerMessage]);
 
   const handleLanguageClick = useCallback(() => {
     triggerMessage("多言語対応は近日公開予定です");
@@ -990,10 +791,13 @@ function App() {
   const handleNotificationDismiss = useCallback(
     (notification: InAppNotification) => {
       markNotificationsAsRead([notification]);
-      setNotifications((current) => current.filter((item) => item.id !== notification.id));
-      if (notifications.length <= 1) {
-        setNotificationsOpen(false);
-      }
+      setNotifications((current) => {
+        const next = current.filter((item) => item.id !== notification.id);
+        if (next.length === 0) {
+          setNotificationsOpen(false);
+        }
+        return next;
+      });
     },
     [markNotificationsAsRead]
   );

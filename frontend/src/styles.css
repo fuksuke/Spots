@@ -19,188 +19,6 @@
   background: #f1f5f9;
 }
 
-/* --------------------------------------------------------------------
-   Custom additions for the Yokohama Illumination detail sheet. These rules
-   introduce new visual elements such as a catch copy callout, dual map
-   buttons, a compact social link bar and bottom actions for sharing and
-   reporting. The selectors are scoped under .spot-detail-sheet to avoid
-   collisions with other UI components.
-*/
-
-.spot-detail-sheet .sheet-catchcopy {
-  padding: 0.8rem 1rem;
-  border-radius: 16px;
-  background: #ffffff;
-  border: 3px solid rgba(175, 175, 175, 0.8);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
-  font-weight: 900;
-  font-size: 1.5rem;
-  line-height: 1.4;
-  text-align: center;
-  color: #0f172a;
-  text-shadow: 0.5px 0.5px 0px rgba(0, 0, 0, 0.2);
-}
-
-.spot-detail-sheet .sheet-map-buttons {
-  display: flex;
-  flex-direction: column;
-  gap: 0.75rem;
-}
-
-.spot-detail-sheet .sheet-map-buttons .button {
-  flex: 1 1 auto;
-  padding: 0.8rem 1rem;
-  border-radius: 16px;
-  font-weight: 600;
-  font-size: 0.95rem;
-  line-height: 1.2;
-  text-align: center;
-  color: #0f172a;
-}
-
-.spot-detail-sheet .button.map-google {
-  background: #6DFEB5;
-}
-
-.spot-detail-sheet .button.map-apple {
-  background: #FFA989;
-}
-
-.spot-detail-sheet .sheet-social-icons {
-  display: flex;
-  flex-direction: row;
-  gap: 1rem;
-  align-items: center;
-}
-
-.spot-detail-sheet .sheet-social-icons a {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 44px;
-  height: 44px;
-  border-radius: 12px;
-  background: rgba(15, 23, 42, 0.05);
-  color: #0f172a;
-  transition: background 0.2s ease;
-}
-
-.spot-detail-sheet .sheet-social-icons a:hover {
-  background: rgba(15, 23, 42, 0.1);
-}
-
-.spot-detail-sheet .sheet-bottom-actions {
-  display: flex;
-  flex-direction: row;
-  gap: 0.5rem;
-}
-
-.spot-detail-sheet .sheet-bottom-actions .button {
-  flex: 1 1 0;
-  padding: 0.75rem 1rem;
-  border-radius: 16px;
-  font-weight: 600;
-  font-size: 0.95rem;
-  text-align: center;
-  background: #f3f4f6;
-  color: #0f172a;
-}
-
-.spot-detail-sheet .sheet-bottom-actions .button:hover {
-  background: #e5e7eb;
-}
-
-/* Statistics group containing likes and view counts */
-.spot-detail-sheet .sheet-statistics {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.5rem;
-}
-
-/* View count pill: styled similarly to the like button but not interactive */
-.spot-detail-sheet .sheet-view-count {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 0.15rem;
-  padding: 0.1rem 0.4rem;
-  border-radius: 999px;
-  color: #0f172a;
-  font-size: 0.85rem;
-  font-weight: 600;
-  cursor: default;
-}
-
-/* Support for optional subtitle under the main title */
-.spot-detail-sheet .sheet-event-subtitle {
-  margin: 0;
-  font-size: 0.82rem;
-  color: rgba(71, 85, 105, 0.8);
-  line-height: 1.2;
-}
-
-/* Overlay the top bar on top of media when present */
-.spot-detail-sheet .sheet-content.has-media .sheet-top-bar {
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  z-index: 2;
-  padding: 0.6rem 0.8rem;
-  background: linear-gradient(rgba(0, 0, 0, 0.5), rgba(0, 0, 0, 0));
-  border-bottom: none;
-  color: #ffffff;
-}
-
-.spot-detail-sheet .sheet-content.has-media .sheet-top-bar .sheet-owner-name {
-  color: #ffffff;
-}
-
-.spot-detail-sheet .sheet-content.has-media .sheet-top-bar .icon-button {
-  color: #ffffff;
-  background: var(--modern-hero-social-bg, rgba(255, 255, 255, 0.15));
-  border-radius: 50%;
-}
-
-/* Refine details section to match screenshot styling */
-.spot-detail-sheet .sheet-section.sheet-details {
-  background: none;
-  border-radius: 0;
-  padding: 0;
-}
-
-.spot-detail-sheet .sheet-section.sheet-details .sheet-detail-list {
-  gap: 0.6rem;
-}
-
-.spot-detail-sheet .sheet-section.sheet-details .detail-row {
-  display: flex;
-  align-items: center;
-  gap: 0.6rem;
-  background: #f3f4f6;
-  border-radius: 12px;
-  padding: 0.7rem 0.8rem;
-}
-
-.spot-detail-sheet .sheet-section.sheet-details .detail-icon {
-  width: 28px;
-  height: 28px;
-  border-radius: 50%;
-  background: #ffffff;
-  border: 1px solid #e5e7eb;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  color: #0f172a;
-  flex: 0 0 auto;
-}
-
-.spot-detail-sheet .sheet-section.sheet-details .detail-content {
-  flex: 1 1 auto;
-  font-size: 0.95rem;
-  color: rgba(15, 23, 42, 0.9);
-}
-
 
 @supports not (height: 100dvh) {
   :root {
@@ -877,76 +695,10 @@ button {
 }
 
 
-.spot-detail-sheet .sheet-section-header {
-  display: flex;
-  flex-direction: column;
-  gap: 0.6rem;
-}
-
-.spot-detail-sheet .sheet-heading-row {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 0.75rem;
-}
-
-.spot-detail-sheet .sheet-section-heading {
-  display: flex;
-  flex-direction: column;
-  gap: 0.45rem;
-  flex: 1 1 auto;
-  min-width: 0;
-}
-
-.spot-detail-sheet .sheet-like-button {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 0.15rem;
-  border: none;
-  border-radius: 999px;
-  padding: 0.1rem 0.4rem;
-  font-weight: 600;
-  font-size: 0.85rem;
-  cursor: pointer;
-  transition: background 0.2s ease;
-}
-
-.spot-detail-sheet .sheet-like-button:hover {
-  background: rgba(239, 68, 68, 0.15);
-}
-
-.spot-detail-sheet .sheet-like-button.liked,
-.spot-detail-sheet .sheet-like-button.liked:hover {
-  background: transparent;
-}
-
-.spot-detail-sheet .sheet-event-title {
-  margin: 0;
-  font-size: 1.25rem;
-  color: #0f172a;
-  line-height: 1.2;
-}
-
-
-.spot-detail-sheet .sheet-title-meta,
-.spot-detail-sheet .sheet-secondary-actions,
-.spot-detail-sheet .sheet-category {
-  display: none;
-}
-
 .spot-detail-sheet .sheet-content {
   display: flex;
   flex-direction: column;
   gap: 1.5rem;
-}
-
-.spot-detail-sheet .sheet-content.no-media .sheet-section:first-of-type {
-  margin-top: 0.75rem;
-}
-
-.spot-detail-sheet .sheet-content.has-media > .sheet-section:first-of-type {
-  margin-top: -0.9rem;
 }
 
 .spot-detail-sheet .sheet-media {
@@ -1027,144 +779,6 @@ button {
   background: #ffffff;
 }
 
-.spot-detail-sheet .sheet-section {
-  display: flex;
-  flex-direction: column;
-  gap: 0.8rem;
-}
-
-.spot-detail-sheet .sheet-action-row {
-  display: flex;
-  flex-wrap: nowrap;
-  gap: 0.5rem;
-  align-items: center;
-}
-
-.spot-detail-sheet .sheet-action-row .button.directions {
-  flex: 1 1 auto;
-}
-
-.spot-detail-sheet .sheet-share-wrapper {
-  position: relative;
-  flex: 0 0 auto;
-  display: inline-flex;
-  align-items: center;
-}
-
-.spot-detail-sheet .sheet-share-wrapper .share-toggle {
-  padding: 0.80rem 1.1rem;
-  font-size: 0.95rem;
-  line-height: 1.2;
-}
-
-.spot-detail-sheet .sheet-share-menu {
-  position: absolute;
-  top: calc(100% + 0.35rem);
-  right: 0;
-  min-width: 180px;
-  background: #ffffff;
-  border: 1px solid rgba(226, 232, 240, 0.85);
-  border-radius: 14px;
-  box-shadow: 0 12px 32px rgba(15, 23, 42, 0.18);
-  padding: 0.75rem;
-  display: flex;
-  flex-direction: column;
-  gap: 0.65rem;
-  z-index: 10;
-}
-
-.spot-detail-sheet .sheet-share-menu__native {
-  border: none;
-  background: rgba(15, 23, 42, 0.05);
-  border-radius: 10px;
-  padding: 0.45rem 0.6rem;
-  font-weight: 600;
-  cursor: pointer;
-}
-
-.spot-detail-sheet .sheet-share-menu__links {
-  display: flex;
-  flex-direction: column;
-  gap: 0.4rem;
-}
-
-.spot-detail-sheet .sheet-share-menu__links a {
-  text-decoration: none;
-  color: #0f172a;
-  font-weight: 600;
-  padding: 0.25rem 0.35rem;
-  border-radius: 8px;
-  transition: background 0.2s ease;
-}
-
-.spot-detail-sheet .sheet-share-menu__links a:hover {
-  background: rgba(226, 232, 240, 0.6);
-}
-
-.spot-detail-sheet .sheet-section.sheet-report {
-  margin-top: 0.25rem;
-  margin-bottom: 0.5rem;
-}
-
-.spot-detail-sheet .sheet-section.sheet-report .report-trigger {
-  width: 100%;
-  justify-content: center;
-}
-
-.spot-detail-sheet .sheet-section.sheet-details .sheet-detail-list {
-  margin: 0;
-  padding: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 0.65rem;
-  list-style: none;
-}
-
-.spot-detail-sheet .sheet-section.sheet-details {
-  border-radius: 18px;
-}
-
-.spot-detail-sheet .sheet-section.sheet-details .detail-row {
-  display: flex;
-  align-items: flex-start;
-  gap: 0.6rem;
-}
-
-.spot-detail-sheet .sheet-section.sheet-details .detail-icon {
-  width: 36px;
-  height: 36px;
-  border-radius: 12px;
-  background: rgba(15, 23, 42, 0.05);
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  color: #0f172a;
-}
-
-.spot-detail-sheet .sheet-section.sheet-details .detail-content {
-  flex: 1 1 auto;
-  font-size: 0.95rem;
-  color: rgba(15, 23, 42, 0.95);
-}
-
-.spot-detail-sheet .sheet-section.sheet-details .detail-content a {
-  color: #2563eb;
-  text-decoration: none;
-}
-
-.spot-detail-sheet .sheet-section.sheet-details .detail-content a:hover {
-  text-decoration: underline;
-}
-
-.spot-detail-sheet .sheet-section.sheet-details dd a {
-  color: #2563eb;
-  text-decoration: none;
-}
-
-.spot-detail-sheet .sheet-section.sheet-details dd a:hover {
-  text-decoration: underline;
-}
-
 .spot-detail-sheet .sheet-report-modal {
   position: fixed;
   inset: 0;
@@ -1229,60 +843,6 @@ button {
   display: flex;
   justify-content: flex-end;
   gap: 0.75rem;
-}
-
-.spot-detail-sheet .sheet-section h3 {
-  margin: 0;
-  font-size: 0.98rem;
-  color: #0f172a;
-}
-
-.spot-detail-sheet .sheet-period {
-  margin: 0;
-  font-size: 0.88rem;
-  color: rgba(71, 85, 105, 0.88);
-}
-
-.spot-detail-sheet .sheet-description {
-  margin: 0;
-  font-size: 0.95rem;
-  line-height: 1.7;
-  color: rgba(30, 41, 59, 0.95);
-  white-space: pre-wrap;
-}
-
-.spot-detail-sheet .sheet-info {
-  display: none;
-}
-
-.spot-detail-sheet .button.directions {
-  align-self: flex-start;
-}
-
-.spot-detail-sheet .sheet-links {
-  list-style: none;
-  padding: 1rem;
-  margin: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 0.6rem;
-}
-
-.spot-detail-sheet .sheet-links a {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.35rem;
-  color: rgba(37, 99, 235, 0.95);
-  text-decoration: none;
-  font-weight: 600;
-}
-
-.spot-detail-sheet .sheet-links a:hover {
-  text-decoration: underline;
-}
-
-.spot-detail-sheet .sheet-section.comments {
-  margin-top: 0.5rem;
 }
 
 .spot-detail-sheet .sheet-placeholder {
@@ -3899,15 +3459,6 @@ select.input:focus {
   color: rgba(71, 85, 105, 0.9);
 }
 
-/* -------------------------------------------------------------
-   Enhanced search overlay styling
-   These rules refine the appearance of the search overlay to
-   better align with the overall application aesthetic. They are
-   scoped under .search-overlay to avoid interfering with other
-   components. The design emphasises soft backgrounds, clear
-   typography and subtle interactions.
-*/
-
 /* Search sheet container refinements */
 .search-overlay .search-sheet {
   border: 1px solid rgba(148, 163, 184, 0.25);
@@ -3941,7 +3492,6 @@ select.input:focus {
   background: rgba(148, 163, 184, 0.3);
 }
 
-/* Search bar styling */
 /* Search bar styling */
 .search-overlay .search-bar {
   display: flex;
@@ -4458,22 +4008,8 @@ select.input:focus {
       height: 28px;
     }
 
-    .spot-detail-sheet .sheet-section-top {
-      flex-direction: column;
-      gap: 0.6rem;
-    }
-
-
     .spot-detail-sheet .sheet-owner-name {
       font-size: 0.85rem;
-    }
-
-    .spot-detail-sheet .sheet-title-group h2 {
-      font-size: clamp(1.2rem, 5vw, 1.55rem);
-    }
-
-    .spot-detail-sheet .sheet-info {
-      grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
     }
   }
 
@@ -4727,30 +4263,15 @@ select.input:focus {
     gap: 1rem;
   }
 
-  .spot-detail-sheet .sheet-info {
-    grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
-  }
 }
 
 /* Custom mobile overrides for SpotDetailSheet */
 @media (max-width: 768px) {
-  .spot-detail-sheet .sheet-like-button,
-  .spot-detail-sheet .sheet-view-count {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 0.15rem;
-    padding: 0.1rem 0.4rem;
-  }
-
   .spot-detail-sheet .sheet-scroll-container {
     /* Add more padding at the bottom to avoid the action bar */
     padding-bottom: clamp(5.5rem, 18vw, 6.5rem) !important;
   }
 
-  .spot-detail-sheet .sheet-event-title {
-    font-size: clamp(1.1rem, 4.5vw, 1.4rem);
-  }
 }
 
 /*

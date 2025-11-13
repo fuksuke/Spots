@@ -38,6 +38,7 @@ export type Spot = {
   durationMinutes?: number;
   imageUrl?: string | null;
   mediaUrls?: string[] | null;
+  media?: Array<string | { url?: string | null }> | null;
   likes: number;
   commentsCount: number;
   ownerId: string;
