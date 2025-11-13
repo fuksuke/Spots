@@ -1,17 +1,18 @@
 # Spots プロジェクトサマリー（更新: 2025-10-30 (Latest sync)）
 
 ## 現況まとめ
-- Stage: Private Alpha (渋谷ローカルテスター向け)。投稿・ソーシャル・課金・審査ラインは通しで動作。
-- Map/検索UX: タイルベースの LOD 切替と DOM300 制御は導入済み。DOM 超過時は canvas フォールバックへ退避し、プレミアム投稿は優先表示。Tap-to-Grow や WebGL 点群など v0.3 の演出系は未実装。
-- オペレーション: Firebase Functions で予約投稿処理/ランキング/Stripe Webhook/Quota リセットを運用、Firestore 通知と In-app トーストで利用者アラートを補完。
+- Stage: Private Alpha (渋谷ローカルテスター向け)。投稿・ソーシャル・審査ラインは通しで動作。マネタイズは Google AdSense のシンプルな表示枠のみ有効化し、Stripe 決済 UI は隠したままコードだけ保持している。
+- Map/検索UX: タイルベースの LOD 切替と DOM300 制御は導入済み。DOM 超過時は canvas フォールバックへ退避し、マップ視認性を最優先。Tap-to-Grow や WebGL 点群など v0.3 の演出系は未実装。
+- Discovery/Trend: 人気ランキングは likes / view_count / comments をリアルタイム係数付きで再計算。トレンド画面は AdSense バナー + 人気スポットの 2 本立てで、まずは閲覧動線の検証を優先。
+- オペレーション: Firebase Functions + `npm run maintenance`（10分おき実行想定）で予約投稿公開・ランキング再構築を自動運用。Firestore 通知と In-app トーストで利用者アラートを補完。
 - 安全性: 投稿・予約は SMS 本人確認必須。認証モーダル/phone_hash 保存/Functions との同期を実装済み。
-- 既知ギャップ: 行きたい通知/通報・信頼スコア・高度検索・距離/料金メタデータ・地図パフォーマンスなどは仕様書の範囲に届いておらず、今後の開発対象。
+- 既知ギャップ: 通報/信頼スコア/高度検索/距離や料金メタデータ/Map パフォーマンス最適化などは今後の開発対象。
 
 ## スペック準拠状況
 ### `spots_plan_v0.1.md`
 - ✅ 投稿・いいね・コメント（画像付）・フォロー/フォローフィード・お気に入り・カテゴリフィルタ・検索オーバーレイ・予約告知（quota/Tier/審査）・管理者ダッシュボード・Stripe課金・Firestore通知を実装。
-- ⚠️ 行きたい通知はUIモックのみ、通報ワークフロー/信頼スコア/広告アルゴリズム/アドバンスドサーチ（距離・価格など）は未着手。
-- ⚠️ コンテンツ露出ロジックは単純な likes/comments + recency。score リフレッシュアルゴリズムや新規投稿優遇は今後設計。
+- ⚠️ 行きたい通知はUIモックのみ、通報ワークフロー/信頼スコア/アドバンスドサーチ（距離・価格など）は未着手。
+- ✅ コンテンツ露出ロジックは「プロモーション枠 + 人気ランキング（likes / view_count / comments / recency ブースト）」まで実装済み。新規投稿優遇や信頼スコア連動は今後設計。
 
 ### `sms_verification_spec.md`
 - ✅ PhoneVerificationModal（国選択/フォーマット/再送制御）＋ Firebase Phone Auth + `/api/profile/verify-phone` で phone_hash 保存、`PhoneVerificationRequiredError` を投稿/予約 API に組み込み済み。
@@ -29,12 +30,12 @@
 - ⚠️ pricing・distance・verifiedバッジの共通データ整備が未完了。メタ情報は Firestore モデル/レスポンス拡張が必要。
 
 ## 実装済み機能ハイライト
-- Map & Discovery: Mapbox GL ベースの地図描画、カテゴリタブ、マップ/リスト切替、検索オーバーレイ（履歴付きクライアントフィルタ）、人気ランキング・プロモーション枠。
+- Map & Discovery: Mapbox GL ベースの地図描画、カテゴリタブ、マップ/リスト切替、検索オーバーレイ（履歴付きクライアントフィルタ）、AdSense バナー + likes/view/comments を加味した人気ランキング。
 - List View: ソート（開始時間/人気/価格/新着）とフィルタ（無料・Verified・当日・室内/屋外）を追加し、価格・場所・バッジなど `event_data_spec` に沿ったカード表示へ刷新。
 - Posting & Scheduling: 3ステップ投稿フロー（地図位置選択/プラン選択/詳細入力）、画像アップロード、Tier別プラン制御、Firebase Functions 経由の予約告知公開/Promotion反映。
 - Social & Community: いいね・お気に入り・フォロー、コメントスレッド（ページング・画像添付・Like）、フォロー中フィード、投稿者バッジ表示。
-- Notifications & Analytics: Firestore 通知購読 + In-app トースト、Sentry 初期化、GA4/Mixpanel ラッパ、Stripe/Functions イベントのログ連携。
-- Admin & Billing: 審査ダッシュボード（フィルタ・検索・テンプレ適用）、審査ログ、Stripe Checkout/Portal、Webhook冪等ストア、クォータリセットとアラート下地。
+- Notifications & Analytics: Firestore 通知購読 + In-app トースト、Sentry 初期化、GA4/Mixpanel ラッパ、Stripe/Functions イベントのログ連携、スポットビュートラッキング API。
+- Admin: 審査ダッシュボード（フィルタ・検索・テンプレ適用）、審査ログ。Stripe Checkout/Portal/Stripe Webhook のコードは温存するが、MVP では AdSense 広告のみマネタイズ対象。
 
 ## 優先課題と開発計画
 - Map UI performance v0.3: タイルAPIとクラスタリング層を backend に追加し、フロントで LOD/Marker プール/Auto-Degrade/Tap-to-Grow を実装。FPS・初期描画計測と低性能端末フォールバックを導入。
@@ -104,6 +105,7 @@
 - Billingアラート送付先: `BILLING_ALERT_RECIPIENT_UIDS` or `firebase functions:config:set alerts.billing_recipient_uids=...`
 - サポート窓口: `support@shibuya-livemap.local`（UIリンクあり）、Billing FAQ (`/billing-faq.html`)
 - Secretsはローカル `.env` と Functions Config を同期させ、Vault 等からデプロイスクリプトで注入する運用を想定。
+- メンテナンスジョブ: `npm run maintenance --workspace backend` を 10 分毎に実行する。Cloud Scheduler の HTTP ジョブや Cloud Run Jobs から `gcloud scheduler jobs create http maintenance --schedule="*/10 * * * *" --http-method=POST --uri=https://<your-run-url>/maintenance --oidc-service-account-email=<sa>@<project>.iam.gserviceaccount.com --body='{"command":"npm run maintenance --workspace backend"}'` のように叩くか、VM で `*/10 * * * * cd /path/to/repo && npm run maintenance --workspace backend >> /var/log/spots-maint.log 2>&1` を登録しておく。
 
 ## 参考ドキュメント
 - [要件定義書](docs/requirements.md)

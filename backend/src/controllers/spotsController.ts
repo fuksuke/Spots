@@ -1,3 +1,5 @@
+import { createHash } from "node:crypto";
+
 import type { Request, Response, NextFunction } from "express";
 import { z } from "zod";
 
@@ -10,7 +12,8 @@ import {
   createComment,
   likeSpot,
   unlikeSpot,
-  fetchPopularSpotsFromLeaderboard
+  fetchPopularSpotsFromLeaderboard,
+  recordSpotView
 } from "../services/firestoreService.js";
 import { PhoneVerificationRequiredError, SchedulingRuleError } from "../services/posterProfileService.js";
 import { extractUidFromAuthorization, InvalidAuthTokenError } from "../utils/auth.js";
@@ -36,6 +39,31 @@ const listSpotsQuerySchema = z.object({
 const popularSpotsQuerySchema = z.object({
   limit: z.coerce.number().int().min(1).max(50).optional()
 });
+
+const recordSpotViewBodySchema = z
+  .object({
+    sessionId: z.string().min(8).max(160).optional()
+  })
+  .optional();
+
+const hashViewerKey = (value: string) => createHash("sha256").update(value).digest("hex");
+
+const resolveViewerHash = (req: Request, viewerId?: string | null, sessionId?: string | null) => {
+  if (viewerId) {
+    return hashViewerKey(`uid:${viewerId}`);
+  }
+  if (sessionId) {
+    return hashViewerKey(`session:${sessionId}`);
+  }
+  const forwarded = req.headers["x-forwarded-for"];
+  const forwardedValue = Array.isArray(forwarded) ? forwarded[0] : forwarded;
+  const ipCandidate = forwardedValue?.split(",").map((item) => item.trim()).filter(Boolean)[0];
+  const fallbackIp = ipCandidate || req.socket.remoteAddress || req.ip;
+  if (fallbackIp) {
+    return hashViewerKey(`ip:${fallbackIp}`);
+  }
+  return null;
+};
 
 export const listSpotsHandler = async (req: Request, res: Response, next: NextFunction) => {
   try {
@@ -77,6 +105,32 @@ export const popularSpotsHandler = async (req: Request, res: Response, next: Nex
 
     const spots = await fetchPopularSpotsFromLeaderboard(limit ?? 10, viewerId);
     res.json(spots);
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const recordSpotViewHandler = async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const body = recordSpotViewBodySchema.parse(req.body);
+    let viewerId: string | undefined;
+    try {
+      const extractedViewerId = await extractUidFromAuthorization(req.headers.authorization);
+      viewerId = extractedViewerId ?? undefined;
+    } catch (error) {
+      if (error instanceof InvalidAuthTokenError) {
+        return res.status(401).json({ message: error.message });
+      }
+      throw error;
+    }
+
+    const viewerHash = resolveViewerHash(req, viewerId, body?.sessionId ?? null);
+    if (!viewerHash) {
+      return res.status(400).json({ message: "視聴セッションを特定できませんでした" });
+    }
+
+    const result = await recordSpotView(req.params.id, viewerHash);
+    res.status(result.recorded ? 201 : 200).json(result);
   } catch (error) {
     next(error);
   }

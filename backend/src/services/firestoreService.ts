@@ -35,6 +35,7 @@ type SpotDocument = {
   owner_id: string;
   likes: number;
   comments_count: number;
+  view_count: number;
   created_at: Timestamp;
 };
 
@@ -53,6 +54,7 @@ export type SpotResponse = {
   ownerPhotoUrl?: string | null;
   likes: number;
   commentsCount: number;
+  viewCount: number;
   createdAt: string;
   likedByViewer?: boolean;
   followedByViewer?: boolean;
@@ -115,6 +117,7 @@ type PopularSpotLeaderboardEntry = {
   popularity_score: number;
   likes: number;
   comments_count: number;
+  view_count?: number;
   rank: number;
   updated_at: Timestamp;
 };
@@ -140,9 +143,21 @@ const toSpotResponse = (doc: FirebaseFirestore.QueryDocumentSnapshot<SpotDocumen
     ownerPhotoUrl: null,
     likes: data.likes,
     commentsCount: data.comments_count,
+    viewCount: data.view_count ?? 0,
     createdAt: data.created_at.toDate().toISOString(),
     ownerPhoneVerified: false
   };
+};
+
+const VIEW_SESSION_COLLECTION = "spot_view_sessions";
+const VIEW_SESSION_TTL_MS = 7 * 24 * 60 * 60 * 1000;
+const VIEW_DEDUPE_WINDOW_MS = 30 * 60 * 1000;
+
+type SpotViewSessionDocument = {
+  spot_id: string;
+  viewer_hash: string;
+  last_view: Timestamp;
+  expire_at: Timestamp;
 };
 
 const sanitizeSpotIds = (ids: unknown): string[] => {
@@ -209,17 +224,44 @@ type OwnerMetrics = {
 };
 
 export const calculatePopularityScore = (spot: SpotResponse, ownerMetrics?: OwnerMetrics) => {
-  const base = spot.likes * 2 + spot.commentsCount;
+  const now = Date.now();
+  const startTime = new Date(spot.startTime).getTime();
+  const endTime = new Date(spot.endTime).getTime();
+
+  const likesWeight = 3;
+  const viewsWeight = 1.2;
+  const commentsWeight = 0.8;
+
+  const engagementScore = spot.likes * likesWeight + (spot.viewCount ?? 0) * viewsWeight + spot.commentsCount * commentsWeight;
+
+  let recencyMultiplier = 1;
+  if (now >= startTime && now <= endTime) {
+    // Live events should dominate the leaderboard.
+    recencyMultiplier = 1.6;
+  } else if (now < startTime) {
+    const hoursUntil = (startTime - now) / (60 * 60 * 1000);
+    if (hoursUntil <= 2) {
+      recencyMultiplier = 1.4;
+    } else if (hoursUntil <= 6) {
+      recencyMultiplier = 1.25;
+    } else if (hoursUntil <= 24) {
+      recencyMultiplier = 1.1;
+    }
+  } else if (now > endTime) {
+    const hoursSince = (now - endTime) / (60 * 60 * 1000);
+    recencyMultiplier = Math.max(0.45, 1 - hoursSince / 24);
+  }
+
   const followers = ownerMetrics?.followersCount ?? 0;
   const tier = ownerMetrics?.tier ?? "tier_c";
   const isSponsor = ownerMetrics?.isSponsor ?? false;
 
-  const followerBoost = Math.log10(followers + 1) * 10;
-  const tierBoost = tier === "tier_a" ? 20 : tier === "tier_b" ? 10 : 0;
-  const sponsorBoost = isSponsor ? 15 : 0;
-  const categoryBoost = spot.category === "event" ? 5 : 0;
+  const followerBoost = Math.log10(followers + 1) * 8;
+  const tierBoost = tier === "tier_a" ? 18 : tier === "tier_b" ? 9 : 0;
+  const sponsorBoost = isSponsor ? 12 : 0;
+  const categoryBoost = spot.category === "event" ? 4 : 0;
 
-  return base + followerBoost + tierBoost + sponsorBoost + categoryBoost;
+  return engagementScore * recencyMultiplier + followerBoost + tierBoost + sponsorBoost + categoryBoost;
 };
 
 export const fetchSpots = async ({ category, followedUserIds, viewerId }: SpotFilter) => {
@@ -254,6 +296,7 @@ export const createSpot = async (spot: SpotInput) => {
     owner_id: spot.ownerId,
     likes: 0,
     comments_count: 0,
+    view_count: 0,
     created_at: now
   });
 
@@ -649,9 +692,10 @@ export const fetchSpotsByIds = async (spotIds: string[], viewerId?: string) => {
 
 export const rebuildPopularSpotsLeaderboard = async (maxEntries = 50) => {
   const entryLimit = Math.max(5, Math.min(maxEntries, 200));
-  const [likesSnapshot, commentsSnapshot] = await Promise.all([
+  const [likesSnapshot, commentsSnapshot, viewsSnapshot] = await Promise.all([
     firestore.collection("spots").orderBy("likes", "desc").limit(entryLimit * 2).get(),
-    firestore.collection("spots").orderBy("comments_count", "desc").limit(entryLimit * 2).get()
+    firestore.collection("spots").orderBy("comments_count", "desc").limit(entryLimit * 2).get(),
+    firestore.collection("spots").orderBy("view_count", "desc").limit(entryLimit * 2).get()
   ]);
 
   const candidateMap = new Map<string, SpotResponse>();
@@ -659,6 +703,12 @@ export const rebuildPopularSpotsLeaderboard = async (maxEntries = 50) => {
     candidateMap.set(doc.id, toSpotResponse(doc as FirebaseFirestore.QueryDocumentSnapshot<SpotDocument>));
   });
   commentsSnapshot.docs.forEach((doc) => {
+    if (!candidateMap.has(doc.id)) {
+      candidateMap.set(doc.id, toSpotResponse(doc as FirebaseFirestore.QueryDocumentSnapshot<SpotDocument>));
+    }
+  });
+
+  viewsSnapshot.docs.forEach((doc) => {
     if (!candidateMap.has(doc.id)) {
       candidateMap.set(doc.id, toSpotResponse(doc as FirebaseFirestore.QueryDocumentSnapshot<SpotDocument>));
     }
@@ -719,6 +769,7 @@ export const rebuildPopularSpotsLeaderboard = async (maxEntries = 50) => {
       popularity_score: entry.score,
       likes: entry.spot.likes,
       comments_count: entry.spot.commentsCount,
+      view_count: entry.spot.viewCount,
       rank: index + 1,
       updated_at: now
     });
@@ -794,4 +845,53 @@ export const fetchPopularSpotsFromLeaderboard = async (limit = 20, viewerId?: st
   });
 
   return result;
+};
+
+export const recordSpotView = async (
+  spotId: string,
+  viewerHash: string,
+  dedupeWindowMs = VIEW_DEDUPE_WINDOW_MS
+): Promise<{ recorded: boolean; viewCount: number }> => {
+  if (!viewerHash) {
+    throw new Error("viewer hash is required");
+  }
+
+  const spotRef = firestore.collection("spots").doc(spotId);
+  const sessionRef = firestore.collection(VIEW_SESSION_COLLECTION).doc(`${spotId}_${viewerHash}`);
+
+  return firestore.runTransaction(async (tx) => {
+    const [spotSnap, sessionSnap] = await Promise.all([tx.get(spotRef), tx.get(sessionRef)]);
+    if (!spotSnap.exists) {
+      throw new Error("Spot not found");
+    }
+
+    const now = Timestamp.now();
+    const spotData = spotSnap.data() as SpotDocument;
+    let recorded = false;
+    let nextViewCount = spotData.view_count ?? 0;
+
+    if (sessionSnap.exists) {
+      const sessionData = sessionSnap.data() as SpotViewSessionDocument;
+      const lastViewMs = sessionData.last_view.toDate().getTime();
+      if (now.toDate().getTime() - lastViewMs < dedupeWindowMs) {
+        return { recorded, viewCount: nextViewCount };
+      }
+    }
+
+    recorded = true;
+    nextViewCount += 1;
+    tx.update(spotRef, { view_count: FieldValue.increment(1) });
+    tx.set(
+      sessionRef,
+      {
+        spot_id: spotId,
+        viewer_hash: viewerHash,
+        last_view: now,
+        expire_at: Timestamp.fromMillis(now.toMillis() + VIEW_SESSION_TTL_MS)
+      } satisfies SpotViewSessionDocument,
+      { merge: true }
+    );
+
+    return { recorded, viewCount: nextViewCount };
+  });
 };

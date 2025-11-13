@@ -49,6 +49,7 @@
     "set-admin": "tsx src/scripts/setAdminClaim.ts",
     "seed-moderation": "tsx src/scripts/seedModerationFixtures.ts",
     "preview-quota-reset": "tsx src/scripts/previewQuotaReset.ts",
+    "maintenance": "tsx src/scripts/runMaintenance.ts",
     "lint": "eslint 'src/**/*.{ts,tsx,js}'",
     "test": "vitest run"
   },

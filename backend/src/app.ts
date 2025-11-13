@@ -2,7 +2,6 @@ import cors from "cors";
 import express from "express";
 
 import { sentryErrorHandler, sentryRequestHandler } from "./monitoring/sentry.js";
-
 import authRouter from "./routes/auth.js";
 import billingRouter from "./routes/billing.js";
 import mapTilesRouter from "./routes/mapTiles.js";

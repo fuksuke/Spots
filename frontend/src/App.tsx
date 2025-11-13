@@ -30,6 +30,8 @@ import type { CategoryKey } from "./hooks/useCategoryTabs";
 import { useSearchHistory } from "./hooks/useSearchHistory";
 import { useBillingReturn } from "./hooks/useBillingReturn";
 import { auth, db } from "./lib/firebase";
+import { recordSpotView } from "./lib/spotEngagement";
+import { getOrCreateViewSessionId } from "./lib/viewSession";
 import { mockSpots } from "./mockData";
 import { Coordinates, Spot, SpotCategory, ViewMode, PageMode } from "./types";
 
@@ -154,6 +156,8 @@ function App() {
   const [isNotificationsOpen, setNotificationsOpen] = useState(false);
   const [isSheetModalOpen, setSheetModalOpen] = useState(false);
   const profileRefreshTimeoutRef = useRef<number | null>(null);
+  const viewSessionIdRef = useRef<string>(getOrCreateViewSessionId());
+  const recentViewMapRef = useRef<Map<string, number>>(new Map());
   const supportMailto = `mailto:${SUPPORT_EMAIL}`;
   const isAnyModalOpen =
     isAdminPanelOpen ||
@@ -491,11 +495,8 @@ function App() {
     (spot: Spot) => {
       setActiveSpot(spot);
       setFocusCoordinates({ lat: spot.lat, lng: spot.lng });
-      if (viewMode === "list") {
-        window.scrollTo({ top: 0, behavior: "smooth" });
-      }
     },
-    [viewMode]
+    []
   );
 
   const handleMapSpotClick = useCallback(
@@ -1057,6 +1058,31 @@ function App() {
 
     previousCategoryKeyRef.current = categoryFilter;
   }, [isMapHomeView, categoryFilter, activeSpot]);
+
+  useEffect(() => {
+    const spotId = activeSpot?.id;
+    if (!spotId) return;
+
+    const lastRecorded = recentViewMapRef.current.get(spotId);
+    const now = Date.now();
+    const debounceWindowMs = 2 * 60 * 1000;
+    if (lastRecorded && now - lastRecorded < debounceWindowMs) {
+      return;
+    }
+
+    recentViewMapRef.current.set(spotId, now);
+    const sessionId = viewSessionIdRef.current;
+
+    void recordSpotView({
+      spotId,
+      sessionId,
+      authToken: authToken?.trim() ? authToken : undefined
+    }).catch((error) => {
+      if (import.meta.env.DEV) {
+        console.warn("視聴記録の送信に失敗しました", error);
+      }
+    });
+  }, [activeSpot?.id, authToken]);
 
   const spotCreateHeaderActions = currentUser ? (
     <button type="button" className="button secondary" onClick={handleAccountPanelOpen}>

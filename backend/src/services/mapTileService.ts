@@ -4,6 +4,7 @@ import { LRUCache } from "lru-cache";
 import Supercluster, { type AnyProps, type ClusterFeature, type PointFeature } from "supercluster";
 
 import type { SpotCategory } from "../constants/categories.js";
+
 import { firestore } from "./firebaseAdmin.js";
 
 export type MapTileLayer = "cluster" | "pulse" | "balloon";

@@ -1416,41 +1416,29 @@ select.input:focus {
   border-radius: 50%;
 }
 
-.icon-button {
-  position: relative;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 44px;
-  height: 44px;
+
+
+.app-header .header-auth-buttons .icon-button {
+  width: 28px;
+  height: 28px;
   border-radius: 50%;
   background: rgba(148, 163, 184, 0.16);
   transition: background-color 0.2s ease;
 }
 
-.icon-button .icon svg {
-  width: 20px;
-  height: 20px;
-}
-
-.app-header .header-auth-buttons .icon-button {
-  width: 32px;
-  height: 32px;
-}
-
 .app-header .header-auth-buttons .icon-button .icon svg {
-  width: 16px;
-  height: 16px;
+  width: 14px;
+  height: 14px;
 }
 
 .app-header .header-auth-buttons .header-account-button {
-  width: 32px;
-  height: 32px;
+  width: 21px;
+  height: 21px;
 }
 
 .app-header .header-auth-buttons .header-account-button .icon svg {
-  width: 18px;
-  height: 18px;
+  width: 16px;
+  height: 16px;
 }
 
 .icon-button:hover {
@@ -1486,8 +1474,6 @@ select.input:focus {
   align-items: center;
   gap: 0.4rem;
 }
-
-
 
 .language-select select {
   padding: 0.6rem 0.9rem;
@@ -2089,13 +2075,15 @@ select.input:focus {
   }
 
   .app-header.compact .icon-button {
-    width: 42px;
-    height: 42px;
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    background: rgba(148, 163, 184, 0.16);
   }
 
   .app-header.compact .icon svg {
-    width: 20px;
-    height: 20px;
+    width: 19px;
+    height: 19px;
   }
 
   .category-tabs {
