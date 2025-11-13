@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { MutableRefObject, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import mapboxgl, { Map as MapboxMap } from "mapbox-gl";
 import * as tilebelt from "@mapbox/tilebelt";
 import styled from 'styled-components';
@@ -49,6 +49,516 @@ const deriveLayerForZoom = (zoom: number): MapTileLayer => {
   if (clamped <= GRID_MAX_ZOOM) return "cluster";
   if (clamped <= 12) return "pulse";
   return "balloon";
+};
+
+type TileWatcherParams = {
+  mapRef: MutableRefObject<MapboxMap | null>;
+  isLayerOverridden: boolean;
+  tileLayer?: MapTileLayer;
+  onTilesChange: (tiles: TileCoordinate[]) => void;
+  onActiveLayerChange: (layer: MapTileLayer) => void;
+};
+
+const useMapTileWatcher = ({
+  mapRef,
+  isLayerOverridden,
+  tileLayer,
+  onTilesChange,
+  onActiveLayerChange
+}: TileWatcherParams) => {
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map) return;
+
+    const updateTiles = () => {
+      onTilesChange(getVisibleTiles(map));
+      if (!isLayerOverridden) {
+        onActiveLayerChange(deriveLayerForZoom(map.getZoom()));
+      } else if (tileLayer) {
+        onActiveLayerChange(tileLayer);
+      }
+    };
+
+    updateTiles();
+    map.on("moveend", updateTiles);
+    map.on("zoomend", updateTiles);
+
+    return () => {
+      map.off("moveend", updateTiles);
+      map.off("zoomend", updateTiles);
+    };
+  }, [isLayerOverridden, mapRef, onActiveLayerChange, onTilesChange, tileLayer]);
+};
+
+type CanvasRendererParams = {
+  mapRef: MutableRefObject<MapboxMap | null>;
+  canvasRef: MutableRefObject<HTMLCanvasElement | null>;
+  contextRef: MutableRefObject<CanvasRenderingContext2D | null>;
+  renderMode: MapTileLayer | "canvas";
+  fallbackSpots: MapTileFeature[];
+};
+
+const useCanvasRenderer = ({
+  mapRef,
+  canvasRef,
+  contextRef,
+  renderMode,
+  fallbackSpots
+}: CanvasRendererParams) => {
+  useEffect(() => {
+    const map = mapRef.current;
+    const canvas = canvasRef.current;
+    const context = contextRef.current;
+    if (!map || !canvas || !context) return;
+
+    const resizeCanvas = () => {
+      const dpr = window.devicePixelRatio || 1;
+      const mapCanvas = map.getCanvas();
+      const { width, height } = mapCanvas;
+
+      if (canvas.width !== width * dpr || canvas.height !== height * dpr) {
+        canvas.width = width * dpr;
+        canvas.height = height * dpr;
+        canvas.style.width = `${width}px`;
+        canvas.style.height = `${height}px`;
+        context.setTransform(1, 0, 0, 1, 0, 0);
+        context.scale(dpr, dpr);
+      }
+    };
+
+    const draw = () => {
+      resizeCanvas();
+      context.clearRect(0, 0, canvas.width, canvas.height);
+      if (renderMode !== "canvas" || fallbackSpots.length === 0) return;
+
+      context.fillStyle = "rgba(59, 130, 246, 0.7)";
+      context.strokeStyle = "rgba(15, 23, 42, 0.8)";
+      context.lineWidth = 1;
+
+      fallbackSpots.forEach((feature) => {
+        const point = map.project([feature.geometry.lng, feature.geometry.lat]);
+        context.beginPath();
+        context.arc(point.x, point.y, feature.premium ? 6 : 4, 0, Math.PI * 2);
+        context.fill();
+        context.stroke();
+      });
+    };
+
+    draw();
+    map.on("move", draw);
+    map.on("moveend", draw);
+    map.on("zoom", draw);
+    map.on("zoomend", draw);
+    map.on("resize", draw);
+
+    return () => {
+      map.off("move", draw);
+      map.off("moveend", draw);
+      map.off("zoom", draw);
+      map.off("zoomend", draw);
+      map.off("resize", draw);
+    };
+  }, [fallbackSpots, mapRef, canvasRef, contextRef, renderMode]);
+};
+
+type GeoJsonSourceParams = {
+  mapRef: MutableRefObject<MapboxMap | null>;
+  featureCollection: FeatureCollection<Point, FeatureProperties>;
+  renderMode: MapTileLayer | "canvas";
+};
+
+const useGeoJsonSource = ({ mapRef, featureCollection, renderMode }: GeoJsonSourceParams) => {
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map) return;
+
+    const source = map.getSource(TILE_SOURCE_ID) as mapboxgl.GeoJSONSource | undefined;
+    if (!source) return;
+
+    const data =
+      renderMode === "canvas"
+        ? {
+            type: "FeatureCollection" as const,
+            features: featureCollection.features.filter((feature) => {
+              const type = feature.properties?.featureType;
+              return type === "cluster" || feature.properties?.premium === true;
+            })
+          }
+        : featureCollection;
+
+    source.setData(data as FeatureCollection<Point>);
+  }, [featureCollection, mapRef, renderMode]);
+};
+
+const useInteractiveCursor = (mapRef: MutableRefObject<MapboxMap | null>) => {
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map) return;
+
+    const setPointer = () => {
+      map.getCanvas().style.cursor = "pointer";
+    };
+    const unsetPointer = () => {
+      map.getCanvas().style.cursor = "";
+    };
+
+    INTERACTIVE_LAYERS.forEach((layer) => {
+      map.on("mouseenter", layer, setPointer);
+      map.on("mouseleave", layer, unsetPointer);
+    });
+
+    return () => {
+      INTERACTIVE_LAYERS.forEach((layer) => {
+        map.off("mouseenter", layer, setPointer);
+        map.off("mouseleave", layer, unsetPointer);
+      });
+    };
+  }, [mapRef]);
+};
+
+type InteractionParams = {
+  mapRef: MutableRefObject<MapboxMap | null>;
+  calloutManagerRef: MutableRefObject<SpotCalloutManager | null>;
+  renderMode: MapTileLayer | "canvas";
+  calloutCandidates: MapTileFeature[];
+  onSpotClick?: MapViewProps["onSpotClick"];
+  onSpotClickRef: MutableRefObject<MapViewProps["onSpotClick"]>;
+  onSelectLocation?: MapViewProps["onSelectLocation"];
+  selectionMarkerRef: MutableRefObject<mapboxgl.Marker | null>;
+  selectedLocation: Coordinates | null;
+  focusCoordinates: Coordinates | null;
+};
+
+const useMapEventHandlers = ({
+  mapRef,
+  calloutManagerRef,
+  renderMode,
+  calloutCandidates,
+  onSpotClick,
+  onSpotClickRef,
+  onSelectLocation,
+  selectionMarkerRef,
+  selectedLocation,
+  focusCoordinates
+}: InteractionParams) => {
+  useEffect(() => {
+    const map = mapRef.current;
+    const manager = calloutManagerRef.current;
+    if (!map || !manager) return;
+
+    manager.updateSelectHandler((spotId) => {
+      const handler = onSpotClickRef.current;
+      if (handler) {
+        handler(spotId);
+      }
+    });
+
+    if (renderMode === "balloon" && calloutCandidates.length > 0) {
+      const premium = calloutCandidates.filter((feature) => feature.premium);
+      const regular = calloutCandidates.filter((feature) => !feature.premium);
+      const limitedPremium = premium.slice(0, MAX_CALLOUT_PREMIUM);
+      const remainingSlots = Math.max(0, MAX_CALLOUT_VISIBLE - limitedPremium.length);
+      const limitedRegular = remainingSlots > 0 ? regular.slice(0, remainingSlots) : [];
+      manager.sync([...limitedPremium, ...limitedRegular]);
+    } else {
+      manager.clear();
+    }
+
+    const handleRelayout = () => {
+      manager.repositionAll();
+    };
+
+    manager.repositionAll();
+
+    map.on("move", handleRelayout);
+    map.on("zoom", handleRelayout);
+    map.on("rotate", handleRelayout);
+    map.on("pitch", handleRelayout);
+    map.on("resize", handleRelayout);
+
+    return () => {
+      map.off("move", handleRelayout);
+      map.off("zoom", handleRelayout);
+      map.off("rotate", handleRelayout);
+      map.off("pitch", handleRelayout);
+      map.off("resize", handleRelayout);
+      if (renderMode !== "balloon") {
+        manager.clear();
+      }
+    };
+  }, [calloutCandidates, calloutManagerRef, mapRef, onSpotClickRef, renderMode]);
+
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map) return;
+
+    const handleSpotClick = (event: mapboxgl.MapLayerMouseEvent) => {
+      event.preventDefault();
+      const spotId = event.features?.[0]?.properties?.spotId as string | undefined;
+      if (spotId) {
+        onSpotClick?.(spotId);
+      }
+    };
+
+    const handleClusterClick = (event: mapboxgl.MapLayerMouseEvent) => {
+      event.preventDefault();
+      const zoom = Math.min(map.getZoom() + 1.5, MAX_ZOOM);
+      map.easeTo({ center: event.lngLat, zoom });
+    };
+
+    const handleCanvasClick = (event: mapboxgl.MapMouseEvent) => {
+      if (!onSelectLocation) return;
+      const features = map.queryRenderedFeatures(event.point, { layers: INTERACTIVE_LAYERS });
+      if (features.length > 0) return;
+      const { lat, lng } = event.lngLat;
+      onSelectLocation({ lat, lng });
+    };
+
+    if (onSpotClick) {
+      map.on("click", LAYER_PULSE, handleSpotClick);
+      map.on("click", LAYER_BALLOON, handleSpotClick);
+    }
+    map.on("click", LAYER_CLUSTER, handleClusterClick);
+    map.on("click", handleCanvasClick);
+
+    return () => {
+      if (onSpotClick) {
+        map.off("click", LAYER_PULSE, handleSpotClick);
+        map.off("click", LAYER_BALLOON, handleSpotClick);
+      }
+      map.off("click", LAYER_CLUSTER, handleClusterClick);
+      map.off("click", handleCanvasClick);
+    };
+  }, [mapRef, onSpotClick, onSelectLocation]);
+
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map) return;
+
+    if (!selectedLocation) {
+      if (selectionMarkerRef.current) {
+        selectionMarkerRef.current.remove();
+        selectionMarkerRef.current = null;
+      }
+      return;
+    }
+
+    if (!selectionMarkerRef.current) {
+      selectionMarkerRef.current = new mapboxgl.Marker({ color: "#22d3ee" });
+    }
+
+    selectionMarkerRef.current.setLngLat([selectedLocation.lng, selectedLocation.lat]).addTo(map);
+  }, [mapRef, selectedLocation, selectionMarkerRef]);
+
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map || !focusCoordinates) return;
+
+    map.flyTo({
+      center: [focusCoordinates.lng, focusCoordinates.lat],
+      zoom: Math.max(map.getZoom(), 15),
+      essential: true
+    });
+  }, [focusCoordinates, mapRef]);
+};
+
+const useCanvasContextSetup = ({
+  mapRef,
+  canvasRef,
+  contextRef
+}: {
+  mapRef: MutableRefObject<MapboxMap | null>;
+  canvasRef: MutableRefObject<HTMLCanvasElement | null>;
+  contextRef: MutableRefObject<CanvasRenderingContext2D | null>;
+}) => {
+  useEffect(() => {
+    const map = mapRef.current;
+    const canvas = canvasRef.current;
+    if (!map || !canvas) return;
+
+    const context = canvas.getContext("2d");
+    if (!context) return;
+    contextRef.current = context;
+
+    const updateCanvasSize = () => {
+      const { width, height } = map.getCanvas();
+      canvas.width = width;
+      canvas.height = height;
+      canvas.style.width = `${width}px`;
+      canvas.style.height = `${height}px`;
+    };
+
+    updateCanvasSize();
+    map.on("resize", updateCanvasSize);
+
+    return () => {
+      map.off("resize", updateCanvasSize);
+    };
+  }, [canvasRef, contextRef, mapRef]);
+};
+
+type MapInitializationParams = {
+  mapRef: MutableRefObject<MapboxMap | null>;
+  mapContainerRef: MutableRefObject<HTMLDivElement | null>;
+  initialViewRef: MutableRefObject<MapViewProps['initialView']>;
+  scheduleMapResize: (label?: string) => void;
+  calloutLayerRef: MutableRefObject<HTMLDivElement | null>;
+  calloutManagerRef: MutableRefObject<SpotCalloutManager | null>;
+  onSpotClickRef: MutableRefObject<MapViewProps['onSpotClick']>;
+  resizeObserverRef: MutableRefObject<ResizeObserver | null>;
+  selectionMarkerRef: MutableRefObject<mapboxgl.Marker | null>;
+  isLayerOverridden: boolean;
+  setTileCoordinates: (tiles: TileCoordinate[]) => void;
+  setActiveLayer: (layer: MapTileLayer | undefined) => void;
+};
+
+const useMapInitialization = ({
+  mapRef,
+  mapContainerRef,
+  initialViewRef,
+  scheduleMapResize,
+  calloutLayerRef,
+  calloutManagerRef,
+  onSpotClickRef,
+  resizeObserverRef,
+  selectionMarkerRef,
+  isLayerOverridden,
+  setTileCoordinates,
+  setActiveLayer
+}: MapInitializationParams) => {
+  useEffect(() => {
+    if (mapRef.current) return;
+
+    let frameId: number | null = null;
+    let aborted = false;
+
+    const initializeMap = () => {
+      if (aborted) return;
+      const container = mapContainerRef.current;
+      if (!container || mapRef.current) return;
+
+      const { width, height } = container.getBoundingClientRect();
+      if (width <= 0 || height <= 0) {
+        frameId = window.requestAnimationFrame(initializeMap);
+        return;
+      }
+
+      const view = initialViewRef.current;
+
+      const map = new mapboxgl.Map({
+        container,
+        style: "mapbox://styles/mapbox/streets-v12",
+        center: [view.longitude, view.latitude],
+        zoom: view.zoom,
+        projection: "mercator"
+      });
+
+      map.addControl(new mapboxgl.NavigationControl(), "top-right");
+      mapRef.current = map;
+
+      if (typeof ResizeObserver !== "undefined") {
+        const observer = new ResizeObserver(() => {
+          scheduleMapResize("resize-observer");
+        });
+        observer.observe(container);
+        resizeObserverRef.current = observer;
+      }
+
+      scheduleMapResize("initialized");
+
+      const calloutLayer = document.createElement("div");
+      calloutLayer.className = "map-callout-layer";
+      map.getCanvasContainer().appendChild(calloutLayer);
+      calloutLayerRef.current = calloutLayer;
+      calloutManagerRef.current = new SpotCalloutManager(map, calloutLayer, (spotId: string) => {
+        const handler = onSpotClickRef.current;
+        if (handler) {
+          handler(spotId);
+        }
+      });
+
+      const handleLoad = () => {
+        ensureMapLayers(map);
+        setTileCoordinates(getVisibleTiles(map));
+        if (!isLayerOverridden) {
+          setActiveLayer(deriveLayerForZoom(map.getZoom()));
+        }
+        scheduleMapResize("map-load");
+      };
+
+      if (map.isStyleLoaded()) {
+        handleLoad();
+      } else {
+        map.once("load", handleLoad);
+      }
+    };
+
+    initializeMap();
+
+    return () => {
+      aborted = true;
+      if (frameId !== null) {
+        window.cancelAnimationFrame(frameId);
+      }
+      const map = mapRef.current;
+      if (map) {
+        map.remove();
+        mapRef.current = null;
+      }
+      if (selectionMarkerRef.current) {
+        selectionMarkerRef.current.remove();
+        selectionMarkerRef.current = null;
+      }
+      if (calloutManagerRef.current) {
+        calloutManagerRef.current.destroy();
+        calloutManagerRef.current = null;
+      }
+      if (resizeObserverRef.current) {
+        resizeObserverRef.current.disconnect();
+        resizeObserverRef.current = null;
+      }
+      if (calloutLayerRef.current) {
+        const container = calloutLayerRef.current;
+        if (container.parentNode) {
+          container.parentNode.removeChild(container);
+        }
+        calloutLayerRef.current = null;
+      }
+    };
+  }, [calloutLayerRef, calloutManagerRef, initialViewRef, isLayerOverridden, mapContainerRef, mapRef, onSpotClickRef, resizeObserverRef, scheduleMapResize, selectionMarkerRef, setActiveLayer, setTileCoordinates]);
+};
+
+const useWindowResize = ({
+  scheduleMapResize,
+  resizeAnimationFrameRef
+}: {
+  scheduleMapResize: (label?: string) => void;
+  resizeAnimationFrameRef: MutableRefObject<number | null>;
+}) => {
+  useEffect(() => {
+    const handleWindowResize = () => {
+      if (typeof window === "undefined") return;
+      if (resizeAnimationFrameRef.current !== null) {
+        window.cancelAnimationFrame(resizeAnimationFrameRef.current);
+      }
+      resizeAnimationFrameRef.current = window.requestAnimationFrame(() => {
+        resizeAnimationFrameRef.current = null;
+        scheduleMapResize("window-resize");
+      });
+    };
+
+    window.addEventListener("resize", handleWindowResize);
+    window.addEventListener("orientationchange", handleWindowResize);
+
+    return () => {
+      window.removeEventListener("resize", handleWindowResize);
+      window.removeEventListener("orientationchange", handleWindowResize);
+      if (resizeAnimationFrameRef.current !== null) {
+        window.cancelAnimationFrame(resizeAnimationFrameRef.current);
+        resizeAnimationFrameRef.current = null;
+      }
+    };
+  }, [resizeAnimationFrameRef, scheduleMapResize]);
 };
 
 const normalizeTileIndex = (value: number, tileCount: number) => ((value % tileCount) + tileCount) % tileCount;
@@ -389,7 +899,6 @@ const MapCanvas = styled.canvas`
 
 export const MapView = ({
   initialView,
-  spots: legacySpots = [],
   selectedLocation,
   onSelectLocation,
   focusCoordinates,
@@ -399,7 +908,6 @@ export const MapView = ({
   tilePremiumOnly,
   authToken
 }: MapViewProps) => {
-  void legacySpots;
 
   const mapContainerRef = useRef<HTMLDivElement | null>(null);
   const mapOuterRef = useRef<HTMLDivElement | null>(null);
@@ -422,8 +930,6 @@ export const MapView = ({
   const [activeLayer, setActiveLayer] = useState<MapTileLayer | undefined>(tileLayer);
 
   const isLayerOverridden = tileLayer !== undefined;
-
-  const categoriesKey = useMemo(() => (tileCategories ? tileCategories.join(',') : ''), [tileCategories]);
 
   useEffect(() => {
     initialViewRef.current = {
@@ -464,6 +970,23 @@ export const MapView = ({
     onSpotClickRef.current = onSpotClick;
   }, [onSpotClick]);
 
+  const handleLayerDensity = useCallback(
+    (layer: MapTileLayer, nonClusterCount: number, zoom: number): MapTileLayer | 'canvas' => {
+      let nextLayer: MapTileLayer | 'canvas' = layer;
+      if (nextLayer === 'balloon' && (nonClusterCount > PULSE_DENSITY_THRESHOLD || zoom < 10.5)) {
+        nextLayer = 'pulse';
+      }
+      if (nextLayer === 'pulse' && (nonClusterCount > CLUSTER_DENSITY_THRESHOLD || zoom <= GRID_MAX_ZOOM + 0.2)) {
+        nextLayer = 'cluster';
+      }
+      if (nextLayer === 'cluster' && nonClusterCount > GLOBAL_DOM_BUDGET) {
+        return 'canvas';
+      }
+      return nextLayer;
+    },
+    []
+  );
+
   useEffect(() => {
     const map = mapRef.current;
     if (!map || tiles.length === 0) return;
@@ -475,31 +998,17 @@ export const MapView = ({
 
     const zoom = map.getZoom();
     const baseLayer = deriveLayerForZoom(zoom);
-    let nextLayer: MapTileLayer = baseLayer;
+    const nextLayer = handleLayerDensity(baseLayer, renderingData.nonClusterCount, zoom);
 
-    const nonClusterCount = renderingData.nonClusterCount;
-
-    if (nextLayer === 'balloon' && (nonClusterCount > PULSE_DENSITY_THRESHOLD || zoom < 10.5)) {
-      nextLayer = 'pulse';
-    }
-
-    if (nextLayer === 'pulse' && (nonClusterCount > CLUSTER_DENSITY_THRESHOLD || zoom <= GRID_MAX_ZOOM + 0.2)) {
-      nextLayer = 'cluster';
-    }
-
-    if (nextLayer === 'cluster') {
+    if (nextLayer === 'canvas') {
       setActiveLayer('cluster');
-      if (nonClusterCount > GLOBAL_DOM_BUDGET) {
-        setRenderMode('canvas');
-      } else {
-        setRenderMode('cluster');
-      }
+      setRenderMode('canvas');
       return;
     }
 
     setActiveLayer(nextLayer);
     setRenderMode(nextLayer);
-  }, [tiles, renderingData.nonClusterCount, isLayerOverridden, tileLayer]);
+  }, [tiles.length, isLayerOverridden, tileLayer, handleLayerDensity, renderingData.nonClusterCount]);
 
   useEffect(() => {
     if (renderMode !== 'canvas') {
@@ -509,172 +1018,37 @@ export const MapView = ({
 
     const nonPremium = renderingData.spotFeatures.filter((feature) => !feature.premium);
     setFallbackSpots(nonPremium);
-  }, [renderMode, renderingData.spotFeatures]);
+  }, [renderingData.spotFeatures, renderMode]);
 
-  const logContainerMetrics = useCallback((label: string) => {
-    const container = mapContainerRef.current;
-    if (!container) return;
-    const parent = container.parentElement;
-    const contentArea = container.closest('.content-area');
-    const shell = container.closest('.app-shell');
-    const containerRect = container.getBoundingClientRect();
-    const parentRect = parent?.getBoundingClientRect();
-    const contentAreaRect = contentArea instanceof HTMLElement ? contentArea.getBoundingClientRect() : undefined;
-    const shellRect = shell instanceof HTMLElement ? shell.getBoundingClientRect() : undefined;
-    // eslint-disable-next-line no-console
-    console.debug('[MapView] layout', label, {
-      windowInnerHeight: typeof window !== 'undefined' ? window.innerHeight : undefined,
-      containerRect,
-      parentRect,
-      contentAreaRect,
-      shellRect
+  const scheduleMapResize = useCallback(() => {
+    if (typeof window === 'undefined') return;
+    if (resizeAnimationFrameRef.current !== null) {
+      window.cancelAnimationFrame(resizeAnimationFrameRef.current);
+    }
+    resizeAnimationFrameRef.current = window.requestAnimationFrame(() => {
+      resizeAnimationFrameRef.current = null;
+      if (mapRef.current) {
+        mapRef.current.resize();
+      }
     });
   }, []);
 
-  const scheduleMapResize = useCallback(
-    (label?: string) => {
-      if (typeof window === 'undefined') return;
-      if (resizeAnimationFrameRef.current !== null) {
-        window.cancelAnimationFrame(resizeAnimationFrameRef.current);
-      }
-      resizeAnimationFrameRef.current = window.requestAnimationFrame(() => {
-        resizeAnimationFrameRef.current = null;
-        if (mapRef.current) {
-          mapRef.current.resize();
-        }
-        if (label) {
-          logContainerMetrics(label);
-        }
-      });
-    },
-    [logContainerMetrics]
-  );
+  useMapInitialization({
+    mapRef,
+    mapContainerRef,
+    initialViewRef,
+    scheduleMapResize,
+    calloutLayerRef,
+    calloutManagerRef,
+    onSpotClickRef,
+    resizeObserverRef,
+    selectionMarkerRef,
+    isLayerOverridden,
+    setTileCoordinates,
+    setActiveLayer
+  });
 
-  useEffect(() => {
-    if (mapRef.current) return;
-
-    let frameId: number | null = null;
-    let aborted = false;
-
-    const initializeMap = () => {
-      if (aborted) return;
-      const container = mapContainerRef.current;
-      if (!container || mapRef.current) return;
-
-      const { width, height } = container.getBoundingClientRect();
-      if (width <= 0 || height <= 0) {
-        frameId = window.requestAnimationFrame(initializeMap);
-        return;
-      }
-
-      const view = initialViewRef.current;
-
-      const map = new mapboxgl.Map({
-        container,
-        style: "mapbox://styles/mapbox/streets-v12",
-        center: [view.longitude, view.latitude],
-        zoom: view.zoom,
-        projection: "mercator"
-      });
-
-      map.addControl(new mapboxgl.NavigationControl(), "top-right");
-      mapRef.current = map;
-
-      if (typeof ResizeObserver !== "undefined") {
-        const observer = new ResizeObserver(() => {
-          scheduleMapResize('resize-observer');
-        });
-        observer.observe(container);
-        resizeObserverRef.current = observer;
-      }
-
-      scheduleMapResize('initialized');
-
-      const calloutLayer = document.createElement('div');
-      calloutLayer.className = 'map-callout-layer';
-      map.getCanvasContainer().appendChild(calloutLayer);
-      calloutLayerRef.current = calloutLayer;
-      calloutManagerRef.current = new SpotCalloutManager(map, calloutLayer, (spotId: string) => {
-        const handler = onSpotClickRef.current;
-        if (handler) {
-          handler(spotId);
-        }
-      });
-
-      const handleLoad = () => {
-        ensureMapLayers(map);
-        setTileCoordinates(getVisibleTiles(map));
-        if (!isLayerOverridden) {
-          setActiveLayer(deriveLayerForZoom(map.getZoom()));
-        }
-        scheduleMapResize('map-load');
-      };
-
-      if (map.isStyleLoaded()) {
-        handleLoad();
-      } else {
-        map.once("load", handleLoad);
-      }
-    };
-
-    initializeMap();
-
-    return () => {
-      aborted = true;
-      if (frameId !== null) {
-        window.cancelAnimationFrame(frameId);
-      }
-      const map = mapRef.current;
-      if (map) {
-        map.remove();
-        mapRef.current = null;
-      }
-      if (selectionMarkerRef.current) {
-        selectionMarkerRef.current.remove();
-        selectionMarkerRef.current = null;
-      }
-      if (calloutManagerRef.current) {
-        calloutManagerRef.current.destroy();
-        calloutManagerRef.current = null;
-      }
-      if (resizeObserverRef.current) {
-        resizeObserverRef.current.disconnect();
-        resizeObserverRef.current = null;
-      }
-      if (calloutLayerRef.current) {
-        const container = calloutLayerRef.current;
-        if (container.parentNode) {
-          container.parentNode.removeChild(container);
-        }
-        calloutLayerRef.current = null;
-      }
-    };
-  }, [scheduleMapResize, isLayerOverridden]);
-
-  useEffect(() => {
-    const handleWindowResize = () => {
-      if (mapRef.current) {
-        scheduleMapResize('window-resize');
-      }
-    };
-
-    window.addEventListener('resize', handleWindowResize);
-    window.addEventListener('orientationchange', handleWindowResize);
-
-    return () => {
-      window.removeEventListener('resize', handleWindowResize);
-      window.removeEventListener('orientationchange', handleWindowResize);
-    };
-  }, [scheduleMapResize]);
-
-  useEffect(() => {
-    return () => {
-      if (resizeAnimationFrameRef.current !== null) {
-        window.cancelAnimationFrame(resizeAnimationFrameRef.current);
-        resizeAnimationFrameRef.current = null;
-      }
-    };
-  }, []);
+  useWindowResize({ scheduleMapResize, resizeAnimationFrameRef });
 
   useEffect(() => {
     const map = mapRef.current;
@@ -713,276 +1087,36 @@ export const MapView = ({
     };
   }, []);
 
-  useEffect(() => {
-    const map = mapRef.current;
-    if (!map) return;
+  useMapTileWatcher({
+    mapRef,
+    isLayerOverridden,
+    tileLayer,
+    onTilesChange: setTileCoordinates,
+    onActiveLayerChange: setActiveLayer
+  });
 
-    const updateTiles = () => {
-      setTileCoordinates(getVisibleTiles(map));
-      if (!isLayerOverridden) {
-        setActiveLayer(deriveLayerForZoom(map.getZoom()));
-      }
-    };
-
-    updateTiles();
-    map.on("moveend", updateTiles);
-
-    return () => {
-      map.off("moveend", updateTiles);
-    };
-  }, [categoriesKey, tilePremiumOnly, isLayerOverridden, tileLayer]);
-
-  useEffect(() => {
-    const map = mapRef.current;
-    if (!map) return;
-
-    const source = map.getSource(TILE_SOURCE_ID) as mapboxgl.GeoJSONSource | undefined;
-    if (!source) return;
-
-    const data =
-      renderMode === 'canvas'
-        ? {
-            type: 'FeatureCollection' as const,
-            features: featureCollection.features.filter((feature) => {
-              const type = feature.properties?.featureType;
-              return type === 'cluster' || feature.properties?.premium === true;
-            })
-          }
-        : featureCollection;
-
-    source.setData(data as FeatureCollection<Point>);
-  }, [featureCollection, renderMode]);
-
-
-  useEffect(() => {
-    const map = mapRef.current;
-    const canvas = canvasRef.current;
-    const context = canvasContextRef.current;
-    if (!map || !canvas || !context) return;
-
-    const resizeCanvas = () => {
-      const dpr = window.devicePixelRatio || 1;
-      const mapCanvas = map.getCanvas();
-      const { width, height } = mapCanvas;
-
-      if (canvas.width !== width * dpr || canvas.height !== height * dpr) {
-        canvas.width = width * dpr;
-        canvas.height = height * dpr;
-        canvas.style.width = `${width}px`;
-        canvas.style.height = `${height}px`;
-        context.setTransform(1, 0, 0, 1, 0, 0);
-        context.scale(dpr, dpr);
-      }
-    };
-
-    resizeCanvas();
-
-    const draw = () => {
-      resizeCanvas();
-      context.clearRect(0, 0, canvas.width, canvas.height);
-      if (renderMode !== 'canvas' || fallbackSpots.length === 0) return;
-
-      context.fillStyle = 'rgba(59, 130, 246, 0.7)';
-      context.strokeStyle = 'rgba(15, 23, 42, 0.8)';
-    context.lineWidth = 1;
-
-    fallbackSpots.forEach((feature) => {
-      const point = map.project([feature.geometry.lng, feature.geometry.lat]);
-      context.beginPath();
-      context.arc(point.x, point.y, feature.premium ? 6 : 4, 0, Math.PI * 2);
-      context.fill();
-      context.stroke();
-    });
-  };
-
-    draw();
-    map.on('move', draw);
-    map.on('moveend', draw);
-    map.on('zoom', draw);
-    map.on('zoomend', draw);
-    map.on('resize', draw);
-
-    return () => {
-      map.off('move', draw);
-      map.off('moveend', draw);
-      map.off('zoom', draw);
-      map.off('zoomend', draw);
-      map.off('resize', draw);
-    };
-  }, [renderMode, fallbackSpots]);
-
-  useEffect(() => {
-    const map = mapRef.current;
-    if (!map) return;
-
-    const setPointer = () => {
-      map.getCanvas().style.cursor = "pointer";
-    };
-    const unsetPointer = () => {
-      map.getCanvas().style.cursor = "";
-    };
-
-    INTERACTIVE_LAYERS.forEach((layer) => {
-      map.on("mouseenter", layer, setPointer);
-      map.on("mouseleave", layer, unsetPointer);
-    });
-
-    return () => {
-      INTERACTIVE_LAYERS.forEach((layer) => {
-        map.off("mouseenter", layer, setPointer);
-        map.off("mouseleave", layer, unsetPointer);
-      });
-    };
-  }, []);
-
-  useEffect(() => {
-    const map = mapRef.current;
-    if (!map) return;
-
-    const manager = calloutManagerRef.current;
-    if (!manager) return;
-
-    manager.updateSelectHandler((spotId) => {
-      const handler = onSpotClickRef.current;
-      if (handler) {
-        handler(spotId);
-      }
-    });
-
-    if (renderMode === 'balloon' && calloutCandidates.length > 0) {
-      const premium = calloutCandidates.filter((feature) => feature.premium);
-      const regular = calloutCandidates.filter((feature) => !feature.premium);
-      const limitedPremium = premium.slice(0, MAX_CALLOUT_PREMIUM);
-      const remainingSlots = Math.max(0, MAX_CALLOUT_VISIBLE - limitedPremium.length);
-      const limitedRegular = remainingSlots > 0 ? regular.slice(0, remainingSlots) : [];
-      manager.sync([...limitedPremium, ...limitedRegular]);
-    } else {
-      manager.clear();
-    }
-
-    const handleRelayout = () => {
-      manager.repositionAll();
-    };
-
-    manager.repositionAll();
-
-    map.on('move', handleRelayout);
-    map.on('zoom', handleRelayout);
-    map.on('rotate', handleRelayout);
-    map.on('pitch', handleRelayout);
-    map.on('resize', handleRelayout);
-
-    return () => {
-      map.off('move', handleRelayout);
-      map.off('zoom', handleRelayout);
-      map.off('rotate', handleRelayout);
-      map.off('pitch', handleRelayout);
-      map.off('resize', handleRelayout);
-      if (renderMode !== 'balloon') {
-        manager.clear();
-      }
-    };
-  }, [renderMode, calloutCandidates]);
-
-  useEffect(() => {
-    const map = mapRef.current;
-    if (!map) return;
-
-    const handleSpotClick = (event: mapboxgl.MapLayerMouseEvent) => {
-      event.preventDefault();
-      const spotId = event.features?.[0]?.properties?.spotId as string | undefined;
-      if (spotId) {
-        onSpotClick?.(spotId);
-      }
-    };
-
-    const handleClusterClick = (event: mapboxgl.MapLayerMouseEvent) => {
-      event.preventDefault();
-      const zoom = Math.min(map.getZoom() + 1.5, MAX_ZOOM);
-      map.easeTo({ center: event.lngLat, zoom });
-    };
-
-    const handleCanvasClick = (event: mapboxgl.MapMouseEvent) => {
-      if (!onSelectLocation) return;
-      const features = map.queryRenderedFeatures(event.point, { layers: INTERACTIVE_LAYERS });
-      if (features.length > 0) return;
-      const { lat, lng } = event.lngLat;
-      onSelectLocation({ lat, lng });
-    };
-
-    if (onSpotClick) {
-      map.on("click", LAYER_PULSE, handleSpotClick);
-      map.on("click", LAYER_BALLOON, handleSpotClick);
-    }
-    map.on("click", LAYER_CLUSTER, handleClusterClick);
-    map.on("click", handleCanvasClick);
-
-    return () => {
-      if (onSpotClick) {
-        map.off("click", LAYER_PULSE, handleSpotClick);
-        map.off("click", LAYER_BALLOON, handleSpotClick);
-      }
-      map.off("click", LAYER_CLUSTER, handleClusterClick);
-      map.off("click", handleCanvasClick);
-    };
-  }, [onSpotClick, onSelectLocation]);
-
-  useEffect(() => {
-    const map = mapRef.current;
-    if (!map) return;
-
-    if (!selectedLocation) {
-      if (selectionMarkerRef.current) {
-        selectionMarkerRef.current.remove();
-        selectionMarkerRef.current = null;
-      }
-      return;
-    }
-
-    if (!selectionMarkerRef.current) {
-      selectionMarkerRef.current = new mapboxgl.Marker({ color: "#22d3ee" });
-    }
-
-    selectionMarkerRef.current
-      .setLngLat([selectedLocation.lng, selectedLocation.lat])
-      .addTo(map);
-  }, [selectedLocation]);
-
-  useEffect(() => {
-    const map = mapRef.current;
-    if (!map || !focusCoordinates) return;
-
-    map.flyTo({
-      center: [focusCoordinates.lng, focusCoordinates.lat],
-      zoom: Math.max(map.getZoom(), 15),
-      essential: true
-    });
-  }, [focusCoordinates]);
-
-  useEffect(() => {
-    const map = mapRef.current;
-    const canvas = canvasRef.current;
-    if (!map || !canvas) return;
-
-    const context = canvas.getContext('2d');
-    if (!context) return;
-    canvasContextRef.current = context;
-
-    const updateCanvasSize = () => {
-      const { width, height } = map.getCanvas();
-      canvas.width = width;
-      canvas.height = height;
-      canvas.style.width = `${width}px`;
-      canvas.style.height = `${height}px`;
-    };
-
-    updateCanvasSize();
-    map.on('resize', updateCanvasSize);
-
-    return () => {
-      map.off('resize', updateCanvasSize);
-    };
-  }, []);
+  useCanvasRenderer({
+    mapRef,
+    canvasRef,
+    contextRef: canvasContextRef,
+    renderMode,
+    fallbackSpots
+  });
+  useGeoJsonSource({ mapRef, featureCollection, renderMode });
+  useInteractiveCursor(mapRef);
+  useMapEventHandlers({
+    mapRef,
+    calloutManagerRef,
+    renderMode,
+    calloutCandidates,
+    onSpotClick,
+    onSpotClickRef,
+    onSelectLocation,
+    selectionMarkerRef,
+    selectedLocation,
+    focusCoordinates
+  });
+  useCanvasContextSetup({ mapRef, canvasRef, contextRef: canvasContextRef });
 
   return (
     <MapOuter role="presentation" ref={mapOuterRef}>

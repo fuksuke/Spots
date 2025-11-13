@@ -10,7 +10,7 @@ const FOOTER_SELECTOR = ".action-bar";
 
 const scheduleAnimation = (callback: () => void) => {
   if (typeof window === "undefined") return () => undefined;
-  let rafId = requestAnimationFrame(callback);
+  const rafId = requestAnimationFrame(callback);
   return () => cancelAnimationFrame(rafId);
 };
 
@@ -151,7 +151,7 @@ export const useLayoutMetrics = (
         /* noop */
       };
     };
-  }, [rootRef, ...dependencies]);
+  }, [rootRef, dependencies]);
 
   return useCallback(() => {
     refreshRef.current();

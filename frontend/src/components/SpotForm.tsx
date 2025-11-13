@@ -95,7 +95,6 @@ export const SpotForm = ({
     [canPostLongTerm, canPostRecurring]
   );
 
-  const stepLabels: string[] = ["位置を選択", "イベント種別", "詳細入力"];
 
   useEffect(() => {
     const current = planOptions.find((option) => option.id === selectedPlan);

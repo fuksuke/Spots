@@ -17,21 +17,21 @@ export const SpotMediaGallery = ({ title, mediaUrls }: SpotMediaGalleryProps) =>
     setCurrentIndex(0);
   }, [normalizedUrls.length]);
 
-  if (normalizedUrls.length === 0) {
-    return null;
-  }
-
-  const total = normalizedUrls.length;
-
   const goRelative = useCallback(
     (delta: number) => {
       setCurrentIndex((prev) => {
-        const next = (prev + delta + total) % total;
+        const size = normalizedUrls.length || 1;
+        const next = (prev + delta + size) % size;
         return next;
       });
     },
-    [total]
+    [normalizedUrls.length]
   );
+
+  const total = normalizedUrls.length;
+  if (total === 0) {
+    return null;
+  }
 
   const activeSrc = normalizedUrls[currentIndex] ?? normalizedUrls[0];
 

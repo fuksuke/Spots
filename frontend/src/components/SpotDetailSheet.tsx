@@ -37,7 +37,6 @@ export type SpotDetailSheetProps = {
   isOpen: boolean;
   onClose: () => void;
   onLike?: (spotId: string) => void;
-  onNotify?: (spot: Spot) => void;
   onShare?: (spot: Spot) => void;
   onOverlayToggle?: (open: boolean) => void;
 };
@@ -47,7 +46,6 @@ export const SpotDetailSheet = ({
   isOpen,
   onClose,
   onLike,
-  onNotify,
   onShare,
   onOverlayToggle
 }: SpotDetailSheetProps) => {
@@ -114,15 +112,16 @@ export const SpotDetailSheet = ({
   }, [isOpen]);
 
   useEffect(() => {
-    if (spot && isOpen) {
-      setSheetTranslate(PEEK_TRANSLATE);
-      setIsDragging(false);
-      scrollAreaRef.current?.scrollTo({ top: 0, behavior: "auto" });
-      setIsReportModalOpen(false);
-      setReportDetails("");
-      setReportCategory(REPORT_CATEGORIES[0].value);
+    if (!isOpen) {
+      return;
     }
-  }, [spot?.id, isOpen]);
+    setSheetTranslate(PEEK_TRANSLATE);
+    setIsDragging(false);
+    scrollAreaRef.current?.scrollTo({ top: 0, behavior: "auto" });
+    setIsReportModalOpen(false);
+    setReportDetails("");
+    setReportCategory(REPORT_CATEGORIES[0].value);
+  }, [isOpen, spot?.id]);
 
   useEffect(() => {
     onOverlayToggle?.(isReportModalOpen);
@@ -213,9 +212,9 @@ export const SpotDetailSheet = ({
     return Boolean(interactive);
   }, []);
 
-  const shouldIgnoreDragTarget = (event: ReactPointerEvent<HTMLElement>) => {
+  const shouldIgnoreDragTarget = useCallback((event: ReactPointerEvent<HTMLElement>) => {
     return isInteractiveElement(event.target);
-  };
+  }, [isInteractiveElement]);
 
   const startDrag = useCallback(
     (pointerId: number, startY: number) => {
