@@ -701,56 +701,26 @@ button {
   gap: 1.5rem;
 }
 
-.spot-detail-sheet .sheet-media {
+.spot-detail-sheet .modern-hero-gallery {
   position: relative;
-  width: calc(100% + (var(--sheet-horizontal-padding) * 2));
+  width: 100%;
+  height: 100%;
   overflow: hidden;
-  margin: 0 calc(-1 * var(--sheet-horizontal-padding));
-  background: linear-gradient(120deg, rgba(226, 232, 240, 0.8), rgba(203, 213, 225, 0.8));
-  aspect-ratio: 4 / 3;
-  box-shadow: inset 0 0 0 1px rgba(148, 163, 184, 0.15);
+  background: #020617;
 }
 
-.spot-detail-sheet .sheet-media img {
+.spot-detail-sheet .modern-hero-gallery img {
   width: 100%;
   height: 100%;
   object-fit: cover;
   display: block;
 }
 
-.spot-detail-sheet .media-nav {
-  position: absolute;
-  top: 50%;
-  transform: translateY(-50%);
-  width: 40px;
-  height: 40px;
-  border-radius: 999px;
-  border: none;
-  background: rgba(15, 23, 42, 0.45);
-  color: #f8fafc;
-  font-size: 1.4rem;
-  line-height: 1;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  cursor: pointer;
-  backdrop-filter: blur(4px);
-  transition: background 0.2s ease;
+.spot-detail-sheet .modern-hero-gallery .media-nav {
+  display: none;
 }
 
-.spot-detail-sheet .media-nav:hover {
-  background: rgba(15, 23, 42, 0.65);
-}
-
-.spot-detail-sheet .media-nav.prev {
-  left: 0.65rem;
-}
-
-.spot-detail-sheet .media-nav.next {
-  right: 0.65rem;
-}
-
-.spot-detail-sheet .media-indicators {
+.spot-detail-sheet .modern-hero-gallery .media-indicators {
   position: absolute;
   left: 50%;
   bottom: 0.65rem;
@@ -759,23 +729,23 @@ button {
   gap: 0.4rem;
   padding: 0.25rem 0.6rem;
   border-radius: 999px;
-  background: rgba(15, 23, 42, 0.5);
+  background: rgba(15, 23, 42, 0.45);
   backdrop-filter: blur(6px);
 }
 
-.spot-detail-sheet .media-indicators .indicator {
+.spot-detail-sheet .modern-hero-gallery .media-indicators .indicator {
   width: 8px;
   height: 8px;
   border-radius: 999px;
   border: none;
-  background: rgba(255, 255, 255, 0.55);
+  background: rgba(255, 255, 255, 0.5);
   padding: 0;
   cursor: pointer;
   transition: width 0.2s ease, background 0.2s ease;
 }
 
-.spot-detail-sheet .media-indicators .indicator.active {
-  width: 18px;
+.spot-detail-sheet .modern-hero-gallery .media-indicators .indicator.active {
+  width: 16px;
   background: #ffffff;
 }
 
@@ -2602,38 +2572,6 @@ select.input:focus {
 }
 :is(.spot-list-view, .spot-detail-sheet) .modern-hero-social:hover {
   background: var(--modern-hero-social-bg-hover, rgba(255, 255, 255, 0.25));
-}
-.spot-detail-sheet .modern-hero .sheet-media {
-  width: 100%;
-  height: 100%;
-  margin: 0;
-  aspect-ratio: auto;
-}
-.spot-detail-sheet .modern-hero .media-nav {
-  display: none;
-}
-.spot-detail-sheet .modern-hero .media-indicators {
-  position: absolute;
-  bottom: 0.5rem;
-  left: 0;
-  right: 0;
-  display: flex;
-  justify-content: center;
-  gap: 0.35rem;
-  pointer-events: auto;
-}
-.spot-detail-sheet .modern-hero .media-indicators .indicator {
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
-  border: none;
-  background: rgba(255, 255, 255, 0.4);
-  padding: 0;
-}
-.spot-detail-sheet .modern-hero .media-indicators .indicator.active {
-  width: 12px;
-  height: 12px;
-  background: rgba(255, 255, 255, 0.9);
 }
 
 /* Header bar inside each modern card showing the owner information. This header

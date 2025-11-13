@@ -715,7 +715,11 @@ export const SpotDetailSheet = ({
                 <ModernHero
                   media={
                     hasMedia ? (
-                      <SpotMediaGallery title={spot.title} mediaUrls={mediaGalleryUrls} />
+                      <SpotMediaGallery
+                        title={spot.title}
+                        mediaUrls={mediaGalleryUrls}
+                        className="modern-hero-gallery"
+                      />
                     ) : (
                       <ModernHeroPlaceholder label={(spot.category ?? "EVENT").toUpperCase()} />
                     )

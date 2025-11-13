@@ -3,9 +3,10 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 export type SpotMediaGalleryProps = {
   title: string;
   mediaUrls: string[];
+  className?: string;
 };
 
-export const SpotMediaGallery = ({ title, mediaUrls }: SpotMediaGalleryProps) => {
+export const SpotMediaGallery = ({ title, mediaUrls, className }: SpotMediaGalleryProps) => {
   const normalizedUrls = useMemo(() => {
     return mediaUrls
       .map((url) => url.trim())
@@ -34,9 +35,10 @@ export const SpotMediaGallery = ({ title, mediaUrls }: SpotMediaGalleryProps) =>
   }
 
   const activeSrc = normalizedUrls[currentIndex] ?? normalizedUrls[0];
+  const galleryClassName = ["sheet-media", className].filter(Boolean).join(" ");
 
   return (
-    <div className="sheet-media" aria-label={`${title}の画像ギャラリー`}>
+    <div className={galleryClassName} aria-label={`${title}の画像ギャラリー`}>
       <img src={activeSrc} alt={`${title}の画像 ${currentIndex + 1}/${total}`} loading="lazy" />
       {total > 1 ? (
         <>
