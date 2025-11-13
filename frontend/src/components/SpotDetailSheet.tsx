@@ -1,6 +1,8 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { FormEvent, PointerEvent as ReactPointerEvent, WheelEvent as ReactWheelEvent } from "react";
 
+import "../styles/components/SpotDetailSheet.css";
+
 import { Avatar } from "./Avatar";
 import { Icon } from "./Icon";
 import { SpotMediaGallery } from "./SpotMediaGallery";

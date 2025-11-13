@@ -1,3 +1,5 @@
+import "../styles/components/SpotListView.css";
+
 import { useMemo, useState } from "react";
 
 import type { Spot } from "../types";

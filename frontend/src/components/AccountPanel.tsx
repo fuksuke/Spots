@@ -1,3 +1,5 @@
+import "../styles/components/AccountPanel.css";
+
 import { ChangeEvent, KeyboardEvent, useEffect, useMemo, useRef, useState } from "react";
 import { User } from "firebase/auth";
 

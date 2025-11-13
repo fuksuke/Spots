@@ -1,0 +1,25 @@
+.map-callout {
+.map-callout-layer {
+.map-callout-layer .map-callout {
+.map-callout__bubble {
+.map-callout__host {
+.map-callout__tail {
+.map-callout__bubble:focus-visible {
+.map-callout__text {
+.map-callout__lamp {
+.map-callout__lamp::after {
+.map-callout__lamp[data-state="idle"] {
+.map-callout__lamp[data-state="live"] {
+  animation: map-callout-lamp-pulse 1.1s ease-in-out infinite;
+.map-callout__lamp[data-state="warning"] {
+  animation: map-callout-lamp-flash 0.75s ease-in-out infinite;
+.map-callout__lamp[data-state="off"] {
+@keyframes map-callout-lamp-pulse {
+@keyframes map-callout-lamp-flash {
+.map-callout__status {
+.map-callout--premium .map-callout__bubble {
+.map-callout--premium .map-callout__tail {
+.map-container {
+.map-container.mapboxgl-map {
+.layout-column.map-view .map-container {
+.spot-map-shell .map-container,

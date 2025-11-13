@@ -1,3 +1,5 @@
+import "../styles/components/MapView.css";
+
 import { MutableRefObject, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import mapboxgl, { Map as MapboxMap } from "mapbox-gl";
 import * as tilebelt from "@mapbox/tilebelt";
