@@ -1038,10 +1038,26 @@ function App() {
 
   const normalizedPath = location.pathname.replace(/\/$/, "") || "/";
   const pageMode: PageMode = normalizedPath === "/spots/trending" ? "trending" : "home";
-  const isHomePage = pageMode === "home" && normalizedPath.startsWith("/spots");
+  const isHomePage = pageMode === "home" && normalizedPath === "/spots";
   const isMapHomeView = isHomePage && viewMode === "map";
   const isListModeActive = isHomePage && viewMode === "list";
   const homeMainAriaLabel = viewMode === "map" ? "スポットマップ" : "スポット一覧";
+
+  useEffect(() => {
+    const previousCategory = previousCategoryKeyRef.current;
+
+    if (!activeSpot) {
+      previousCategoryKeyRef.current = categoryFilter;
+      return;
+    }
+
+    if (!isMapHomeView || categoryFilter !== previousCategory) {
+      setActiveSpot(null);
+    }
+
+    previousCategoryKeyRef.current = categoryFilter;
+  }, [isMapHomeView, categoryFilter, activeSpot]);
+
   const spotCreateHeaderActions = currentUser ? (
     <button type="button" className="button secondary" onClick={handleAccountPanelOpen}>
       アカウント
@@ -1054,6 +1070,7 @@ function App() {
 
   const [isListHeaderHidden, setListHeaderHidden] = useState(false);
   const mainRef = useRef<HTMLElement | null>(null);
+  const previousCategoryKeyRef = useRef(categoryFilter);
 
   useLayoutMetrics(layoutRootRef, {
     dependencies: [isHomePage, viewMode, isMapHomeView]
@@ -1485,15 +1502,17 @@ function App() {
         </div>
       </div>
 
-      <SpotDetailSheet
-        spot={activeSpot}
-        isOpen={Boolean(activeSpot)}
-        onClose={() => setActiveSpot(null)}
-        onLike={handleLike}
-        onNotify={handleNotify}
-        onShare={handleShareSpot}
-        onOverlayToggle={handleSheetOverlayToggle}
-      />
+      {isMapHomeView ? (
+        <SpotDetailSheet
+          spot={activeSpot}
+          isOpen={Boolean(activeSpot)}
+          onClose={() => setActiveSpot(null)}
+          onLike={handleLike}
+          onNotify={handleNotify}
+          onShare={handleShareSpot}
+          onOverlayToggle={handleSheetOverlayToggle}
+        />
+      ) : null}
 
       <InAppNotifications
         notifications={notifications}
