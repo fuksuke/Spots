@@ -1,6 +1,11 @@
-type AvatarProps = {
+import type { CSSProperties } from "react";
+
+export type AvatarProps = {
   name?: string | null;
   photoUrl?: string | null;
+  size?: number;
+  className?: string;
+  style?: CSSProperties;
 };
 
 const getInitials = (value?: string | null) => {
@@ -11,16 +16,22 @@ const getInitials = (value?: string | null) => {
   return initials || value.slice(0, 2).toUpperCase();
 };
 
-export const Avatar = ({ name, photoUrl }: AvatarProps) => {
+export const Avatar = ({ name, photoUrl, size, className, style }: AvatarProps) => {
+  const dimensionStyles = size ? { width: size, height: size } : null;
+  const composedStyle = dimensionStyles ? { ...dimensionStyles, ...style } : style;
+  const baseClass = photoUrl ? "avatar" : "avatar avatar-fallback";
+  const classNames = [baseClass, className].filter(Boolean).join(" ");
+
   return photoUrl ? (
     <img
-      className="avatar"
+      className={classNames}
       src={photoUrl}
       alt={name ?? "ユーザー"}
       loading="lazy"
+      style={composedStyle as CSSProperties | undefined}
     />
   ) : (
-    <span className="avatar avatar-fallback">
+    <span className={classNames} style={composedStyle}>
       {getInitials(name)}
     </span>
   );

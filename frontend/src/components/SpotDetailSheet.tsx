@@ -23,6 +23,40 @@ const DRAG_ACTIVATION_THRESHOLD = 4;
 const WHEEL_PULL_SENSITIVITY = 0.55;
 const WHEEL_SETTLE_DELAY_MS = 140;
 
+const formatEventSchedule = (startTime?: string, endTime?: string | null) => {
+  if (!startTime) return "日程未設定";
+  const start = new Date(startTime);
+  if (Number.isNaN(start.getTime())) {
+    return "日程未設定";
+  }
+
+  const end = endTime ? new Date(endTime) : null;
+  const hasValidEnd = end && !Number.isNaN(end.getTime());
+
+  const formatDate = (date: Date) =>
+    date.toLocaleDateString("ja-JP", { month: "2-digit", day: "2-digit" });
+
+  const formatTime = (date: Date) =>
+    date.toLocaleTimeString("ja-JP", { hour: "2-digit", minute: "2-digit", hour12: false });
+
+  let label = `${formatDate(start)} ${formatTime(start)}`;
+
+  if (hasValidEnd && end) {
+    const sameDay = formatDate(start) === formatDate(end);
+    label += sameDay ? `~${formatTime(end)}` : `~${formatDate(end)} ${formatTime(end)}`;
+  }
+
+  return label;
+};
+
+const parseTitle = (title: string): [string, string] => {
+  const match = title.match(/(.+?)\s*\((.+)\)/);
+  if (match) {
+    return [match[1].trim(), match[2].trim()];
+  }
+  return [title, ""];
+};
+
 export type SpotDetailSheetProps = {
   spot: Spot | null;
   isOpen: boolean;
@@ -42,17 +76,6 @@ export const SpotDetailSheet = ({
   onShare,
   onOverlayToggle
 }: SpotDetailSheetProps) => {
-  const timeRange = useMemo(() => {
-    if (!spot) return "";
-    const formatter = new Intl.DateTimeFormat("ja-JP", {
-      month: "short",
-      day: "numeric",
-      weekday: "short",
-      hour: "2-digit",
-      minute: "2-digit"
-    });
-    return `${formatter.format(new Date(spot.startTime))} - ${formatter.format(new Date(spot.endTime))}`;
-  }, [spot]);
 
   const sheetRef = useRef<HTMLElement | null>(null);
   const closeTimeoutRef = useRef<number | null>(null);
@@ -712,25 +735,25 @@ export const SpotDetailSheet = ({
     }));
   }, [spot]);
 
-  const shareMenuLinks = useMemo(() => {
-    if (!spot) return [];
-    const shareUrl = `https://shibuya-livemap.example/spots/${spot.id}`;
-    const encodedUrl = encodeURIComponent(shareUrl);
-    const encodedText = encodeURIComponent(`${spot.title} @Shibuya LiveMap`);
-    return [
-      {
-        label: "LINE",
-        href: `https://line.me/R/msg/text/?${encodeURIComponent(`${spot.title}\n${shareUrl}`)}`
-      },
-      {
-        label: "Instagram",
-        href: `https://www.instagram.com/?url=${encodedUrl}`
-      },
-      {
-        label: "X (旧Twitter)",
-        href: `https://twitter.com/intent/tweet?text=${encodedText}&url=${encodedUrl}`
-      }
-    ];
+  const scheduleLabel = useMemo(() => {
+    return formatEventSchedule(spot?.startTime, spot?.endTime ?? null);
+  }, [spot?.endTime, spot?.startTime]);
+
+  const [mainTitle, subTitle] = useMemo(() => {
+    if (!spot?.title) return ["", ""] as [string, string];
+    return parseTitle(spot.title);
+  }, [spot?.title]);
+
+  const catchCopy = useMemo(() => {
+    if (!spot) return "";
+    if (spot.speechBubble && spot.speechBubble.trim()) {
+      return spot.speechBubble.trim();
+    }
+    if (spot.description) {
+      const firstSentence = spot.description.split(/[。.!！\?？]/)[0];
+      return firstSentence.trim();
+    }
+    return spot.title;
   }, [spot]);
 
   const sheetMode = sheetTranslate <= EXPAND_THRESHOLD ? "expanded" : sheetTranslate >= 99 ? "closed" : "peek";
@@ -797,131 +820,95 @@ export const SpotDetailSheet = ({
               style={{ overflowY: sheetTranslate <= 0 ? "auto" : "hidden" }}
             >
               <div className={`sheet-content ${hasMedia ? "has-media" : "no-media"}`.trim()}>
-                {hasMedia ? (
-                  <SpotMediaGallery title={spot.title} mediaUrls={mediaGalleryUrls} />
-                ) : null}
+                <div className="modern-hero">
+                  <div className="modern-hero-image">
+                    {hasMedia ? (
+                      <SpotMediaGallery title={spot.title} mediaUrls={mediaGalleryUrls} />
+                    ) : (
+                      <div className="modern-hero-placeholder">
+                        {(spot.category ?? "EVENT").toUpperCase()}
+                      </div>
+                    )}
+                    <button type="button" className="modern-hero-social" aria-label="Instagram">
+                      <Icon name="camera" size={22} />
+                    </button>
+                  </div>
+                </div>
 
-                <section className="sheet-section">
-                  <header className="sheet-section-header">
-                    <div className="sheet-heading-row">
-                      <div className="sheet-section-heading">
-                        <div className="sheet-event-titles">
-                          <h2 className="sheet-event-title" id={`spot-detail-${spot.id}`}>
-                            {spot.title}
-                          </h2>
-                          {(spot as any)?.titleReading ? (
-                            <p className="sheet-event-subtitle">{(spot as any).titleReading as any}</p>
-                          ) : null}
-                        </div>
-                      </div>
-                      <div className="sheet-statistics">
-                        <button type="button" className={`sheet-like-button ${spot.likedByViewer ? 'liked' : ''}`} aria-label="いいね" data-prevent-drag onClick={() => spot && onLike?.(spot.id)}>
-                          <Icon name="heart" size={18} color={spot.likedByViewer ? "#ef4444" : "#0f172a"} />
-                          <span>{(spot.likes ?? 0).toLocaleString("ja-JP")}</span>
-                        </button>
-                        <div className="sheet-view-count" aria-label="見たよ">
-                          <Icon name="eyesFill" size={18} />
-                          <span>{(spot.viewCount ?? 0).toLocaleString("ja-JP")}</span>
-                        </div>
-                      </div>
+                <div className="modern-content">
+                  <div className="modern-title-row">
+                    <div className="modern-titles">
+                      <h2 className="modern-title" id={`spot-detail-${spot.id}`}>
+                        {mainTitle || spot.title}
+                      </h2>
+                      {subTitle ? <p className="modern-subtitle">{subTitle}</p> : null}
                     </div>
-                    <p className="sheet-period">{timeRange}</p>
-                    {/**
-                     * Display the marketing catch copy. In the provided mock data
-                     * this text is stored in the `speechBubble` field. If that
-                     * property is present, we show it as a prominent callout.
-                     */}
-                    {(() => {
-                      const copy = (spot as any)?.speechBubble;
-                      return copy ? <p className="sheet-catchcopy">{copy}</p> : null;
-                    })()}
-                  </header>
-                  <p className="sheet-description">{spot.description}</p>
-                </section>
-
-                <section className="sheet-section">
-                  <div className="sheet-map-buttons">
-                    <button
-                      type="button"
-                      className="button map-google"
-                      onClick={handleDirections}
-                    >
+                    <div className="modern-stats">
+                      <div className="metric view" aria-label="閲覧数">
+                        <Icon name="eyesFill" size={18} />
+                        <span>{(spot.viewCount ?? 0).toLocaleString("ja-JP")}</span>
+                      </div>
+                      <button
+                        type="button"
+                        className={`metric like ${spot.likedByViewer ? "liked" : ""}`.trim()}
+                        aria-label="いいね"
+                        onClick={() => onLike?.(spot.id)}
+                      >
+                        <Icon name="heart" size={18} color={spot.likedByViewer ? "#ef4444" : undefined} />
+                        <span>{(spot.likes ?? 0).toLocaleString("ja-JP")}</span>
+                      </button>
+                    </div>
+                  </div>
+                  <div className="modern-schedule">{scheduleLabel}</div>
+                  {catchCopy ? <div className="modern-catchcopy">{catchCopy}</div> : null}
+                  {spot.description ? <p className="modern-description">{spot.description}</p> : null}
+                  <div className="modern-map-buttons">
+                    <button type="button" className="modern-google" onClick={handleDirections}>
                       Google Mapで経路を検索
                     </button>
-                    <button
-                      type="button"
-                      className="button map-apple"
-                      onClick={handleAppleDirections}
-                    >
+                    <button type="button" className="modern-apple" onClick={handleAppleDirections}>
                       Apple Mapで経路を検索
                     </button>
                   </div>
-                </section>
-
-                {detailItems.length > 0 ? (
-                  <section className="sheet-section sheet-details">
-                    <h3>詳細</h3>
-                    <ul className="sheet-detail-list">
-                      {detailItems.map((item) => (
-                        <li key={item.key} className="detail-row">
-                          <span className="detail-icon">
-                            {
-                              // Choose an icon based on the detail type. For contact we use the chat icon,
-                              // for location a map pin, and for price a ticket or money icon.
-                            }
-                            <Icon
-                              name={
-                                item.type === "contact"
-                                  ? "wechatLogo"
-                                  : /* Use the map icon for both location and price rows. The library
-                                     * may not expose a dedicated price/ticket icon, so falling back
-                                     * prevents runtime errors when an icon name is unknown. */
-                                    "mapLight"
-                              }
-                              size={18}
-                            />
-                          </span>
-                          <div className="detail-content">{item.content}</div>
-                        </li>
-                      ))}
-                    </ul>
-                  </section>
-                ) : null}
-
-                {externalLinks.length > 0 ? (
-                  <section className="sheet-section">
-                    <h3>関連リンク</h3>
-                    <ul className="sheet-links">
-                      {externalLinks.map((link) => (
-                        <li key={`${link.label}-${link.url}`}>
-                          <a href={link.url} target="_blank" rel="noopener noreferrer">
+                  {detailItems.length > 0 ? (
+                    <>
+                      <div className="modern-section-title">詳細</div>
+                      <div className="modern-detail-list">
+                        {detailItems.map((item) => (
+                          <div className="modern-detail-item" key={item.key}>
+                            <div className="detail-icon">
+                              {item.type === "location" && <Icon name="mapLight" size={20} />}
+                              {item.type === "contact" && <Icon name="userFill" size={20} />}
+                              {item.type === "price" && <Icon name="currencyJpyFill" size={20} />}
+                            </div>
+                            <div className="detail-content">{item.content}</div>
+                          </div>
+                        ))}
+                      </div>
+                    </>
+                  ) : null}
+                  {externalLinks.length > 0 ? (
+                    <>
+                      <div className="modern-section-title">関連リンク</div>
+                      <div className="modern-social-icons">
+                        {externalLinks.map((link) => (
+                          <a
+                            key={`${link.label}-${link.url}`}
+                            href={link.url}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                          >
                             {link.label}
                           </a>
-                        </li>
-                      ))}
-                    </ul>
-                  </section>
-                ) : null}
-
-                <section className="sheet-section">
-                  <div className="sheet-bottom-actions">
-                    <button
-                      type="button"
-                      className="button share"
-                      onClick={() => spot && onShare?.(spot)}
-                    >
-                      共有
-                    </button>
-                    <button
-                      type="button"
-                      className="button report"
-                      onClick={() => setIsReportModalOpen(true)}
-                    >
-                      通報
-                    </button>
+                        ))}
+                      </div>
+                    </>
+                  ) : null}
+                  <div className="modern-bottom-actions">
+                    <button type="button" onClick={() => onShare?.(spot)}>共有</button>
+                    <button type="button" onClick={() => setIsReportModalOpen(true)}>通報</button>
                   </div>
-                </section>
-
+                </div>
               </div>
             </div>
           </>

@@ -158,7 +158,7 @@
 
 .spot-detail-sheet .sheet-content.has-media .sheet-top-bar .icon-button {
   color: #ffffff;
-  background: rgba(255, 255, 255, 0.15);
+  background: var(--modern-hero-social-bg, rgba(255, 255, 255, 0.15));
   border-radius: 50%;
 }
 
@@ -200,6 +200,7 @@
   font-size: 0.95rem;
   color: rgba(15, 23, 42, 0.9);
 }
+
 
 @supports not (height: 100dvh) {
   :root {
@@ -755,11 +756,14 @@ button {
   flex-direction: column;
   min-height: 0;
   overflow-y: auto;
+  overflow-x: visible;
   margin: 0 calc(-1 * var(--sheet-horizontal-padding));
-  padding: 0 calc(var(--sheet-horizontal-padding) + 0.75rem) clamp(4.5rem, 12vw, 5.5rem);
+  --sheet-content-horizontal-padding: calc(var(--sheet-horizontal-padding) + 0.75rem);
+  padding: 0 var(--sheet-content-horizontal-padding) clamp(4.5rem, 12vw, 5.5rem);
   overscroll-behavior: contain;
   scrollbar-width: thin;
   scrollbar-color: rgba(148, 163, 184, 0.4) transparent;
+  scrollbar-gutter: stable both-edges;
   touch-action: pan-y;
 }
 
@@ -2947,30 +2951,59 @@ select.input:focus {
   gap: 0;
 }
 
+.spot-list-view {
+  --modern-hero-height: clamp(200px, 40vw, 240px);
+  --modern-content-gap: 0.75rem;
+  --modern-hero-social-bg: rgba(255, 255, 255, 0.15);
+  --modern-hero-social-bg-hover: rgba(255, 255, 255, 0.25);
+}
+
+.spot-detail-sheet {
+  --modern-hero-height: clamp(220px, 45vw, 280px);
+  --modern-content-gap: 0.85rem;
+  --modern-content-padding: 0;
+  --modern-hero-social-bg: rgba(15, 23, 42, 0.45);
+  --modern-hero-social-bg-hover: rgba(15, 23, 42, 0.6);
+}
+
 /* Modern card layout styles inspired by the SpotDetailSheet design.
    These rules control the hero image, overlay elements, content
    structure, and expanded sections. */
-.spot-list-view .modern-hero {
+:is(.spot-list-view, .spot-detail-sheet) .modern-hero {
   position: relative;
   width: 100%;
   overflow: hidden;
-  /* Flatten top corners to match the non-rounded card design */
-  /* Remove rounding from the hero section */
   border-radius: 0;
 }
-.spot-list-view .modern-hero-image {
+.spot-detail-sheet .modern-hero {
+  width: calc(100% + (var(--sheet-content-horizontal-padding, var(--sheet-horizontal-padding)) * 2));
+  margin-left: calc(-1 * var(--sheet-content-horizontal-padding, var(--sheet-horizontal-padding)));
+  margin-right: calc(-1 * var(--sheet-content-horizontal-padding, var(--sheet-horizontal-padding)));
+}
+:is(.spot-list-view, .spot-detail-sheet) .modern-hero-image {
   position: relative;
   width: 100%;
-  height: clamp(200px, 40vw, 240px);
+  height: var(--modern-hero-height, clamp(200px, 40vw, 240px));
   overflow: hidden;
 }
-.spot-list-view .modern-hero-image img {
+:is(.spot-list-view, .spot-detail-sheet) .modern-hero-image img {
   width: 100%;
   height: 100%;
   object-fit: cover;
   display: block;
 }
-.spot-list-view .modern-hero-indicators {
+:is(.spot-list-view, .spot-detail-sheet) .modern-hero-placeholder {
+  width: 100%;
+  height: 100%;
+  display: grid;
+  place-items: center;
+  font-weight: 800;
+  font-size: 1.1rem;
+  letter-spacing: 0.08em;
+  color: #ffffff;
+  background: linear-gradient(135deg, #fb7185, #f97316);
+}
+:is(.spot-list-view, .spot-detail-sheet) .modern-hero-indicators {
   position: absolute;
   bottom: 0.4rem;
   left: 0;
@@ -2980,19 +3013,19 @@ select.input:focus {
   gap: 0.25rem;
   pointer-events: all;
 }
-.spot-list-view .modern-hero-indicators span {
+:is(.spot-list-view, .spot-detail-sheet) .modern-hero-indicators span {
   width: 8px;
   height: 8px;
   border-radius: 50%;
   background: rgba(148, 163, 184, 0.5);
   cursor: pointer;
 }
-.spot-list-view .modern-hero-indicators span.active {
+:is(.spot-list-view, .spot-detail-sheet) .modern-hero-indicators span.active {
   width: 12px;
   height: 12px;
   background: rgba(148, 163, 184, 0.9);
 }
-.spot-list-view .modern-hero-social {
+:is(.spot-list-view, .spot-detail-sheet) .modern-hero-social {
   position: absolute;
   bottom: 0.4rem;
   right: 0.5rem;
@@ -3007,15 +3040,47 @@ select.input:focus {
   justify-content: center;
   cursor: pointer;
 }
-.spot-list-view .modern-hero-social:hover {
-  background: rgba(255, 255, 255, 0.25);
+:is(.spot-list-view, .spot-detail-sheet) .modern-hero-social:hover {
+  background: var(--modern-hero-social-bg-hover, rgba(255, 255, 255, 0.25));
+}
+.spot-detail-sheet .modern-hero .sheet-media {
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  aspect-ratio: auto;
+}
+.spot-detail-sheet .modern-hero .media-nav {
+  display: none;
+}
+.spot-detail-sheet .modern-hero .media-indicators {
+  position: absolute;
+  bottom: 0.5rem;
+  left: 0;
+  right: 0;
+  display: flex;
+  justify-content: center;
+  gap: 0.35rem;
+  pointer-events: auto;
+}
+.spot-detail-sheet .modern-hero .media-indicators .indicator {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  border: none;
+  background: rgba(255, 255, 255, 0.4);
+  padding: 0;
+}
+.spot-detail-sheet .modern-hero .media-indicators .indicator.active {
+  width: 12px;
+  height: 12px;
+  background: rgba(255, 255, 255, 0.9);
 }
 
 /* Header bar inside each modern card showing the owner information. This header
    appears above the hero image and provides a consistent location for the
    avatar and owner name. The styling uses a light background and a subtle
    bottom border to separate it from the image below. */
-.spot-list-view .modern-card-header {
+:is(.spot-list-view, .spot-detail-sheet) .modern-card-header {
   display: flex;
   align-items: center;
   gap: 0.9rem;
@@ -3024,12 +3089,12 @@ select.input:focus {
   /* border-bottom: 1px solid rgba(148, 163, 184, 0.2); */
   /* box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.01); */
 }
-.spot-list-view .modern-card-header .owner-name {
+:is(.spot-list-view, .spot-detail-sheet) .modern-card-header .owner-name {
   font-size: 0.85rem;
   font-weight: 700;
   color: #0f172a;
 }
-.spot-list-view .modern-hero-owner {
+:is(.spot-list-view, .spot-detail-sheet) .modern-hero-owner {
   position: absolute;
   top: 0.4rem;
   left: 0.5rem;
@@ -3040,38 +3105,38 @@ select.input:focus {
   z-index: 2;
   font-weight: 600;
 }
-.spot-list-view .modern-hero-owner .owner-name {
+:is(.spot-list-view, .spot-detail-sheet) .modern-hero-owner .owner-name {
   font-size: 0.95rem;
 }
-.spot-list-view .modern-content {
-  padding: 0.7rem 1rem 0.7rem;
+:is(.spot-list-view, .spot-detail-sheet) .modern-content {
+  padding: var(--modern-content-padding, 0.7rem 1rem 0.7rem);
   display: flex;
   flex-direction: column;
-  gap: 0.75rem;
+  gap: var(--modern-content-gap, 0.75rem);
 }
-.spot-list-view .modern-title-row {
+:is(.spot-list-view, .spot-detail-sheet) .modern-title-row {
   display: flex;
   justify-content: space-between;
   align-items: flex-start;
   gap: 1.15rem;
 }
-.spot-list-view .modern-title {
+:is(.spot-list-view, .spot-detail-sheet) .modern-title {
   margin: 0;
   font-size: 1.0rem;
   font-weight: 900;
   color: #0f172a;
 }
-.spot-list-view .modern-subtitle {
+:is(.spot-list-view, .spot-detail-sheet) .modern-subtitle {
   margin: 0;
   font-size: 0.85rem;
   color: rgba(71, 85, 105, 0.8);
 }
-.spot-list-view .modern-stats {
+:is(.spot-list-view, .spot-detail-sheet) .modern-stats {
   display: flex;
   gap: 0.8rem;
   align-items: center;
 }
-.spot-list-view .modern-stats .metric {
+:is(.spot-list-view, .spot-detail-sheet) .modern-stats .metric {
   /* Display metrics vertically with icon on top and number below */
   display: inline-flex;
   flex-direction: column;
@@ -3084,24 +3149,24 @@ select.input:focus {
   /* Slightly adjust padding to accommodate vertical layout */
   /* padding: 0.3rem 0.4rem; */
 }
-.spot-list-view .modern-stats .metric.view {
+:is(.spot-list-view, .spot-detail-sheet) .modern-stats .metric.view {
   color: #0f172a;
 }
-.spot-list-view .modern-stats .metric.like {
+:is(.spot-list-view, .spot-detail-sheet) .modern-stats .metric.like {
   color: #0f172a;
   cursor: pointer;
 }
-.spot-list-view .modern-stats .metric.like.liked {
+:is(.spot-list-view, .spot-detail-sheet) .modern-stats .metric.like.liked {
   color: #dc2626;
 }
-.spot-list-view .modern-schedule {
+:is(.spot-list-view, .spot-detail-sheet) .modern-schedule {
   font-size: 0.9rem;
   font-weight: 800;
   text-decoration: underline 1px rgba(100, 116, 139, 0.4);
   color: rgb(145, 145, 145);
   margin-top: -0.4rem;
 }
-.spot-list-view .modern-catchcopy {
+:is(.spot-list-view, .spot-detail-sheet) .modern-catchcopy {
   padding: 0.5rem 0.7rem;
   /* margin-top: 0.4rem; */
   border-radius: 10px;
@@ -3116,14 +3181,14 @@ select.input:focus {
   color: #0f172a;
   -webkit-text-stroke: 0.4px #0f172a; /* Add text-stroke for bolder text */
 }
-.spot-list-view .modern-description {
+:is(.spot-list-view, .spot-detail-sheet) .modern-description {
   color: #475569;
   font-size: 0.9rem;
   line-height: 1.6;
   white-space: pre-wrap;
   margin: 0.2rem 0;
 }
-.spot-list-view .modern-more-link {
+:is(.spot-list-view, .spot-detail-sheet) .modern-more-link {
   color: #969696;
   cursor: pointer;
   text-decoration: none;
@@ -3131,18 +3196,18 @@ select.input:focus {
 }
 
 /* Container for the “もっと見る” link when a description is truncated */
-.spot-list-view .modern-more-link-wrapper {
+:is(.spot-list-view, .spot-detail-sheet) .modern-more-link-wrapper {
   margin-top: -1.1rem;
   display: flex;
   justify-content: flex-end;
 }
-.spot-list-view .modern-map-buttons {
+:is(.spot-list-view, .spot-detail-sheet) .modern-map-buttons {
   display: flex;
   flex-direction: column;
   gap: 0.75rem;
   margin-top: 0.6rem;
 }
-.spot-list-view .modern-map-buttons a {
+:is(.spot-list-view, .spot-detail-sheet) .modern-map-buttons :is(a, button) {
   text-decoration: none;
   padding: 0.8rem 1rem;
   border-radius: 16px;
@@ -3151,20 +3216,22 @@ select.input:focus {
   line-height: 1.2;
   text-align: center;
   color: #0f172a;
+  border: none;
+  cursor: pointer;
 }
-.spot-list-view .modern-google {
+:is(.spot-list-view, .spot-detail-sheet) .modern-google {
   background: #6dfeb5b0;
 }
-.spot-list-view .modern-apple {
+:is(.spot-list-view, .spot-detail-sheet) .modern-apple {
   background: #ffa88994;
 }
-.spot-list-view .modern-detail-list {
+:is(.spot-list-view, .spot-detail-sheet) .modern-detail-list {
   display: flex;
   flex-direction: column;
   gap: 0.6rem;
   margin-top: 0.6rem;
 }
-.spot-list-view .modern-detail-item {
+:is(.spot-list-view, .spot-detail-sheet) .modern-detail-item {
   display: flex;
   align-items: center;
   gap: 0.6rem;
@@ -3172,7 +3239,7 @@ select.input:focus {
   border-radius: 12px;
   padding: 0.7rem 0.8rem;
 }
-.spot-list-view .modern-detail-item .detail-icon {
+:is(.spot-list-view, .spot-detail-sheet) .modern-detail-item .detail-icon {
   width: 28px;
   height: 28px;
   border-radius: 50%;
@@ -3182,22 +3249,22 @@ select.input:focus {
   color: #6d6d6d;
   flex: 0 0 auto;
 }
-.spot-list-view .modern-detail-item .detail-content {
+:is(.spot-list-view, .spot-detail-sheet) .modern-detail-item .detail-content {
   flex: 1 1 auto;
   font-size: 0.9rem;
   color: rgba(15, 23, 42, 0.9);
 }
 /* When the detail content is an anchor itself, ensure consistent styling */
-.spot-list-view .modern-detail-item a.detail-content {
+:is(.spot-list-view, .spot-detail-sheet) .modern-detail-item a.detail-content {
   color: rgba(15, 23, 42, 0.9);
   text-decoration: underline;
 }
-.spot-list-view .modern-social-icons {
+:is(.spot-list-view, .spot-detail-sheet) .modern-social-icons {
   display: flex;
   gap: 1rem;
   margin-top: 0.8rem;
 }
-.spot-list-view .modern-social-icons button {
+:is(.spot-list-view, .spot-detail-sheet) .modern-social-icons button {
   width: 44px;
   height: 44px;
   border-radius: 12px;
@@ -3209,16 +3276,37 @@ select.input:focus {
   justify-content: center;
   cursor: pointer;
 }
-.spot-list-view .modern-social-icons button:hover {
+:is(.spot-list-view, .spot-detail-sheet) .modern-social-icons button:hover {
   background: rgba(15, 23, 42, 0.1);
 }
-.spot-list-view .modern-bottom-actions {
+.spot-detail-sheet .modern-social-icons {
+  flex-wrap: wrap;
+  gap: 0.6rem;
+}
+.spot-detail-sheet .modern-social-icons a {
+  text-decoration: none;
+  min-width: 68px;
+  padding: 0.6rem 0.9rem;
+  border-radius: 12px;
+  background: rgba(15, 23, 42, 0.05);
+  color: #0f172a;
+  font-weight: 600;
+  font-size: 0.85rem;
+  text-align: center;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+.spot-detail-sheet .modern-social-icons a:hover {
+  background: rgba(15, 23, 42, 0.12);
+}
+:is(.spot-list-view, .spot-detail-sheet) .modern-bottom-actions {
   display: flex;
   gap: 0.3rem;
   margin-top: 1.2rem;
   margin-bottom: 2rem;
 }
-.spot-list-view .modern-bottom-actions button {
+:is(.spot-list-view, .spot-detail-sheet) .modern-bottom-actions button {
   flex: 1;
   padding: 0.5rem 1.2rem;
   border-radius: 16px;
@@ -3229,12 +3317,12 @@ select.input:focus {
   border: none;
   cursor: pointer;
 }
-.spot-list-view .modern-bottom-actions button:hover {
+:is(.spot-list-view, .spot-detail-sheet) .modern-bottom-actions button:hover {
   background: #e5e7eb;
 }
 
 /* Section titles for detail and URLs within the modern expanded card */
-.spot-list-view .modern-section-title {
+:is(.spot-list-view, .spot-detail-sheet) .modern-section-title {
   margin-top: 0.9rem;
   margin-bottom: 0.4rem;
   font-weight: 700;
@@ -4361,7 +4449,8 @@ select.input:focus {
 
     .spot-detail-sheet .sheet-scroll-container {
       margin: 0 calc(-1 * var(--sheet-horizontal-padding));
-      padding: 0 var(--sheet-horizontal-padding) clamp(4rem, 14vw, 5rem);
+      --sheet-content-horizontal-padding: var(--sheet-horizontal-padding);
+      padding: 0 var(--sheet-content-horizontal-padding) clamp(4rem, 14vw, 5rem);
     }
 
     .spot-detail-sheet .sheet-actions .icon-button {
@@ -4394,7 +4483,8 @@ select.input:focus {
     }
 
     .spot-detail-sheet .sheet-scroll-container {
-      padding: 0 calc(var(--sheet-horizontal-padding) + 0.35rem) clamp(4.5rem, 18vw, 5.5rem);
+      --sheet-content-horizontal-padding: calc(var(--sheet-horizontal-padding) + 0.35rem);
+      padding: 0 var(--sheet-content-horizontal-padding) clamp(4.5rem, 18vw, 5.5rem);
     }
 
     .spot-detail-sheet .sheet-owner-name {
@@ -4416,7 +4506,8 @@ select.input:focus {
     }
 
     .spot-detail-sheet .sheet-scroll-container {
-      padding: 0 var(--sheet-horizontal-padding) clamp(4rem, 10vw, 4.6rem);
+      --sheet-content-horizontal-padding: var(--sheet-horizontal-padding);
+      padding: 0 var(--sheet-content-horizontal-padding) clamp(4rem, 10vw, 4.6rem);
     }
 
     .spot-detail-sheet .sheet-owner-name {
@@ -4625,8 +4716,9 @@ select.input:focus {
   }
 
   .spot-detail-sheet .sheet-scroll-container {
-    margin: 0 calc(-1 * clamp(1rem, 4.5vw, 1.75rem));
-    padding: 0 clamp(1rem, 4.5vw, 1.75rem) clamp(3.2rem, 6vw, 3.6rem);
+    --sheet-content-horizontal-padding: clamp(1rem, 4.5vw, 1.75rem);
+    margin: 0 calc(-1 * var(--sheet-content-horizontal-padding));
+    padding: 0 var(--sheet-content-horizontal-padding) clamp(3.2rem, 6vw, 3.6rem);
   }
 
   .spot-detail-sheet .sheet-top-bar {
