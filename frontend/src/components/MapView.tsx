@@ -901,9 +901,9 @@ const MapCanvas = styled.canvas`
 
 export const MapView = ({
   initialView,
-  selectedLocation,
+  selectedLocation = null,
   onSelectLocation,
-  focusCoordinates,
+  focusCoordinates = null,
   onSpotClick,
   tileLayer,
   tileCategories,

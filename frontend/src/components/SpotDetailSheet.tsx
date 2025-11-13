@@ -40,6 +40,7 @@ export type SpotDetailSheetProps = {
   onClose: () => void;
   onLike?: (spotId: string) => void;
   onShare?: (spot: Spot) => void;
+  onNotify?: (spot: Spot) => void;
   onOverlayToggle?: (open: boolean) => void;
 };
 
@@ -49,6 +50,7 @@ export const SpotDetailSheet = ({
   onClose,
   onLike,
   onShare,
+  onNotify,
   onOverlayToggle
 }: SpotDetailSheetProps) => {
 
@@ -793,6 +795,9 @@ export const SpotDetailSheet = ({
                   ) : null}
                   <div className="modern-bottom-actions">
                     <button type="button" onClick={() => onShare?.(spot)}>共有</button>
+                    {onNotify ? (
+                      <button type="button" onClick={() => onNotify(spot)}>通知を受け取る</button>
+                    ) : null}
                     <button type="button" onClick={() => setIsReportModalOpen(true)}>通報</button>
                   </div>
                 </div>
