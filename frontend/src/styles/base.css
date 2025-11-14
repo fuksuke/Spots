@@ -1642,6 +1642,247 @@ select.input:focus {
   padding: 1.5rem;
 }
 
+.admin-dashboard {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.admin-dashboard-hero {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 0.8rem;
+  padding: 1.2rem 1.5rem 1.4rem;
+  border-radius: 22px;
+  background: radial-gradient(circle at top left, #0f172a, #1e3a8a 55%, #0f172a);
+  color: #f8fafc;
+  border: 1px solid rgba(248, 250, 252, 0.14);
+  box-shadow: 0 22px 45px rgba(15, 23, 42, 0.28);
+}
+
+.hero-text-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.admin-dashboard-hero .eyebrow {
+  font-size: 0.78rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  margin: 0;
+  opacity: 0.85;
+  font-weight: 600;
+}
+
+.admin-dashboard-hero h2 {
+  margin: 0.2rem 0;
+  font-size: clamp(1.5rem, 2vw, 1.9rem);
+}
+
+.hero-metrics-row {
+  display: flex;
+  gap: 0.6rem;
+  flex-wrap: wrap;
+}
+
+.hero-metric {
+  flex: 1 1 120px;
+  padding: 0.65rem 1rem;
+  border-radius: 14px;
+  background: rgba(15, 23, 42, 0.3);
+  border: 1px solid rgba(248, 250, 252, 0.25);
+  text-align: right;
+  backdrop-filter: blur(6px);
+}
+
+.hero-metric span {
+  display: block;
+  font-size: 0.78rem;
+  opacity: 0.85;
+}
+
+.hero-metric strong {
+  display: block;
+  font-size: 1.45rem;
+  line-height: 1.2;
+}
+
+.admin-dashboard-hero .hero-close {
+  position: absolute;
+  top: 1rem;
+  right: 1rem;
+  background: rgba(15, 23, 42, 0.35);
+  color: #f8fafc;
+  border: 1px solid rgba(248, 250, 252, 0.2);
+  backdrop-filter: blur(4px);
+}
+
+.segment-control {
+  display: inline-flex;
+  gap: 0.45rem;
+  background: rgba(248, 250, 252, 0.08);
+  padding: 0.45rem;
+  border-radius: 999px;
+  align-self: flex-start;
+  border: 1px solid rgba(248, 250, 252, 0.18);
+}
+
+.segment-button {
+  border-radius: 999px;
+  padding: 0.4rem 1.1rem;
+  border: none;
+  background: transparent;
+  font-weight: 600;
+  color: rgba(15, 23, 42, 0.62);
+  transition: background 140ms ease, color 140ms ease, box-shadow 140ms ease;
+}
+
+.segment-button.active {
+  background: #ffffff;
+  box-shadow: 0 6px 18px rgba(15, 23, 42, 0.18);
+  color: #0f172a;
+}
+
+.admin-toolbar {
+  display: flex;
+  flex-direction: column;
+  gap: 0.85rem;
+}
+
+.status-group {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+}
+
+.filter-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.85rem;
+  align-items: center;
+}
+
+.filter.control select,
+.filter.control input {
+  border-radius: 12px;
+  border: 1px solid rgba(15, 23, 42, 0.12);
+  padding: 0.45rem 0.75rem;
+  font-size: 0.95rem;
+}
+
+.admin-spot-reports-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 0.8rem;
+}
+
+.spot-report-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.spot-report-card {
+  border: 1px solid rgba(148, 163, 184, 0.25);
+  border-radius: 18px;
+  padding: 1.1rem;
+  background: #f8fafc;
+  display: flex;
+  flex-direction: column;
+  gap: 0.8rem;
+  box-shadow: 0 12px 30px rgba(15, 23, 42, 0.08);
+}
+
+.spot-report-header {
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.report-status {
+  padding: 0.15rem 0.75rem;
+  border-radius: 999px;
+  font-size: 0.8rem;
+  font-weight: 600;
+}
+
+.report-status.open {
+  background: rgba(248, 113, 113, 0.18);
+  color: #b91c1c;
+}
+
+.report-status.resolved {
+  background: rgba(16, 185, 129, 0.18);
+  color: #047857;
+}
+
+.report-reason {
+  font-weight: 600;
+}
+
+.report-meta {
+  margin: 0;
+  color: rgba(15, 23, 42, 0.75);
+  font-size: 0.9rem;
+}
+
+.report-details {
+  margin: 0;
+  white-space: pre-wrap;
+  line-height: 1.4;
+}
+
+.report-details.muted {
+  color: rgba(15, 23, 42, 0.6);
+  font-style: italic;
+}
+
+.spot-report-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.6rem;
+}
+
+.spot-report-card .button.primary {
+  min-width: 150px;
+}
+
+.spot-report-card .button.subtle {
+  background: rgba(15, 23, 42, 0.08);
+  border-radius: 10px;
+  padding: 0.5rem 0.9rem;
+}
+
+.spot-report-card .button.subtle:hover {
+  background: rgba(15, 23, 42, 0.12);
+}
+
+.spot-report-card .button.primary {
+  background: linear-gradient(120deg, #0f172a, #1d4ed8);
+  color: #fff;
+  border-radius: 10px;
+  padding: 0.5rem 1.1rem;
+}
+
+.spot-report-card .button.primary:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.spot-report-list .empty-message {
+  text-align: center;
+  padding: 1rem;
+  border-radius: 12px;
+  background: rgba(148, 163, 184, 0.2);
+  color: rgba(15, 23, 42, 0.7);
+}
+
 .list-placeholder,
 .list-placeholder.error {
   padding: 1.5rem;

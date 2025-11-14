@@ -204,6 +204,19 @@ export type ReviewLog = {
   createdAt: string;
 };
 
+export type SpotReportStatus = "open" | "resolved";
+
+export type SpotReport = {
+  id: string;
+  spotId: string;
+  reason: string;
+  details: string | null;
+  status: SpotReportStatus;
+  reporterUid: string | null;
+  createdAt: string;
+  resolvedAt?: string;
+};
+
 export type ReviewTemplate = {
   id: string;
   label: string;

@@ -19,10 +19,10 @@
 |----|----------|------|---------|------|------------|
 | P0-1 | 運用 | `npm run maintenance --workspace backend` を Cloud Scheduler/cron で 10分毎に叩き、ログ確認手順を README に追記（済） | P0 | なし | 稼働状況を Cloud Logging で監視 |
 | P0-2 | マップ | DOM300 over 時の canvas fallback（既存）＋ marker pooling / auto degrade を導入し、モバイルで FPS>30 を確認 | P0 | map_tile API | `frontend/src/components/MapView.tsx` |
-| P0-3 | ビュー記録 | SpotDetailSheet 以外（リストカード、Map 吹き出し、トレンドカード）からも `recordSpotView` を送信し、Sentry tag で失敗率を監視 | P0 | API 実装済み | 最低2分間隔のデバウンスで実装 |
+| P0-3 | ビュー記録 | SpotDetailSheet 以外（リストカード、Map 吹き出し、トレンドカード）からも `recordSpotView` を送信し、Sentry tag で失敗率を監視（済） | P0 | API 実装済み | Map/リスト/トレンド/通知から `onSpotView` で統一 |
 | P0-4 | トレンド | トレンド画面/リストに AdSense ユニットを設置。広告未配信時の Skeleton と "スポンサー" ラベルを実装 | P0 | AdSense Script | Frontend |
-| P0-5 | 投稿/審査 | Runbook: 予約投稿→審査→公開の手順とチェックリストを docs/operations.md に追記（1人でも迷わないようにする） | P0 | 現状メモなし | テンプレも記載 |
-| P0-6 | 通報 | Firestore に `spot_reports` を作成し、`POST /api/spots/:id/report` + Admin リストで最小限の対応フローを用意 | P0 | 未実装 | まずはシンプルなテーブルで OK |
+| P0-5 | 投稿/審査 | Runbook: 予約投稿→審査→公開の手順とチェックリストを docs/operations.md に追記（済） | P0 | 審査オペレーション | Hero/チェックリスト込みで更新 |
+| P0-6 | 通報 | Firestore に `spot_reports` + Admin リストで対応フローを用意（済） | P0 | API/UI | Adminダッシュボードの「通報」タブで閲覧・対応済み更新可 |
 | P0-7 | QA/安定 | Playwright で「ログイン→投稿→マップ→トレンド→通知」シナリオを1本作り、GitHub Actions から回す | P0 | Playwright 未導入 | CI で自走確認 |
 | P0-8 | モニタリング | Sentry/GA4 でマップ滞在時間・スクロール深度を計測し、MVP の指標（UU/滞在分/閲覧イベント数）をダッシュボード化 | P0 | 分析設定 | 最低限のダッシュボード |
 

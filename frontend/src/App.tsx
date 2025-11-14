@@ -781,6 +781,15 @@ function App() {
     [authToken, handleSpotSelect, handleSpotViewFromSpot, navigate, spots, triggerMessage]
   );
 
+  const handleAdminInspectSpot = useCallback(
+    (spotId: string) => {
+      if (!spotId) return;
+      void handlePromotionSelect(spotId);
+      setAdminPanelOpen(false);
+    },
+    [handlePromotionSelect]
+  );
+
   const handleLogoClick = useCallback(() => {
     navigate("/spots");
     selectCategory("top");
@@ -1346,7 +1355,11 @@ function App() {
         <div className="floating-scrim" aria-hidden="true" onClick={() => setAdminPanelOpen(false)} />
         <section className="floating-body">
           {hasAdminClaim && authToken ? (
-            <AdminDashboard authToken={authToken} onClose={() => setAdminPanelOpen(false)} />
+            <AdminDashboard
+              authToken={authToken}
+              onClose={() => setAdminPanelOpen(false)}
+              onInspectSpot={handleAdminInspectSpot}
+            />
           ) : (
             <div className="panel">管理者権限がないか、ログインが必要です。</div>
           )}
