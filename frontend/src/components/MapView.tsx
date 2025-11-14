@@ -39,12 +39,28 @@ const EMPTY_GEOJSON: FeatureCollection<Point, FeatureProperties> = {
 
 const clampZoom = (zoom: number) => Math.max(MIN_ZOOM, Math.min(MAX_ZOOM, Math.floor(zoom)));
 
-const GLOBAL_DOM_BUDGET = 300;
+const BASE_DOM_BUDGET = 300;
+const resolveDomBudget = () => {
+  if (typeof window === "undefined") return BASE_DOM_BUDGET;
+  const dpr = window.devicePixelRatio || 1;
+  const ua = window.navigator.userAgent.toLowerCase();
+  let budget = BASE_DOM_BUDGET;
+  if (/iphone|android/.test(ua)) {
+    budget = dpr > 2 ? 260 : 220;
+  } else if (/ipad|tablet/.test(ua)) {
+    budget = 280;
+  }
+  return Math.max(180, Math.min(budget, BASE_DOM_BUDGET));
+};
+
+const DOM_BUDGET = resolveDomBudget();
 const GRID_MAX_ZOOM = 9;
-const PULSE_DENSITY_THRESHOLD = Math.floor(GLOBAL_DOM_BUDGET * 0.6);
-const CLUSTER_DENSITY_THRESHOLD = Math.floor(GLOBAL_DOM_BUDGET * 0.75);
-const MAX_CALLOUT_VISIBLE = 36;
-const MAX_CALLOUT_PREMIUM = 18;
+const PULSE_DENSITY_THRESHOLD = Math.floor(DOM_BUDGET * 0.6);
+const CLUSTER_DENSITY_THRESHOLD = Math.floor(DOM_BUDGET * 0.75);
+const MAX_CALLOUT_VISIBLE = Math.max(20, Math.floor(DOM_BUDGET * 0.12));
+const MAX_CALLOUT_PREMIUM = Math.max(10, Math.floor(MAX_CALLOUT_VISIBLE * 0.5));
+const RETAINED_DOM_BUCKET = Math.max(12, Math.floor(MAX_CALLOUT_VISIBLE * 0.7));
+const CALLOUT_POOL_SIZE = RETAINED_DOM_BUCKET * 2;
 
 const deriveLayerForZoom = (zoom: number): MapTileLayer => {
   const clamped = clampZoom(zoom);
@@ -224,7 +240,9 @@ type InteractionParams = {
   renderMode: MapTileLayer | "canvas";
   calloutCandidates: MapTileFeature[];
   onSpotClick?: MapViewProps["onSpotClick"];
+  onSpotView?: MapViewProps["onSpotView"];
   onSpotClickRef: MutableRefObject<MapViewProps["onSpotClick"]>;
+  onSpotViewRef: MutableRefObject<MapViewProps["onSpotView"]>;
   onSelectLocation?: MapViewProps["onSelectLocation"];
   selectionMarkerRef: MutableRefObject<mapboxgl.Marker | null>;
   selectedLocation: Coordinates | null;
@@ -237,7 +255,9 @@ const useMapEventHandlers = ({
   renderMode,
   calloutCandidates,
   onSpotClick,
+  onSpotView,
   onSpotClickRef,
+  onSpotViewRef,
   onSelectLocation,
   selectionMarkerRef,
   selectedLocation,
@@ -249,6 +269,10 @@ const useMapEventHandlers = ({
     if (!map || !manager) return;
 
     manager.updateSelectHandler((spotId) => {
+      const viewHandler = onSpotViewRef.current;
+      if (viewHandler) {
+        viewHandler(spotId);
+      }
       const handler = onSpotClickRef.current;
       if (handler) {
         handler(spotId);
@@ -266,29 +290,37 @@ const useMapEventHandlers = ({
       manager.clear();
     }
 
-    const handleRelayout = () => {
-      manager.repositionAll();
+    let rafId: number | null = null;
+    const requestRelayout = () => {
+      if (rafId !== null) return;
+      rafId = window.requestAnimationFrame(() => {
+        rafId = null;
+        manager.repositionAll();
+      });
     };
 
     manager.repositionAll();
 
-    map.on("move", handleRelayout);
-    map.on("zoom", handleRelayout);
-    map.on("rotate", handleRelayout);
-    map.on("pitch", handleRelayout);
-    map.on("resize", handleRelayout);
+    map.on("move", requestRelayout);
+    map.on("zoom", requestRelayout);
+    map.on("rotate", requestRelayout);
+    map.on("pitch", requestRelayout);
+    map.on("resize", requestRelayout);
 
     return () => {
-      map.off("move", handleRelayout);
-      map.off("zoom", handleRelayout);
-      map.off("rotate", handleRelayout);
-      map.off("pitch", handleRelayout);
-      map.off("resize", handleRelayout);
+      if (rafId !== null) {
+        window.cancelAnimationFrame(rafId);
+      }
+      map.off("move", requestRelayout);
+      map.off("zoom", requestRelayout);
+      map.off("rotate", requestRelayout);
+      map.off("pitch", requestRelayout);
+      map.off("resize", requestRelayout);
       if (renderMode !== "balloon") {
         manager.clear();
       }
     };
-  }, [calloutCandidates, calloutManagerRef, mapRef, onSpotClickRef, renderMode]);
+  }, [calloutCandidates, calloutManagerRef, mapRef, onSpotClickRef, onSpotViewRef, renderMode]);
 
   useEffect(() => {
     const map = mapRef.current;
@@ -298,6 +330,7 @@ const useMapEventHandlers = ({
       event.preventDefault();
       const spotId = event.features?.[0]?.properties?.spotId as string | undefined;
       if (spotId) {
+        onSpotView?.(spotId);
         onSpotClick?.(spotId);
       }
     };
@@ -331,7 +364,7 @@ const useMapEventHandlers = ({
       map.off("click", LAYER_CLUSTER, handleClusterClick);
       map.off("click", handleCanvasClick);
     };
-  }, [mapRef, onSpotClick, onSelectLocation]);
+  }, [mapRef, onSpotClick, onSelectLocation, onSpotView]);
 
   useEffect(() => {
     const map = mapRef.current;
@@ -477,7 +510,7 @@ const useMapInitialization = ({
         if (handler) {
           handler(spotId);
         }
-      });
+      }, CALLOUT_POOL_SIZE);
 
       const handleLoad = () => {
         ensureMapLayers(map);
@@ -670,7 +703,7 @@ const buildRenderingData = (tiles: MapTileResponse[]): RenderingData => {
   const premiumSet = new Set(premiumSpots.map((feature) => feature.id));
   const regularSpots = uniqueSpots.filter((feature) => !premiumSet.has(feature.id));
 
-  const remainingBudget = Math.max(0, GLOBAL_DOM_BUDGET - premiumSpots.length);
+  const remainingBudget = Math.max(0, DOM_BUDGET - premiumSpots.length);
   const limitedRegular = regularSpots.slice(0, remainingBudget);
   const limitedSpotFeatures = [...premiumSpots, ...limitedRegular];
 
@@ -858,6 +891,7 @@ export type MapViewProps = {
   onSelectLocation?: (coords: Coordinates) => void;
   focusCoordinates?: Coordinates | null;
   onSpotClick?: (spotId: string) => void;
+  onSpotView?: (spotId: string) => void;
   tileLayer?: MapTileLayer;
   tileCategories?: SpotCategory[];
   tilePremiumOnly?: boolean;
@@ -905,6 +939,7 @@ export const MapView = ({
   onSelectLocation,
   focusCoordinates = null,
   onSpotClick,
+  onSpotView,
   tileLayer,
   tileCategories,
   tilePremiumOnly,
@@ -923,6 +958,7 @@ export const MapView = ({
   const calloutManagerRef = useRef<SpotCalloutManager | null>(null);
   const calloutLayerRef = useRef<HTMLDivElement | null>(null);
   const onSpotClickRef = useRef<MapViewProps['onSpotClick']>(onSpotClick);
+  const onSpotViewRef = useRef<MapViewProps['onSpotView']>(onSpotView);
 
   const { longitude: initialLongitude, latitude: initialLatitude, zoom: initialZoom } = initialView;
 
@@ -972,6 +1008,10 @@ export const MapView = ({
     onSpotClickRef.current = onSpotClick;
   }, [onSpotClick]);
 
+  useEffect(() => {
+    onSpotViewRef.current = onSpotView;
+  }, [onSpotView]);
+
   const handleLayerDensity = useCallback(
     (layer: MapTileLayer, nonClusterCount: number, zoom: number): MapTileLayer | 'canvas' => {
       let nextLayer: MapTileLayer | 'canvas' = layer;
@@ -981,7 +1021,7 @@ export const MapView = ({
       if (nextLayer === 'pulse' && (nonClusterCount > CLUSTER_DENSITY_THRESHOLD || zoom <= GRID_MAX_ZOOM + 0.2)) {
         nextLayer = 'cluster';
       }
-      if (nextLayer === 'cluster' && nonClusterCount > GLOBAL_DOM_BUDGET) {
+      if (nextLayer === 'cluster' && nonClusterCount > DOM_BUDGET) {
         return 'canvas';
       }
       return nextLayer;
@@ -1015,12 +1055,77 @@ export const MapView = ({
   useEffect(() => {
     if (renderMode !== 'canvas') {
       setFallbackSpots([]);
+      const ctx = canvasContextRef.current;
+      const canvas = canvasRef.current;
+      if (ctx && canvas) {
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+      }
       return;
     }
 
     const nonPremium = renderingData.spotFeatures.filter((feature) => !feature.premium);
     setFallbackSpots(nonPremium);
   }, [renderingData.spotFeatures, renderMode]);
+
+  const drawFallbackSpots = useCallback(() => {
+    const map = mapRef.current;
+    const ctx = canvasContextRef.current;
+    const canvas = canvasRef.current;
+    if (!map || !ctx || !canvas) return;
+    const mapCanvas = map.getCanvas();
+    const width = mapCanvas.clientWidth;
+    const height = mapCanvas.clientHeight;
+    const dpr = typeof window !== 'undefined' ? window.devicePixelRatio || 1 : 1;
+    if (canvas.width !== width * dpr || canvas.height !== height * dpr) {
+      canvas.width = width * dpr;
+      canvas.height = height * dpr;
+      canvas.style.width = `${width}px`;
+      canvas.style.height = `${height}px`;
+    }
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    ctx.clearRect(0, 0, width, height);
+
+    const limit = Math.min(fallbackSpots.length, DOM_BUDGET);
+    for (let i = 0; i < limit; i += 1) {
+      const feature = fallbackSpots[i];
+      const point = map.project({ lng: feature.geometry.lng, lat: feature.geometry.lat });
+      if (point.x < -20 || point.y < -20 || point.x > width + 20 || point.y > height + 20) {
+        continue;
+      }
+      const isLive = feature.status === 'live';
+      const radius = feature.premium ? 6 : 4;
+      ctx.beginPath();
+      ctx.arc(point.x, point.y, radius, 0, Math.PI * 2);
+      ctx.fillStyle = feature.premium ? '#ffb347' : '#0ea5e9';
+      if (isLive) {
+        ctx.fillStyle = feature.premium ? '#ff7a18' : '#f97316';
+      }
+      ctx.globalAlpha = 0.85;
+      ctx.fill();
+      ctx.globalAlpha = 1;
+    }
+  }, [fallbackSpots]);
+
+  useEffect(() => {
+    if (renderMode !== 'canvas') return;
+    let rafId = window.requestAnimationFrame(drawFallbackSpots);
+    const handleMapMove = () => {
+      if (rafId) window.cancelAnimationFrame(rafId);
+      rafId = window.requestAnimationFrame(drawFallbackSpots);
+    };
+    const map = mapRef.current;
+    map?.on('move', handleMapMove);
+    map?.on('zoom', handleMapMove);
+    map?.on('rotate', handleMapMove);
+    map?.on('pitch', handleMapMove);
+    return () => {
+      if (rafId) window.cancelAnimationFrame(rafId);
+      map?.off('move', handleMapMove);
+      map?.off('zoom', handleMapMove);
+      map?.off('rotate', handleMapMove);
+      map?.off('pitch', handleMapMove);
+    };
+  }, [renderMode, drawFallbackSpots]);
 
   const scheduleMapResize = useCallback(() => {
     if (typeof window === 'undefined') return;
@@ -1112,7 +1217,9 @@ export const MapView = ({
     renderMode,
     calloutCandidates,
     onSpotClick,
+    onSpotView,
     onSpotClickRef,
+    onSpotViewRef,
     onSelectLocation,
     selectionMarkerRef,
     selectedLocation,

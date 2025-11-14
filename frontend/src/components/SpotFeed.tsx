@@ -8,6 +8,7 @@ type SpotFeedProps = {
   isLoading: boolean;
   error: unknown;
   onSpotSelect?: (spot: Spot) => void;
+  onSpotView?: (spot: Spot) => void;
   mutate: KeyedMutator<Spot[]>;
   authToken: string;
   isFollowedView?: boolean;
@@ -19,6 +20,7 @@ export const SpotFeed = ({
   isLoading,
   error,
   onSpotSelect,
+  onSpotView,
   mutate,
   authToken,
   isFollowedView = false,
@@ -365,7 +367,10 @@ export const SpotFeed = ({
               <button
                 type="button"
                 className="button subtle"
-                onClick={() => onSpotSelect?.(spot)}
+                onClick={() => {
+                  onSpotView?.(spot);
+                  onSpotSelect?.(spot);
+                }}
               >
                 地図で見る
               </button>

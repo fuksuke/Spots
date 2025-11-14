@@ -5,9 +5,10 @@ type PopularSpotsPanelProps = {
   isLoading: boolean;
   error: unknown;
   onSpotSelect?: (spot: Spot) => void;
+  onSpotView?: (spot: Spot) => void;
 };
 
-export const PopularSpotsPanel = ({ spots, isLoading, error, onSpotSelect }: PopularSpotsPanelProps) => {
+export const PopularSpotsPanel = ({ spots, isLoading, error, onSpotSelect, onSpotView }: PopularSpotsPanelProps) => {
   if (isLoading) {
     return <div className="panel">人気スポットを読み込み中...</div>;
   }
@@ -35,7 +36,14 @@ export const PopularSpotsPanel = ({ spots, isLoading, error, onSpotSelect }: Pop
                   )}
                 </p>
               </div>
-              <button type="button" className="button subtle" onClick={() => onSpotSelect?.(spot)}>
+              <button
+                type="button"
+                className="button subtle"
+                onClick={() => {
+                  onSpotView?.(spot);
+                  onSpotSelect?.(spot);
+                }}
+              >
                 地図で見る
               </button>
             </li>

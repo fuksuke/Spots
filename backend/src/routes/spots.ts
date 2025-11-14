@@ -9,7 +9,8 @@ import {
   likeSpotHandler,
   unlikeSpotHandler,
   popularSpotsHandler,
-  recordSpotViewHandler
+  recordSpotViewHandler,
+  reportSpotHandler
 } from "../controllers/spotsController.js";
 import { requireAuth } from "../middleware/requireAuth.js";
 
@@ -24,5 +25,6 @@ router.post("/:id/comments", requireAuth, createCommentHandler);
 router.post("/:id/like", requireAuth, likeSpotHandler);
 router.post("/:id/unlike", requireAuth, unlikeSpotHandler);
 router.post("/:id/view", recordSpotViewHandler);
+router.post("/:id/report", reportSpotHandler);
 
 export default router;

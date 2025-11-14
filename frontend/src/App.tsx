@@ -47,6 +47,8 @@ const DEFAULT_HOME_VIEW: MapViewProps['initialView'] = {
 
 const BILLING_FAQ_PATH = "/billing-faq.html";
 
+const VIEW_DEBOUNCE_MS = 2 * 60 * 1000;
+
 const MOBILE_SCROLL_FOOTER = (
   <footer className="app-footer scroll-footer">
     <span>© 2025 MyApp</span>
@@ -491,6 +493,41 @@ function App() {
     setSelectedLocation(null);
   }, []);
 
+  const trackSpotView = useCallback(
+    (spotId: string | null | undefined) => {
+      if (!spotId) return;
+      const now = Date.now();
+      const lastRecorded = recentViewMapRef.current.get(spotId);
+      if (lastRecorded && now - lastRecorded < VIEW_DEBOUNCE_MS) {
+        return;
+      }
+      recentViewMapRef.current.set(spotId, now);
+      const sessionId = viewSessionIdRef.current;
+      const token = authToken?.trim() ? authToken : undefined;
+      void recordSpotView({ spotId, sessionId, authToken: token }).catch((error) => {
+        if (import.meta.env.DEV) {
+          console.warn("視聴記録の送信に失敗しました", error);
+        }
+      });
+    },
+    [authToken]
+  );
+
+  const handleSpotViewById = useCallback(
+    (spotId: string | null | undefined) => {
+      trackSpotView(spotId);
+    },
+    [trackSpotView]
+  );
+
+  const handleSpotViewFromSpot = useCallback(
+    (spot: Spot | null | undefined) => {
+      if (!spot) return;
+      handleSpotViewById(spot.id);
+    },
+    [handleSpotViewById]
+  );
+
   const handleSpotSelect = useCallback(
     (spot: Spot) => {
       setActiveSpot(spot);
@@ -503,10 +540,11 @@ function App() {
     (spotId: string) => {
       const match = spots.find((spot) => spot.id === spotId);
       if (match) {
+        handleSpotViewFromSpot(match);
         handleSpotSelect(match);
       }
     },
-    [spots, handleSpotSelect]
+    [handleSpotSelect, handleSpotViewFromSpot, spots]
   );
 
   const requireAuth = useCallback(() => {
@@ -627,6 +665,7 @@ function App() {
         { revalidate: false }
       );
       setSelectedLocation(null);
+      handleSpotViewFromSpot(normalizedSpot);
       setActiveSpot(normalizedSpot);
       setFocusCoordinates({ lat: normalizedSpot.lat, lng: normalizedSpot.lng });
       void (async () => {
@@ -635,7 +674,7 @@ function App() {
       })();
       void mutateSpots();
     },
-    [currentUser, goToMapView, mutateSpots, navigate]
+    [currentUser, goToMapView, handleSpotViewFromSpot, mutateSpots, navigate]
   );
 
   const handleSpotCreateClose = useCallback(() => {
@@ -709,19 +748,12 @@ function App() {
     setSheetModalOpen(open);
   }, []);
 
-  const handleNotify = useCallback(
-    (spot: Spot) => {
-      if (!requireAuth()) return;
-      triggerMessage(`「${spot.title}」の通知をオンにしました (仮)`);
-    },
-    [requireAuth, triggerMessage]
-  );
-
   const handlePromotionSelect = useCallback(
     async (promotionIdSpotId: string | null | undefined) => {
       if (!promotionIdSpotId) return;
       const existing = spots.find((spot) => spot.id === promotionIdSpotId);
       if (existing) {
+        handleSpotViewFromSpot(existing);
         handleSpotSelect(existing);
         navigate("/spots");
         return;
@@ -738,6 +770,7 @@ function App() {
           throw new Error(`Failed to fetch spot: ${response.status}`);
         }
         const spot = (await response.json()) as Spot;
+        handleSpotViewFromSpot(spot);
         handleSpotSelect(spot);
         navigate("/spots");
       } catch (error) {
@@ -745,7 +778,7 @@ function App() {
         triggerMessage("イベント詳細を取得できませんでした");
       }
     },
-    [authToken, handleSpotSelect, navigate, spots, triggerMessage]
+    [authToken, handleSpotSelect, handleSpotViewFromSpot, navigate, spots, triggerMessage]
   );
 
   const handleLogoClick = useCallback(() => {
@@ -808,6 +841,7 @@ function App() {
       markNotificationsAsRead([notification]);
       setNotifications((current) => current.filter((item) => item.id !== notification.id));
       if (notification.spot) {
+        handleSpotViewFromSpot(notification.spot);
         handleSpotSelect(notification.spot);
       } else if (notification.spotId) {
         void handlePromotionSelect(notification.spotId);
@@ -816,7 +850,7 @@ function App() {
       }
       setNotificationsOpen(false);
     },
-    [handlePromotionSelect, handleSpotSelect, markNotificationsAsRead, triggerMessage]
+    [handlePromotionSelect, handleSpotSelect, handleSpotViewFromSpot, markNotificationsAsRead, triggerMessage]
   );
 
   const handleNotificationDismissAll = useCallback(() => {
@@ -1059,31 +1093,6 @@ function App() {
     previousCategoryKeyRef.current = categoryFilter;
   }, [isMapHomeView, categoryFilter, activeSpot]);
 
-  useEffect(() => {
-    const spotId = activeSpot?.id;
-    if (!spotId) return;
-
-    const lastRecorded = recentViewMapRef.current.get(spotId);
-    const now = Date.now();
-    const debounceWindowMs = 2 * 60 * 1000;
-    if (lastRecorded && now - lastRecorded < debounceWindowMs) {
-      return;
-    }
-
-    recentViewMapRef.current.set(spotId, now);
-    const sessionId = viewSessionIdRef.current;
-
-    void recordSpotView({
-      spotId,
-      sessionId,
-      authToken: authToken?.trim() ? authToken : undefined
-    }).catch((error) => {
-      if (import.meta.env.DEV) {
-        console.warn("視聴記録の送信に失敗しました", error);
-      }
-    });
-  }, [activeSpot?.id, authToken]);
-
   const spotCreateHeaderActions = currentUser ? (
     <button type="button" className="button secondary" onClick={handleAccountPanelOpen}>
       アカウント
@@ -1246,28 +1255,30 @@ function App() {
             className={`app-main content-area ${viewMode}`.trim()}
             aria-label={homeMainAriaLabel}
           >
-            {viewMode === "map" ? (
-              <MapView
-                initialView={DEFAULT_HOME_VIEW}
+          {viewMode === "map" ? (
+            <MapView
+              initialView={DEFAULT_HOME_VIEW}
+              spots={displaySpots}
+              selectedLocation={selectedLocation}
+              onSelectLocation={handleSelectLocation}
+              focusCoordinates={focusCoordinates}
+              onSpotClick={handleMapSpotClick}
+              onSpotView={handleSpotViewById}
+              tileCategories={activeTileCategories}
+              authToken={authToken}
+            />
+          ) : (
+            <>
+              <SpotListView
                 spots={displaySpots}
-                selectedLocation={selectedLocation}
-                onSelectLocation={handleSelectLocation}
-                focusCoordinates={focusCoordinates}
-                onSpotClick={handleMapSpotClick}
-                tileCategories={activeTileCategories}
-                authToken={authToken}
+                isLoading={isLoadingSpots}
+                error={spotError}
+                onSpotSelect={handleSpotSelect}
+                onSpotView={handleSpotViewFromSpot}
               />
-            ) : (
-              <>
-                <SpotListView
-                  spots={displaySpots}
-                  isLoading={isLoadingSpots}
-                  error={spotError}
-                  onSpotSelect={handleSpotSelect}
-                />
-                {MOBILE_SCROLL_FOOTER}
-              </>
-            )}
+              {MOBILE_SCROLL_FOOTER}
+            </>
+          )}
           </main>
         ) : (
           <main className="app-main content-area trending" aria-label="トレンドとプロモーション">
@@ -1288,6 +1299,7 @@ function App() {
                 isLoading={isLoadingPopularSpots}
                 error={popularError}
                 onSpotSelect={handleSpotSelect}
+                onSpotView={handleSpotViewFromSpot}
               />
             </div>
             {MOBILE_SCROLL_FOOTER}
@@ -1534,9 +1546,10 @@ function App() {
           isOpen={Boolean(activeSpot)}
           onClose={() => setActiveSpot(null)}
           onLike={handleLike}
-          onNotify={handleNotify}
           onShare={handleShareSpot}
           onOverlayToggle={handleSheetOverlayToggle}
+          authToken={authToken}
+          onReportFeedback={triggerMessage}
         />
       ) : null}
 

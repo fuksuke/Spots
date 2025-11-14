@@ -35,9 +35,10 @@ type SpotListViewProps = {
   isLoading: boolean;
   error: unknown;
   onSpotSelect?: (spot: Spot) => void;
+  onSpotView?: (spot: Spot) => void;
 };
 
-export const SpotListView = ({ spots, isLoading, error, onSpotSelect }: SpotListViewProps) => {
+export const SpotListView = ({ spots, isLoading, error, onSpotSelect, onSpotView }: SpotListViewProps) => {
   // Optionally substitute mock data if configured via environment variable.
   const useMockTiles = import.meta.env.VITE_USE_MOCK_TILES === 'true';
   const baseData = spots.length > 0 ? spots : mockSpots;
@@ -136,6 +137,7 @@ export const SpotListView = ({ spots, isLoading, error, onSpotSelect }: SpotList
 
         <div className="spot-list" role="list" aria-label="イベントリスト">
           {sortedSpots.map((spot) => {
+            const isExpanded = expandedSpotId === spot.id;
             // Compute labels and derived values up front for clarity.
             const scheduleLabel = formatSpotSchedule(spot.startTime, spot.endTime ?? null);
             const { likes, views } = formatPopularity(spot);
@@ -149,15 +151,16 @@ export const SpotListView = ({ spots, isLoading, error, onSpotSelect }: SpotList
                 tabIndex={0}
                 className="spot-list-card spot-mobile-card new-card"
                 onClick={() => {
+                  onSpotView?.(spot);
                   onSpotSelect?.(spot);
                   setExpandedSpotId((prev) => (prev === spot.id ? null : spot.id));
-                  // Remove focus to avoid scroll jumps on expansion.
                   if (document.activeElement instanceof HTMLElement) {
                     document.activeElement.blur();
                   }
                 }}
                 onKeyDown={(event) => {
                   if (event.key === 'Enter') {
+                    onSpotView?.(spot);
                     onSpotSelect?.(spot);
                     setExpandedSpotId((prev) => (prev === spot.id ? null : spot.id));
                     if (document.activeElement instanceof HTMLElement) {
@@ -167,7 +170,6 @@ export const SpotListView = ({ spots, isLoading, error, onSpotSelect }: SpotList
                 }}
               >
                 {(() => {
-                  const isExpanded = expandedSpotId === spot.id;
                   const catchCopy = buildSpotCatchCopy(spot);
                   // Prepare full and truncated descriptions.
                   const fullDesc = spot.description ?? '';

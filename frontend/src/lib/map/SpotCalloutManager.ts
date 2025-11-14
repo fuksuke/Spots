@@ -12,6 +12,7 @@ type CalloutEntry = {
   lngLat: [number, number];
   width: number;
   height: number;
+  visible: boolean;
 };
 
 const extractTimeLabel = (value?: string) => {
@@ -207,11 +208,14 @@ export class SpotCalloutManager {
   private container: HTMLDivElement;
   private entries = new Map<string, CalloutEntry>();
   private onSelect: (spotId: string) => void;
+  private recycledEntries: CalloutEntry[] = [];
+  private maxPoolSize: number;
 
-  constructor(map: MapboxMap, container: HTMLDivElement, onSelect: (spotId: string) => void) {
+  constructor(map: MapboxMap, container: HTMLDivElement, onSelect: (spotId: string) => void, maxPoolSize = 32) {
     this.map = map;
     this.container = container;
     this.onSelect = onSelect;
+    this.maxPoolSize = maxPoolSize;
   }
 
   updateSelectHandler(onSelect: (spotId: string) => void) {
@@ -242,8 +246,14 @@ export class SpotCalloutManager {
 
     this.entries.forEach((entry, spotId) => {
       if (!activeIds.has(spotId)) {
-        entry.element.remove();
-        entry.destroy();
+        entry.visible = false;
+        entry.element.style.display = "none";
+        if (this.recycledEntries.length < this.maxPoolSize) {
+          this.recycledEntries.push(entry);
+        } else {
+          entry.element.remove();
+          entry.destroy();
+        }
         this.entries.delete(spotId);
       }
     });
@@ -258,20 +268,29 @@ export class SpotCalloutManager {
         return;
       }
 
-      const { element, update, destroy } = createCalloutDom(feature, (spotId) => this.onSelect(spotId));
-      this.container.appendChild(element);
-
-      const entry: CalloutEntry = {
-        element,
-        update,
-        destroy,
-        lngLat: [feature.geometry.lng, feature.geometry.lat],
-        width: 0,
-        height: 0
-      };
-
-      this.measure(entry);
-      this.position(entry);
+      const recycled = this.recycledEntries.pop();
+      let entry: CalloutEntry;
+      if (recycled) {
+        recycled.update(feature);
+        recycled.lngLat = [feature.geometry.lng, feature.geometry.lat];
+        this.measure(recycled);
+        this.position(recycled);
+        entry = recycled;
+      } else {
+        const { element, update, destroy } = createCalloutDom(feature, (spotId) => this.onSelect(spotId));
+        this.container.appendChild(element);
+        entry = {
+          element,
+          update,
+          destroy,
+          lngLat: [feature.geometry.lng, feature.geometry.lat],
+          width: 0,
+          height: 0,
+          visible: true
+        };
+        this.measure(entry);
+        this.position(entry);
+      }
 
       this.entries.set(feature.id, entry);
     });
@@ -283,6 +302,11 @@ export class SpotCalloutManager {
       entry.destroy();
     });
     this.entries.clear();
+    this.recycledEntries.forEach((entry) => {
+      entry.element.remove();
+      entry.destroy();
+    });
+    this.recycledEntries = [];
   }
 
   destroy() {

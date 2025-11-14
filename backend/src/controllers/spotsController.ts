@@ -15,6 +15,7 @@ import {
   fetchPopularSpotsFromLeaderboard,
   recordSpotView
 } from "../services/firestoreService.js";
+import { createSpotReport } from "../services/spotReportService.js";
 import { PhoneVerificationRequiredError, SchedulingRuleError } from "../services/posterProfileService.js";
 import { extractUidFromAuthorization, InvalidAuthTokenError } from "../utils/auth.js";
 
@@ -45,6 +46,11 @@ const recordSpotViewBodySchema = z
     sessionId: z.string().min(8).max(160).optional()
   })
   .optional();
+
+const spotReportBodySchema = z.object({
+  reason: z.enum(["fraud", "spam", "inappropriate", "other"]),
+  details: z.string().min(0).max(400).optional()
+});
 
 const hashViewerKey = (value: string) => createHash("sha256").update(value).digest("hex");
 
@@ -131,6 +137,32 @@ export const recordSpotViewHandler = async (req: Request, res: Response, next: N
 
     const result = await recordSpotView(req.params.id, viewerHash);
     res.status(result.recorded ? 201 : 200).json(result);
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const reportSpotHandler = async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const { reason, details } = spotReportBodySchema.parse(req.body);
+    let reporterUid: string | null = null;
+    try {
+      const extracted = await extractUidFromAuthorization(req.headers.authorization);
+      reporterUid = extracted ?? null;
+    } catch (error) {
+      if (!(error instanceof InvalidAuthTokenError)) {
+        throw error;
+      }
+    }
+
+    await createSpotReport({
+      spotId: req.params.id,
+      reporterUid,
+      reason,
+      details: details?.trim() ? details.trim() : null
+    });
+
+    res.status(201).json({ status: "ok" });
   } catch (error) {
     next(error);
   }

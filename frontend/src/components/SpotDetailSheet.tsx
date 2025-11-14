@@ -40,8 +40,9 @@ export type SpotDetailSheetProps = {
   onClose: () => void;
   onLike?: (spotId: string) => void;
   onShare?: (spot: Spot) => void;
-  onNotify?: (spot: Spot) => void;
   onOverlayToggle?: (open: boolean) => void;
+  authToken?: string;
+  onReportFeedback?: (message: string) => void;
 };
 
 export const SpotDetailSheet = ({
@@ -50,8 +51,9 @@ export const SpotDetailSheet = ({
   onClose,
   onLike,
   onShare,
-  onNotify,
-  onOverlayToggle
+  onOverlayToggle,
+  authToken,
+  onReportFeedback
 }: SpotDetailSheetProps) => {
 
   const sheetRef = useRef<HTMLElement | null>(null);
@@ -88,6 +90,7 @@ export const SpotDetailSheet = ({
   const [reportCategory, setReportCategory] = useState<string>(REPORT_CATEGORIES[0].value);
   const [reportDetails, setReportDetails] = useState("");
   const [isSubmittingReport, setIsSubmittingReport] = useState(false);
+  const [reportError, setReportError] = useState<string | null>(null);
 
   useEffect(() => {
     return () => {
@@ -102,6 +105,10 @@ export const SpotDetailSheet = ({
     if (!isOpen) {
       setSheetTranslate(100);
       setIsDragging(false);
+      setIsReportModalOpen(false);
+      setReportDetails("");
+      setReportCategory(REPORT_CATEGORIES[0].value);
+      setReportError(null);
       return;
     }
 
@@ -662,6 +669,44 @@ export const SpotDetailSheet = ({
     .filter(Boolean)
     .join(" ");
 
+  const handleReportSubmit = useCallback(
+    async (event: React.FormEvent<HTMLFormElement>) => {
+      event.preventDefault();
+      if (!spot) return;
+      setIsSubmittingReport(true);
+      setReportError(null);
+      try {
+        const response = await fetch(`/api/spots/${spot.id}/report`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            ...(authToken?.trim() ? { Authorization: `Bearer ${authToken}` } : {})
+          },
+          body: JSON.stringify({
+            reason: reportCategory,
+            details: reportDetails.trim() ? reportDetails.trim() : undefined
+          })
+        });
+        if (!response.ok) {
+          const payload = await response.json().catch(() => ({}));
+          throw new Error(payload.message ?? "通報に失敗しました");
+        }
+        onReportFeedback?.("通報を受け付けました");
+        setIsReportModalOpen(false);
+        setReportDetails("");
+        setReportCategory(REPORT_CATEGORIES[0].value);
+      } catch (error) {
+        const message = error instanceof Error ? error.message : "通報に失敗しました";
+        setReportError(message);
+        onReportFeedback?.(message);
+      } finally {
+        setIsSubmittingReport(false);
+      }
+    },
+    [authToken, onReportFeedback, reportCategory, reportDetails, spot]
+  );
+
+
   return (
     <div
       className={sheetClassName}
@@ -795,9 +840,6 @@ export const SpotDetailSheet = ({
                   ) : null}
                   <div className="modern-bottom-actions">
                     <button type="button" onClick={() => onShare?.(spot)}>共有</button>
-                    {onNotify ? (
-                      <button type="button" onClick={() => onNotify(spot)}>通知を受け取る</button>
-                    ) : null}
                     <button type="button" onClick={() => setIsReportModalOpen(true)}>通報</button>
                   </div>
                 </div>
@@ -832,6 +874,7 @@ export const SpotDetailSheet = ({
                 <span>詳細 (任意)</span>
                 <textarea value={reportDetails} onChange={(event) => setReportDetails(event.target.value)} rows={3} />
               </label>
+              {reportError ? <p className="sheet-report-error">{reportError}</p> : null}
               <div className="sheet-report-actions">
                 <button type="button" className="button subtle" onClick={() => setIsReportModalOpen(false)}>
                   キャンセル
