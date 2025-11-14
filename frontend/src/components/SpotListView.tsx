@@ -1,6 +1,6 @@
 import "../styles/components/SpotListView.css";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 
 import type { Spot } from "../types";
 import { mockSpots } from "../mockData";
@@ -17,6 +17,7 @@ import {
   formatSpotSchedule,
   splitSpotTitle
 } from "../lib/spotPresentation";
+import { trackEvent } from "../lib/analytics";
 
 // Extract likes and views from a spot. If undefined, treat as zero.
 const formatPopularity = (spot: Spot) => {
@@ -50,6 +51,8 @@ export const SpotListView = ({ spots, isLoading, error, onSpotSelect, onSpotView
   const [expandedSpotId, setExpandedSpotId] = useState<string | null>(null);
   // Map of liked state per spot id. This is only stored locally on the client.
   const [likedMap, setLikedMap] = useState<Record<string, boolean>>({});
+  const listRef = useRef<HTMLDivElement | null>(null);
+  const maxScrollDepthRef = useRef(0);
 
   // Track which image index is currently shown for each spot. When a card
   // contains multiple images, clicking on the page indicators will update
@@ -82,6 +85,25 @@ export const SpotListView = ({ spots, isLoading, error, onSpotSelect, onSpotView
       setIsSwiping(false);
     }
   };
+
+  useEffect(() => {
+    const node = listRef.current;
+    if (!node) return;
+    const handleScroll = () => {
+      const { scrollTop, scrollHeight, clientHeight } = node;
+      if (scrollHeight <= clientHeight) {
+        maxScrollDepthRef.current = 1;
+        return;
+      }
+      const depth = Math.min(1, scrollTop / (scrollHeight - clientHeight));
+      maxScrollDepthRef.current = Math.max(maxScrollDepthRef.current, depth);
+    };
+    node.addEventListener("scroll", handleScroll);
+    return () => {
+      node.removeEventListener("scroll", handleScroll);
+      trackEvent("list_scroll_depth", { percent: maxScrollDepthRef.current });
+    };
+  }, []);
 
   // Sort the list according to the selected key.
   const sortedSpots = useMemo(() => {
@@ -120,7 +142,7 @@ export const SpotListView = ({ spots, isLoading, error, onSpotSelect, onSpotView
 
   return (
     <>
-      <div className="spot-list-view">
+      <div className="spot-list-view" ref={listRef}>
         <div className="spot-list-toolbar" role="toolbar" aria-label="並び替え">
           <label className="spot-sort-control">
             <span>並び替え</span>

@@ -7,7 +7,8 @@
     "dev": "vite",
     "build": "tsc && vite build",
     "preview": "vite preview",
-    "lint": "eslint 'src/**/*.{ts,tsx}' --max-warnings=0"
+    "lint": "eslint 'src/**/*.{ts,tsx}' --max-warnings=0",
+    "test:e2e": "playwright test"
   },
   "dependencies": {
     "@mapbox/tilebelt": "^2.0.2",
@@ -26,6 +27,7 @@
     "swr": "^2.2.5"
   },
   "devDependencies": {
+    "@playwright/test": "^1.48.2",
     "@types/mapbox-gl": "^2.7.18",
     "@types/react": "^18.3.3",
     "@types/react-dom": "^18.3.0",

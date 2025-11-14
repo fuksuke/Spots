@@ -10,6 +10,7 @@ import "mapbox-gl/dist/mapbox-gl.css";
 import { useMapTiles } from "../hooks/useMapTiles";
 import { SpotCalloutManager } from "../lib/map/SpotCalloutManager";
 import { parseLocalTimestamp } from "../lib/map/time";
+import { trackEvent } from "../lib/analytics";
 import type {
   Coordinates,
   MapTileFeature,
@@ -959,6 +960,7 @@ export const MapView = ({
   const calloutLayerRef = useRef<HTMLDivElement | null>(null);
   const onSpotClickRef = useRef<MapViewProps['onSpotClick']>(onSpotClick);
   const onSpotViewRef = useRef<MapViewProps['onSpotView']>(onSpotView);
+  const mountTimeRef = useRef<number | null>(null);
 
   const { longitude: initialLongitude, latitude: initialLatitude, zoom: initialZoom } = initialView;
 
@@ -1011,6 +1013,16 @@ export const MapView = ({
   useEffect(() => {
     onSpotViewRef.current = onSpotView;
   }, [onSpotView]);
+
+  useEffect(() => {
+    mountTimeRef.current = performance.now();
+    return () => {
+      if (mountTimeRef.current) {
+        const dwellSeconds = (performance.now() - mountTimeRef.current) / 1000;
+        trackEvent("map_dwell", { seconds: dwellSeconds });
+      }
+    };
+  }, []);
 
   const handleLayerDensity = useCallback(
     (layer: MapTileLayer, nonClusterCount: number, zoom: number): MapTileLayer | 'canvas' => {

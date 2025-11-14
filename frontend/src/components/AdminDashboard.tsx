@@ -2,11 +2,13 @@ import { ChangeEvent, useMemo, useState } from "react";
 
 import { useAdminScheduledSpots } from "../hooks/useAdminScheduledSpots";
 import { useSpotReports } from "../hooks/useSpotReports";
+import { useAdminAnalytics } from "../hooks/useAdminAnalytics";
 import { ScheduledSpot } from "../hooks/useScheduledSpots";
 import { SpotReportStatus } from "../types";
 import { trackEvent } from "../lib/analytics";
 import { AdminScheduledSpotsPanel } from "./AdminScheduledSpotsPanel";
 import { AdminSpotReportsPanel } from "./AdminSpotReportsPanel";
+import { AdminAnalyticsPanel } from "./AdminAnalyticsPanel";
 
 const STATUS_OPTIONS: Array<{ value: ScheduledSpot["status"]; label: string }> = [
   { value: "pending", label: "審査待ち" },
@@ -32,7 +34,7 @@ const REPORT_STATUS_OPTIONS: Array<{ value: SpotReportStatus; label: string }> =
   { value: "resolved", label: "対応済み" }
 ];
 
-type AdminPanelView = "scheduled" | "reports";
+type AdminPanelView = "scheduled" | "reports" | "analytics";
 
 type AdminDashboardProps = {
   authToken: string;
@@ -62,6 +64,9 @@ export const AdminDashboard = ({ authToken, onClose, onInspectSpot }: AdminDashb
     isLoading: isLoadingReports,
     mutate: mutateReports
   } = useSpotReports(shouldFetchReports, reportStatusFilter);
+
+  const shouldFetchAnalytics = panelView === "analytics" ? authToken : undefined;
+  const { overview, error: analyticsError, isLoading: isLoadingAnalytics, mutate: mutateAnalytics } = useAdminAnalytics(shouldFetchAnalytics);
 
   const filteredSpots = useMemo(() => {
     const normalizedQuery = searchTerm.trim().toLowerCase();
@@ -159,6 +164,13 @@ export const AdminDashboard = ({ authToken, onClose, onInspectSpot }: AdminDashb
           >
             通報
           </button>
+          <button
+            type="button"
+            className={`segment-button ${panelView === "analytics" ? "active" : ""}`.trim()}
+            onClick={() => setPanelView("analytics")}
+          >
+            アナリティクス
+          </button>
         </div>
       </header>
 
@@ -221,7 +233,7 @@ export const AdminDashboard = ({ authToken, onClose, onInspectSpot }: AdminDashb
             emptyMessage={statusFilter === "pending" ? "審査待ちの告知はありません。" : "該当する告知は見つかりません。"}
           />
         </>
-      ) : (
+      ) : panelView === "reports" ? (
         <>
           <div className="admin-toolbar">
             <div className="status-group" role="tablist" aria-label="通報フィルタ">
@@ -251,6 +263,16 @@ export const AdminDashboard = ({ authToken, onClose, onInspectSpot }: AdminDashb
             onRefresh={() => void mutateReports()}
             onInspectSpot={onInspectSpot}
           />
+        </>
+      ) : (
+        <>
+          {isLoadingAnalytics ? (
+            <div className="panel">アナリティクスを読み込み中...</div>
+          ) : analyticsError ? (
+            <div className="panel error">アナリティクス情報の取得に失敗しました。</div>
+          ) : overview ? (
+            <AdminAnalyticsPanel overview={overview} />
+          ) : null}
         </>
       )}
     </div>

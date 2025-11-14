@@ -315,6 +315,7 @@ export const createSpot = async (spot: SpotInput) => {
     ownerPhotoUrl: null,
     likes: 0,
     commentsCount: 0,
+    viewCount: 0,
     createdAt: now.toDate().toISOString(),
     ownerPhoneVerified: false
   } satisfies SpotResponse;

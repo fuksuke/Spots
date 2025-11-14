@@ -11,6 +11,7 @@ import scheduledSpotsRouter from "./routes/scheduledSpots.js";
 import socialRouter from "./routes/social.js";
 import spotsRouter from "./routes/spots.js";
 import spotReportsRouter from "./routes/spotReports.js";
+import analyticsRouter from "./routes/analytics.js";
 
 export const createApp = () => {
   const app = express();
@@ -41,6 +42,7 @@ export const createApp = () => {
   app.use("/api", mapTilesRouter);
   app.use("/api/spots", spotsRouter);
   app.use("/api", spotReportsRouter);
+  app.use("/api", analyticsRouter);
 
   app.use(sentryErrorHandler());
   app.use(

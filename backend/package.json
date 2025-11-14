@@ -44,6 +44,7 @@
   ],
   "scripts": {
     "dev": "tsx watch src/index.ts",
+    "dev:e2e": "npm run build && node dist/index.js",
     "build": "tsc -p tsconfig.json",
     "start": "node dist/index.js",
     "set-admin": "tsx src/scripts/setAdminClaim.ts",
