@@ -8,12 +8,23 @@ import type { PosterTier } from "./posterProfileService.js";
 type SpotInput = {
   title: string;
   description: string;
+  speechBubble?: string;
   category: SpotCategory;
   lat: number;
   lng: number;
   startTime: string;
   endTime: string;
   imageUrl?: string;
+  contact?: {
+    phone?: string;
+    email?: string;
+  };
+  locationDetails?: string;
+  externalLinks?: Array<{
+    label: string;
+    url: string;
+  }>;
+  hashtags?: string;
   ownerId: string;
 };
 
@@ -26,12 +37,23 @@ type SpotFilter = {
 type SpotDocument = {
   title: string;
   description: string;
+  speech_bubble?: string | null;
   category: SpotCategory;
   lat: number;
   lng: number;
   start_time: Timestamp;
   end_time: Timestamp;
   image_url?: string | null;
+  contact?: {
+    phone?: string;
+    email?: string;
+  } | null;
+  location_details?: string | null;
+  external_links?: Array<{
+    label: string;
+    url: string;
+  }> | null;
+  hashtags?: string | null;
   owner_id: string;
   likes: number;
   comments_count: number;
@@ -43,12 +65,23 @@ export type SpotResponse = {
   id: string;
   title: string;
   description: string;
+  speechBubble?: string | null;
   category: SpotCategory;
   lat: number;
   lng: number;
   startTime: string;
   endTime: string;
   imageUrl?: string | null;
+  contact?: {
+    phone?: string;
+    email?: string;
+  } | null;
+  locationDetails?: string | null;
+  externalLinks?: Array<{
+    label: string;
+    url: string;
+  }> | null;
+  hashtags?: string | null;
   ownerId: string;
   ownerDisplayName?: string | null;
   ownerPhotoUrl?: string | null;
@@ -132,12 +165,17 @@ const toSpotResponse = (doc: FirebaseFirestore.QueryDocumentSnapshot<SpotDocumen
     id: doc.id,
     title: data.title,
     description: data.description,
+    speechBubble: data.speech_bubble ?? null,
     category: data.category,
     lat: data.lat,
     lng: data.lng,
     startTime: data.start_time.toDate().toISOString(),
     endTime: data.end_time.toDate().toISOString(),
     imageUrl: data.image_url ?? null,
+    contact: data.contact ?? null,
+    locationDetails: data.location_details ?? null,
+    externalLinks: data.external_links ?? null,
+    hashtags: data.hashtags ?? null,
     ownerId: data.owner_id,
     ownerDisplayName: null,
     ownerPhotoUrl: null,
@@ -264,6 +302,112 @@ export const calculatePopularityScore = (spot: SpotResponse, ownerMetrics?: Owne
   return engagementScore * recencyMultiplier + followerBoost + tierBoost + sponsorBoost + categoryBoost;
 };
 
+/**
+ * Apply category balance to ensure diversity in trending spots
+ * Strategy: Guarantee minimum slots per category while respecting popularity
+ *
+ * Category quotas (for 20 spots):
+ * - live: max 40% (8 spots)
+ * - event: min 20% (4 spots)
+ * - cafe/coupon/sports: min 10% each (2 spots each)
+ *
+ * Algorithm:
+ * 1. Fill guaranteed slots from top scorers per category
+ * 2. Fill remaining slots by pure popularity
+ */
+const applyCategoryBalance = (
+  scoredSpots: Array<{ spot: SpotResponse; score: number }>,
+  targetCount: number
+): Array<{ spot: SpotResponse; score: number }> => {
+  if (scoredSpots.length === 0 || targetCount <= 0) {
+    return [];
+  }
+
+  // Define category quotas as percentages
+  const categoryQuotas = {
+    live: { min: 0, max: 0.4 }, // Max 40%
+    event: { min: 0.2, max: 1 }, // Min 20%
+    cafe: { min: 0.1, max: 1 }, // Min 10%
+    coupon: { min: 0.1, max: 1 }, // Min 10%
+    sports: { min: 0.1, max: 1 } // Min 10%
+  };
+
+  const minSlots: Record<string, number> = {};
+  const maxSlots: Record<string, number> = {};
+  Object.entries(categoryQuotas).forEach(([category, quota]) => {
+    minSlots[category] = Math.floor(targetCount * quota.min);
+    maxSlots[category] = Math.ceil(targetCount * quota.max);
+  });
+
+  // Group by category
+  const byCategory = new Map<string, Array<{ spot: SpotResponse; score: number }>>();
+  scoredSpots.forEach((entry) => {
+    const cat = entry.spot.category;
+    if (!byCategory.has(cat)) {
+      byCategory.set(cat, []);
+    }
+    byCategory.get(cat)!.push(entry);
+  });
+
+  // Sort within each category by score
+  byCategory.forEach((spots) => spots.sort((a, b) => b.score - a.score));
+
+  const selected = new Set<string>();
+  const result: Array<{ spot: SpotResponse; score: number }> = [];
+
+  // Phase 1: Fill minimum quotas
+  Object.entries(minSlots).forEach(([category, minCount]) => {
+    const spots = byCategory.get(category) || [];
+    const toAdd = Math.min(minCount, spots.length);
+    for (let i = 0; i < toAdd; i++) {
+      const entry = spots[i];
+      if (entry && !selected.has(entry.spot.id)) {
+        result.push(entry);
+        selected.add(entry.spot.id);
+      }
+    }
+  });
+
+  // Phase 2: Fill remaining slots by popularity, respecting max quotas
+  const categoryCounts = new Map<string, number>();
+  result.forEach((entry) => {
+    const cat = entry.spot.category;
+    categoryCounts.set(cat, (categoryCounts.get(cat) || 0) + 1);
+  });
+
+  for (const entry of scoredSpots) {
+    if (result.length >= targetCount) break;
+    if (selected.has(entry.spot.id)) continue;
+
+    const cat = entry.spot.category;
+    const currentCount = categoryCounts.get(cat) || 0;
+    const maxForCategory = maxSlots[cat] || targetCount;
+
+    if (currentCount < maxForCategory) {
+      result.push(entry);
+      selected.add(entry.spot.id);
+      categoryCounts.set(cat, currentCount + 1);
+    }
+  }
+
+  // Phase 3: If still under target, add remaining spots ignoring quotas
+  for (const entry of scoredSpots) {
+    if (result.length >= targetCount) break;
+    if (!selected.has(entry.spot.id)) {
+      result.push(entry);
+      selected.add(entry.spot.id);
+    }
+  }
+
+  // Sort final result by score to maintain ranking integrity
+  result.sort((a, b) => {
+    if (b.score !== a.score) return b.score - a.score;
+    return new Date(b.spot.createdAt).getTime() - new Date(a.spot.createdAt).getTime();
+  });
+
+  return result.slice(0, targetCount);
+};
+
 export const fetchSpots = async ({ category, followedUserIds, viewerId }: SpotFilter) => {
   let query: FirebaseFirestore.Query<SpotDocument> = firestore
     .collection("spots")
@@ -287,12 +431,17 @@ export const createSpot = async (spot: SpotInput) => {
   const docRef = await firestore.collection("spots").add({
     title: spot.title,
     description: spot.description,
+    speech_bubble: spot.speechBubble ?? null,
     category: spot.category,
     lat: spot.lat,
     lng: spot.lng,
     start_time: Timestamp.fromDate(new Date(spot.startTime)),
     end_time: Timestamp.fromDate(new Date(spot.endTime)),
     image_url: spot.imageUrl ?? null,
+    contact: spot.contact ?? null,
+    location_details: spot.locationDetails ?? null,
+    external_links: spot.externalLinks ?? null,
+    hashtags: spot.hashtags ?? null,
     owner_id: spot.ownerId,
     likes: 0,
     comments_count: 0,
@@ -304,12 +453,17 @@ export const createSpot = async (spot: SpotInput) => {
     id: docRef.id,
     title: spot.title,
     description: spot.description,
+    speechBubble: spot.speechBubble ?? null,
     category: spot.category,
     lat: spot.lat,
     lng: spot.lng,
     startTime: spot.startTime,
     endTime: spot.endTime,
     imageUrl: spot.imageUrl ?? null,
+    contact: spot.contact ?? null,
+    locationDetails: spot.locationDetails ?? null,
+    externalLinks: spot.externalLinks ?? null,
+    hashtags: spot.hashtags ?? null,
     ownerId: spot.ownerId,
     ownerDisplayName: null,
     ownerPhotoUrl: null,
@@ -747,7 +901,9 @@ export const rebuildPopularSpotsLeaderboard = async (maxEntries = 50) => {
     return new Date(b.spot.createdAt).getTime() - new Date(a.spot.createdAt).getTime();
   });
 
-  const top = scored.slice(0, Math.min(entryLimit, scored.length));
+  // Apply category balance: ensure diversity while respecting popularity
+  const balanced = applyCategoryBalance(scored, entryLimit);
+  const top = balanced;
   const leaderboardCollection = firestore.collection("leaderboards").doc("popular_spots").collection("entries");
 
   const existingSnapshot = await leaderboardCollection.get();
@@ -846,6 +1002,74 @@ export const fetchPopularSpotsFromLeaderboard = async (limit = 20, viewerId?: st
   });
 
   return result;
+};
+
+/**
+ * Fetch trending new spots (posted within last 24 hours with high engagement growth rate)
+ * Engagement growth rate = (likes + views * 0.5 + comments * 0.3) / hours since creation
+ */
+export const fetchTrendingNewSpots = async (limit = 10, viewerId?: string): Promise<SpotResponse[]> => {
+  const now = Date.now();
+  const oneDayAgo = new Date(now - 24 * 60 * 60 * 1000);
+
+  // Fetch spots created in last 24 hours
+  const snapshot = await firestore
+    .collection("spots")
+    .where("created_at", ">=", Timestamp.fromDate(oneDayAgo))
+    .orderBy("created_at", "desc")
+    .limit(100) // Get more candidates to filter
+    .get();
+
+  if (snapshot.empty) {
+    return [];
+  }
+
+  const spots = snapshot.docs.map((doc) =>
+    toSpotResponse(doc as FirebaseFirestore.QueryDocumentSnapshot<SpotDocument>)
+  );
+
+  // Calculate engagement growth rate for each spot
+  const scored = spots.map((spot) => {
+    const createdAt = new Date(spot.createdAt).getTime();
+    const hoursSinceCreation = Math.max((now - createdAt) / (60 * 60 * 1000), 0.5); // Min 0.5 hour to avoid division issues
+
+    // Engagement score: prioritize likes, views, and comments
+    const engagementScore =
+      spot.likes * 1.0 +
+      (spot.viewCount ?? 0) * 0.5 +
+      spot.commentsCount * 0.3;
+
+    // Growth rate: engagement per hour
+    const growthRate = engagementScore / hoursSinceCreation;
+
+    return {
+      spot,
+      growthRate,
+      engagementScore
+    };
+  });
+
+  // Filter: only spots with meaningful engagement (at least 3 likes or 10 views)
+  const filtered = scored.filter(
+    (entry) => entry.spot.likes >= 3 || (entry.spot.viewCount ?? 0) >= 10
+  );
+
+  // Sort by growth rate descending
+  filtered.sort((a, b) => {
+    if (b.growthRate !== a.growthRate) return b.growthRate - a.growthRate;
+    return b.engagementScore - a.engagementScore;
+  });
+
+  const top = filtered.slice(0, Math.min(limit, filtered.length));
+
+  // Enrich with viewer data if available
+  if (viewerId) {
+    const spotIds = top.map((entry) => entry.spot.id);
+    const enriched = await fetchSpotsByIds(spotIds, viewerId);
+    return enriched.slice(0, limit);
+  }
+
+  return top.map((entry) => entry.spot).slice(0, limit);
 };
 
 export const recordSpotView = async (

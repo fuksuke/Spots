@@ -10,9 +10,12 @@ export const PromotionBanner = ({ promotions, onSelect }: PromotionBannerProps) 
     return null;
   }
 
+  // Limit to top 3 promotions for better UX
+  const displayPromotions = promotions.slice(0, 3);
+
   return (
     <div className="promotion-banner" role="region" aria-label="公式告知">
-      {promotions.map((promo) => (
+      {displayPromotions.map((promo) => (
         <article key={promo.id} className="promotion-card">
           {promo.imageUrl && <img src={promo.imageUrl} alt={promo.headline ?? "イベント告知"} className="promotion-image" />}
           <div className="promotion-body">

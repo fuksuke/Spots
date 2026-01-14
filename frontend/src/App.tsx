@@ -14,15 +14,19 @@ import { SearchOverlay } from "./components/SearchOverlay";
 import { InAppNotifications } from "./components/InAppNotifications";
 import type { InAppNotification } from "./components/InAppNotifications";
 import { PopularSpotsPanel } from "./components/PopularSpotsPanel";
+import { TrendingNewSpotsPanel } from "./components/TrendingNewSpotsPanel";
 import { PromotionBanner } from "./components/PromotionBanner";
 import { AdminDashboard } from "./components/AdminDashboard";
 import { AccountPanel } from "./components/AccountPanel";
 import { SpotCreatePage } from "./components/SpotCreatePage";
+import { AdSenseUnit } from "./components/AdSenseUnit";
 import { trackEvent, trackError, trackPageView } from "./lib/analytics";
+import { ADSENSE_CONFIG } from "./config/adsense";
 import { setSentryUser } from "./lib/sentry";
 import { useSpotFeed } from "./hooks/useSpotFeed";
 import { useProfile } from "./hooks/useProfile";
 import { usePopularSpots } from "./hooks/usePopularSpots";
+import { useTrendingNewSpots } from "./hooks/useTrendingNewSpots";
 import { usePromotions } from "./hooks/usePromotions";
 import { useLayoutMetrics } from "./hooks/useLayoutMetrics";
 import { useCategoryTabs } from "./hooks/useCategoryTabs";
@@ -399,6 +403,12 @@ function App() {
     error: popularError
   } = usePopularSpots(6, authToken);
 
+  const {
+    trendingNewSpots,
+    isLoading: isLoadingTrendingNew,
+    error: trendingNewError
+  } = useTrendingNewSpots(10, authToken);
+
   const { promotions, isLoading: isLoadingPromotions, error: promotionsError } = usePromotions();
 
   const useMockTiles = import.meta.env.VITE_USE_MOCK_TILES === "true";
@@ -706,8 +716,12 @@ function App() {
     [triggerMessage]
   );
 
-  const handleLike = useCallback((spotId: string) => {
+  const handleLike = useCallback(async (spotId: string) => {
     if (!requireAuth()) return;
+
+    // Get current liked state before updating
+    const currentSpot = spots.find(s => s.id === spotId) || activeSpot;
+    const wasLiked = currentSpot?.likedByViewer ?? false;
 
     // Optimistically update the UI
     const updateSpot = (spot: Spot) => {
@@ -731,18 +745,54 @@ function App() {
 
     setActiveSpot(prev => prev ? updateSpot(prev) : null);
 
-    // Here you would also make an API call to persist the like
-    // For now, we'll just do the optimistic update.
-    // Example:
-    // fetch(`/api/spots/${spotId}/like`, {
-    //   method: 'POST',
-    //   headers: { Authorization: `Bearer ${authToken}` },
-    // }).catch(() => {
-    //   // Revert on error
-    //   mutateSpots(spots, { revalidate: false });
-    // });
+    // Persist to backend
+    try {
+      const endpoint = wasLiked ? `/api/spots/${spotId}/unlike` : `/api/spots/${spotId}/like`;
+      const response = await fetch(endpoint, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(authToken ? { Authorization: `Bearer ${authToken}` } : {})
+        }
+      });
 
-  }, [requireAuth, mutateSpots]);
+      if (!response.ok) {
+        throw new Error('Failed to update like');
+      }
+
+      // Optionally sync with server response
+      const result = await response.json();
+      if (result.likes !== undefined) {
+        mutateSpots(
+          (currentSpots) => {
+            if (!currentSpots) return [];
+            return currentSpots.map(spot =>
+              spot.id === spotId
+                ? { ...spot, likes: result.likes, likedByViewer: result.liked }
+                : spot
+            );
+          },
+          { revalidate: false }
+        );
+        setActiveSpot(prev => prev?.id === spotId
+          ? { ...prev, likes: result.likes, likedByViewer: result.liked }
+          : prev
+        );
+      }
+    } catch (error) {
+      console.error('Like update failed:', error);
+      // Revert optimistic update on error
+      mutateSpots(
+        (currentSpots) => {
+          if (!currentSpots) return [];
+          return currentSpots.map(updateSpot); // Reverts the change
+        },
+        { revalidate: false }
+      );
+      setActiveSpot(prev => prev ? updateSpot(prev) : null);
+      triggerMessage('いいねの更新に失敗しました');
+    }
+  }, [requireAuth, mutateSpots, spots, activeSpot, authToken, triggerMessage]);
 
   const handleSheetOverlayToggle = useCallback((open: boolean) => {
     setSheetModalOpen(open);
@@ -1102,15 +1152,6 @@ function App() {
     previousCategoryKeyRef.current = categoryFilter;
   }, [isMapHomeView, categoryFilter, activeSpot]);
 
-  const spotCreateHeaderActions = currentUser ? (
-    <button type="button" className="button secondary" onClick={handleAccountPanelOpen}>
-      アカウント
-    </button>
-  ) : (
-    <button type="button" className="button primary" onClick={handleLoginClick}>
-      ログイン
-    </button>
-  );
 
   const [isListHeaderHidden, setListHeaderHidden] = useState(false);
   const mainRef = useRef<HTMLElement | null>(null);
@@ -1292,21 +1333,39 @@ function App() {
         ) : (
           <main className="app-main content-area trending" aria-label="トレンドとプロモーション">
             <div className="trending-content">
-              <header className="trending-header">
-                <h2>トレンド & プロモーション</h2>
-                <p className="hint">注目のイベントと公式告知をまとめて確認できます。</p>
+              <header className="trending-header-hero">
+                <div className="trending-hero-background"></div>
+                <div className="trending-hero-content">
+                  <div className="trending-hero-icon">
+                    <span className="icon-fire">🔥</span>
+                    <span className="icon-star">✨</span>
+                  </div>
+                  <h1 className="trending-hero-title">トレンド</h1>
+                  <p className="trending-hero-subtitle">渋谷で今、話題のイベントを発見しよう</p>
+                </div>
               </header>
-              {promotionsError ? (
-                <div className="panel error">公式告知の取得に失敗しました。</div>
-              ) : isLoadingPromotions ? (
-                <div className="panel">公式告知を読み込み中...</div>
-              ) : (
-                <PromotionBanner promotions={promotions} onSelect={(promotion) => handlePromotionSelect(promotion.spotId)} />
-              )}
+
+              {/* Google AdSense - Primary monetization placement */}
+              <AdSenseUnit
+                slotId={ADSENSE_CONFIG.TRENDING_SLOT_ID}
+                format="auto"
+                className="trending-ad"
+              />
+
               <PopularSpotsPanel
                 spots={popularSpots}
+                promotions={promotions}
                 isLoading={isLoadingPopularSpots}
                 error={popularError}
+                onSpotSelect={handleSpotSelect}
+                onSpotView={handleSpotViewFromSpot}
+                onPromotionSelect={(promotion) => handlePromotionSelect(promotion.spotId)}
+              />
+
+              <TrendingNewSpotsPanel
+                spots={trendingNewSpots}
+                isLoading={isLoadingTrendingNew}
+                error={trendingNewError}
                 onSpotSelect={handleSpotSelect}
                 onSpotView={handleSpotViewFromSpot}
               />
@@ -1335,7 +1394,6 @@ function App() {
       authToken={authToken}
       canPostLongTerm={canPostLongTerm}
       canPostRecurring={canPostRecurring}
-      headerActions={spotCreateHeaderActions}
       profile={userProfile ?? null}
       onProfileRefresh={scheduleProfileRefresh}
     />

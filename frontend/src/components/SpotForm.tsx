@@ -3,6 +3,7 @@ import { uploadImageFile } from "../lib/storage";
 import { Coordinates, Spot, SpotCategory, SPOT_CATEGORY_VALUES } from "../types";
 import { SpotCreateMap } from "./SpotCreateMap";
 import { searchPlaces } from "../lib/mapboxGeocoding";
+import { formatPhoneNumber, validatePhoneNumber, validateEmail } from "../lib/phoneValidation";
 
 const categories: SpotCategory[] = [...SPOT_CATEGORY_VALUES];
 
@@ -47,6 +48,7 @@ type SpotFormProps = {
   canPostRecurring?: boolean;
   phoneVerified?: boolean;
   onRequirePhoneVerification?: () => void;
+  onSaveDraft?: (saveFn: () => void) => void;
 };
 
 export const SpotForm = ({
@@ -58,9 +60,10 @@ export const SpotForm = ({
   canPostLongTerm = false,
   canPostRecurring = false,
   phoneVerified = false,
-  onRequirePhoneVerification
+  onRequirePhoneVerification,
+  onSaveDraft
 }: SpotFormProps) => {
-  const totalSteps = 3;
+  const totalSteps = 5;
   const [step, setStep] = useState(0);
   const [selectedPlan, setSelectedPlan] = useState<PostingPlan>("short_term");
   const [locationError, setLocationError] = useState<string | null>(null);
@@ -69,6 +72,49 @@ export const SpotForm = ({
   const [searchQuery, setSearchQuery] = useState("");
   const [isSearching, setIsSearching] = useState(false);
   const [searchResults, setSearchResults] = useState<Array<{ label: string; coords: Coordinates }>>([]);
+
+  // オートフィル用のLocalStorageキー
+  const AUTOFILL_KEY = 'spot_form_autofill_data';
+  const DRAFT_KEY = 'spot_form_draft_data';
+
+  // LocalStorageから投稿者情報を読み込む
+  const loadAutofillData = () => {
+    try {
+      const saved = localStorage.getItem(AUTOFILL_KEY);
+      if (saved) {
+        return JSON.parse(saved);
+      }
+    } catch (error) {
+      console.warn('Failed to load autofill data:', error);
+    }
+    return null;
+  };
+
+  // オートフィルデータを初期化
+  const autofillData = useMemo(() => loadAutofillData(), []);
+
+  // State変数を先に定義（関数から参照されるため）
+  const [title, setTitle] = useState("");
+  const [description, setDescription] = useState("");
+  const [onelinePR, setOnelinePR] = useState("");
+  const [category, setCategory] = useState<SpotCategory>("live");
+  const [startTime, setStartTime] = useState(() => toDatetimeLocal(new Date()));
+  const [endTime, setEndTime] = useState(() => toDatetimeLocal(new Date(Date.now() + 60 * 60 * 1000)));
+  const [imageFile, setImageFile] = useState<File | null>(null);
+  const [imagePreview, setImagePreview] = useState<string | null>(null);
+  const [contactType, setContactType] = useState<"phone" | "email">(autofillData?.contactType || "phone");
+  const [contactValue, setContactValue] = useState(autofillData?.contactValue || "");
+  const [contactError, setContactError] = useState<string | null>(null);
+  const [locationDetails, setLocationDetails] = useState(autofillData?.locationDetails || "");
+  const [homepageUrl, setHomepageUrl] = useState(autofillData?.homepageUrl || "");
+  const [snsLinks, setSnsLinks] = useState(autofillData?.snsLinks || { x: "", instagram: "", youtube: "", facebook: "" });
+  const [hashtags, setHashtags] = useState(autofillData?.hashtags || "");
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [statusMessage, setStatusMessage] = useState<string | null>(null);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [formErrors, setFormErrors] = useState<string[]>([]);
+  const [reviewMode, setReviewMode] = useState<'balloon' | 'list'>('balloon');
+  const startTimeMin = useMemo(() => toDatetimeLocal(new Date()), []);
   const planOptions = useMemo<PostingPlanOption[]>(
     () => [
       {
@@ -182,6 +228,98 @@ export const SpotForm = ({
     };
   }, [searchQuery]);
 
+  // 連絡先の値を変更するハンドラー（電話番号の場合は自動整形）
+  const handleContactChange = useCallback((value: string) => {
+    if (contactType === 'phone') {
+      // 電話番号の場合は自動整形
+      const formatted = formatPhoneNumber(value);
+      setContactValue(formatted);
+      // バリデーション
+      const error = validatePhoneNumber(formatted);
+      setContactError(error);
+    } else {
+      // メールの場合
+      setContactValue(value);
+      const error = validateEmail(value);
+      setContactError(error);
+    }
+  }, [contactType]);
+
+  // LocalStorageに投稿者情報を保存する
+  const saveAutofillData = useCallback((data: {
+    contactType: 'phone' | 'email';
+    contactValue: string;
+    locationDetails: string;
+    homepageUrl: string;
+    snsLinks: { x: string; instagram: string; youtube: string; facebook: string };
+    hashtags: string;
+  }) => {
+    try {
+      localStorage.setItem(AUTOFILL_KEY, JSON.stringify(data));
+    } catch (error) {
+      console.warn('Failed to save autofill data:', error);
+    }
+  }, []);
+
+  // 下書きを保存する
+  const saveDraft = useCallback(() => {
+    try {
+      const draftData = {
+        step,
+        selectedPlan,
+        selectedLocation,
+        title,
+        description,
+        onelinePR,
+        category,
+        startTime,
+        endTime,
+        imagePreview,
+        contactType,
+        contactValue,
+        locationDetails,
+        homepageUrl,
+        snsLinks,
+        hashtags,
+        savedAt: new Date().toISOString()
+      };
+      localStorage.setItem(DRAFT_KEY, JSON.stringify(draftData));
+      setStatusMessage('下書きを保存しました');
+      setTimeout(() => setStatusMessage(null), 3000);
+    } catch (error) {
+      console.warn('Failed to save draft:', error);
+      setErrorMessage('下書きの保存に失敗しました');
+    }
+  }, [step, selectedPlan, selectedLocation, title, description, onelinePR, category, startTime, endTime, imagePreview, contactType, contactValue, locationDetails, homepageUrl, snsLinks, hashtags]);
+
+  // 下書きを読み込む
+  const loadDraft = useCallback(() => {
+    try {
+      const saved = localStorage.getItem(DRAFT_KEY);
+      if (saved) {
+        const draftData = JSON.parse(saved);
+        return draftData;
+      }
+    } catch (error) {
+      console.warn('Failed to load draft:', error);
+    }
+    return null;
+  }, []);
+
+  // 下書きを削除する
+  const clearDraft = useCallback(() => {
+    try {
+      localStorage.removeItem(DRAFT_KEY);
+    } catch (error) {
+      console.warn('Failed to clear draft:', error);
+    }
+  }, []);
+
+  // 親コンポーネントにsaveDraft関数を渡す
+  useEffect(() => {
+    onSaveDraft?.(saveDraft);
+  }, [saveDraft, onSaveDraft]);
+
   const handleNextStep = useCallback(() => {
     if (step === 0 && !selectedLocation) {
       setLocationError("地図をクリックして位置を選択してください。");
@@ -194,8 +332,19 @@ export const SpotForm = ({
         return;
       }
     }
+    // Step 3からStep 4に進む際に投稿者情報を保存（オートフィル用）
+    if (step === 3) {
+      saveAutofillData({
+        contactType,
+        contactValue,
+        locationDetails,
+        homepageUrl,
+        snsLinks,
+        hashtags
+      });
+    }
     setStep((prev) => Math.min(prev + 1, totalSteps - 1));
-  }, [step, selectedLocation, planOptions, selectedPlan, totalSteps]);
+  }, [step, selectedLocation, planOptions, selectedPlan, totalSteps, contactType, contactValue, locationDetails, homepageUrl, snsLinks, hashtags, saveAutofillData]);
 
   const handlePreviousStep = useCallback(() => {
     setStep((prev) => Math.max(prev - 1, 0));
@@ -216,33 +365,84 @@ export const SpotForm = ({
       const option = planOptions.find((item) => item.id === selectedPlan);
       return !option || option.locked;
     }
+    if (step === 2) {
+      // イベント詳細のバリデーション
+      return !title.trim() || !description.trim() || !onelinePR.trim() || !startTime || !endTime;
+    }
+    if (step === 3) {
+      // 投稿者情報のバリデーション
+      if (!contactValue.trim() || !locationDetails.trim()) {
+        return true;
+      }
+      // 連絡先のバリデーションエラーがある場合は次へ進めない
+      if (contactType === 'phone') {
+        const phoneError = validatePhoneNumber(contactValue);
+        if (phoneError) return true;
+      } else {
+        const emailError = validateEmail(contactValue);
+        if (emailError) return true;
+      }
+      return false;
+    }
     return false;
-  }, [isLastStep, step, selectedLocation, planOptions, selectedPlan]);
-
-  const [title, setTitle] = useState("");
-  const [description, setDescription] = useState("");
-  const [category, setCategory] = useState<SpotCategory>("live");
-  const [startTime, setStartTime] = useState(() => toDatetimeLocal(new Date()));
-  const [endTime, setEndTime] = useState(() => toDatetimeLocal(new Date(Date.now() + 60 * 60 * 1000)));
-  const [imageFile, setImageFile] = useState<File | null>(null);
-  const [imagePreview, setImagePreview] = useState<string | null>(null);
-  const [contactType, setContactType] = useState<"phone" | "email">("phone");
-  const [contactValue, setContactValue] = useState("");
-  const [locationDetails, setLocationDetails] = useState("");
-  const [homepageUrl, setHomepageUrl] = useState("");
-  const [snsLinks, setSnsLinks] = useState({ x: "", instagram: "", youtube: "", facebook: "" });
-  const [hashtags, setHashtags] = useState("");
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [statusMessage, setStatusMessage] = useState<string | null>(null);
-  const [errorMessage, setErrorMessage] = useState<string | null>(null);
-  const [formErrors, setFormErrors] = useState<string[]>([]);
-  const startTimeMin = useMemo(() => toDatetimeLocal(new Date()), []);
+  }, [isLastStep, step, selectedLocation, planOptions, selectedPlan, title, description, onelinePR, startTime, endTime, contactValue, contactType, locationDetails]);
 
   useEffect(() => {
     if (phoneVerified) {
       setErrorMessage(null);
     }
   }, [phoneVerified]);
+
+  // 連絡先タイプが変更されたときに再バリデーション
+  useEffect(() => {
+    if (contactValue.trim()) {
+      if (contactType === 'phone') {
+        const error = validatePhoneNumber(contactValue);
+        setContactError(error);
+      } else {
+        const error = validateEmail(contactValue);
+        setContactError(error);
+      }
+    } else {
+      setContactError(null);
+    }
+  }, [contactType, contactValue]);
+
+  // マウント時に下書きを復元
+  useEffect(() => {
+    const draft = loadDraft();
+    if (draft) {
+      const shouldRestore = window.confirm(
+        `下書きが見つかりました（保存日時: ${new Date(draft.savedAt).toLocaleString('ja-JP')}）。\n復元しますか？`
+      );
+      if (shouldRestore) {
+        setStep(draft.step || 0);
+        setSelectedPlan(draft.selectedPlan || 'short_term');
+        if (draft.selectedLocation) {
+          onSelectLocation(draft.selectedLocation);
+        }
+        setTitle(draft.title || '');
+        setDescription(draft.description || '');
+        setCategory(draft.category || 'live');
+        setStartTime(draft.startTime || toDatetimeLocal(new Date()));
+        setEndTime(draft.endTime || toDatetimeLocal(new Date(Date.now() + 60 * 60 * 1000)));
+        if (draft.imagePreview) {
+          setImagePreview(draft.imagePreview);
+        }
+        setContactType(draft.contactType || 'phone');
+        setContactValue(draft.contactValue || '');
+        setLocationDetails(draft.locationDetails || '');
+        setHomepageUrl(draft.homepageUrl || '');
+        setSnsLinks(draft.snsLinks || { x: '', instagram: '', youtube: '', facebook: '' });
+        setHashtags(draft.hashtags || '');
+        setStatusMessage('下書きを復元しました');
+        setTimeout(() => setStatusMessage(null), 3000);
+      } else {
+        clearDraft();
+      }
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []); // マウント時のみ実行
 
   const renderStepContent = () => {
     switch (step) {
@@ -341,7 +541,8 @@ export const SpotForm = ({
             <p className="spot-step-hint">長期・定期イベントの投稿には有料プランが必要です。</p>
           </div>
         );
-      default:
+      case 2:
+        // Step 2: イベント詳細
         return (
           <div className="spot-step spot-step-form">
             <div className="spot-plan-summary">
@@ -349,7 +550,7 @@ export const SpotForm = ({
               <span className="spot-plan-summary-value">{activePlan?.title ?? "短期イベント"}</span>
             </div>
             <div className="form-group">
-              <label htmlFor="title">タイトル</label>
+              <label htmlFor="title">タイトル *</label>
               <input
                 id="title"
                 className="input"
@@ -360,7 +561,7 @@ export const SpotForm = ({
               />
             </div>
             <div className="form-group">
-              <label htmlFor="description">説明</label>
+              <label htmlFor="description">説明 *</label>
               <textarea
                 id="description"
                 className="textarea"
@@ -370,6 +571,19 @@ export const SpotForm = ({
                 rows={3}
                 required
               />
+            </div>
+            <div className="form-group">
+              <label htmlFor="onelinePR">ひとことPR *</label>
+              <input
+                id="onelinePR"
+                className="input"
+                value={onelinePR}
+                onChange={(event) => setOnelinePR(event.target.value)}
+                placeholder="マップ上の吹き出しに表示される短いキャッチコピー"
+                maxLength={20}
+                required
+              />
+              <p className="hint">最大20文字。地図の吹き出しに表示されます。</p>
             </div>
             <div className="form-group">
               <label htmlFor="category">カテゴリ</label>
@@ -388,7 +602,7 @@ export const SpotForm = ({
             </div>
             <div className="form-row">
               <div className="form-group">
-                <label htmlFor="startTime">開始</label>
+                <label htmlFor="startTime">開始時刻 *</label>
                 <input
                   id="startTime"
                   type="datetime-local"
@@ -400,7 +614,7 @@ export const SpotForm = ({
                 />
               </div>
               <div className="form-group">
-                <label htmlFor="endTime">終了</label>
+                <label htmlFor="endTime">終了時刻 *</label>
                 <input
                   id="endTime"
                   type="datetime-local"
@@ -413,7 +627,7 @@ export const SpotForm = ({
               </div>
             </div>
             <div className="form-group">
-              <label htmlFor="imageFile">写真をアップロード (任意)</label>
+              <label htmlFor="imageFile">イベント写真 (任意)</label>
               <input
                 id="imageFile"
                 type="file"
@@ -422,9 +636,16 @@ export const SpotForm = ({
               />
               {imagePreview && <img src={imagePreview} alt="選択中の画像プレビュー" className="image-preview" />}
             </div>
+          </div>
+        );
+      case 3:
+        // Step 3: 投稿者情報（オートフィル対応）
+        return (
+          <div className="spot-step spot-step-form">
+            <p className="hint">投稿者情報は次回以降、自動で入力されます。変更がなければそのまま進んでください。</p>
             <div className="form-row">
               <div className="form-group">
-                <label>連絡方法</label>
+                <label>連絡方法 *</label>
                 <div className="contact-radio-group">
                   <label>
                     <input type="radio" value="phone" checked={contactType === "phone"} onChange={() => setContactType("phone")} /> 電話番号
@@ -434,16 +655,17 @@ export const SpotForm = ({
                   </label>
                 </div>
                 <input
-                  type="text"
-                  className="input"
+                  type={contactType === "phone" ? "tel" : "email"}
+                  className={`input ${contactError ? 'input-error' : ''}`}
                   value={contactValue}
-                  onChange={(event) => setContactValue(event.target.value)}
+                  onChange={(event) => handleContactChange(event.target.value)}
                   placeholder={contactType === "phone" ? "090-1234-5678" : "contact@example.com"}
                   required
                 />
+                {contactError && <p className="error-message">{contactError}</p>}
               </div>
               <div className="form-group">
-                <label htmlFor="locationDetails">場所詳細</label>
+                <label htmlFor="locationDetails">場所詳細 *</label>
                 <input
                   id="locationDetails"
                   className="input"
@@ -507,6 +729,104 @@ export const SpotForm = ({
                 placeholder="#shibuya #live #popup"
               />
             </div>
+          </div>
+        );
+      case 4:
+        // Step 4: レビュー画面
+        return (
+          <div className="spot-step spot-step-review">
+            <div className="review-mode-toggle">
+              <button
+                type="button"
+                className={`review-mode-button ${reviewMode === 'balloon' ? 'active' : ''}`}
+                onClick={() => setReviewMode('balloon')}
+              >
+                吹き出しビュー
+              </button>
+              <button
+                type="button"
+                className={`review-mode-button ${reviewMode === 'list' ? 'active' : ''}`}
+                onClick={() => setReviewMode('list')}
+              >
+                リストビュー
+              </button>
+            </div>
+
+            {reviewMode === 'balloon' ? (
+              <div className="review-preview review-preview-balloon">
+                <div className="spot-callout-preview">
+                  <div className="spot-callout-title">{title || 'タイトルなし'}</div>
+                  {onelinePR && <div className="spot-callout-pr">{onelinePR}</div>}
+                  <div className="spot-callout-category">{category.toUpperCase()}</div>
+                  {imagePreview && <img src={imagePreview} alt="イベント画像" className="spot-callout-image" />}
+                </div>
+              </div>
+            ) : (
+              <div className="review-preview review-preview-list">
+                <div className="spot-card-preview">
+                  {imagePreview && <img src={imagePreview} alt="イベント画像" className="spot-card-image" />}
+                  <div className="spot-card-content">
+                    <h3 className="spot-card-title">{title || 'タイトルなし'}</h3>
+                    <p className="spot-card-description">{description || '説明なし'}</p>
+                    <div className="spot-card-meta">
+                      <span className="spot-card-category">{category.toUpperCase()}</span>
+                      <span className="spot-card-time">{startTime ? new Date(startTime).toLocaleString('ja-JP') : ''}</span>
+                    </div>
+                    <div className="spot-card-location">{locationDetails || '場所詳細なし'}</div>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            <div className="review-summary">
+              <h3>投稿内容の確認</h3>
+              <dl className="review-summary-list">
+                <dt>タイトル</dt>
+                <dd>{title || '未入力'}</dd>
+                <dt>説明</dt>
+                <dd>{description || '未入力'}</dd>
+                {onelinePR && (
+                  <>
+                    <dt>ひとことPR</dt>
+                    <dd>{onelinePR}</dd>
+                  </>
+                )}
+                <dt>カテゴリ</dt>
+                <dd>{category.toUpperCase()}</dd>
+                <dt>開始時刻</dt>
+                <dd>{startTime ? new Date(startTime).toLocaleString('ja-JP') : '未入力'}</dd>
+                <dt>終了時刻</dt>
+                <dd>{endTime ? new Date(endTime).toLocaleString('ja-JP') : '未入力'}</dd>
+                <dt>連絡先</dt>
+                <dd>{contactValue || '未入力'} ({contactType === 'phone' ? '電話' : 'メール'})</dd>
+                <dt>場所詳細</dt>
+                <dd>{locationDetails || '未入力'}</dd>
+                {homepageUrl && (
+                  <>
+                    <dt>公式サイト</dt>
+                    <dd>{homepageUrl}</dd>
+                  </>
+                )}
+                {(snsLinks.x || snsLinks.instagram || snsLinks.youtube || snsLinks.facebook) && (
+                  <>
+                    <dt>SNSリンク</dt>
+                    <dd>
+                      {snsLinks.x && <span>X </span>}
+                      {snsLinks.instagram && <span>Instagram </span>}
+                      {snsLinks.youtube && <span>YouTube </span>}
+                      {snsLinks.facebook && <span>Facebook</span>}
+                    </dd>
+                  </>
+                )}
+                {hashtags && (
+                  <>
+                    <dt>ハッシュタグ</dt>
+                    <dd>{hashtags}</dd>
+                  </>
+                )}
+              </dl>
+            </div>
+
             {statusMessage ? <p className="spot-status success">{statusMessage}</p> : null}
             {formErrors.length > 0 ? (
               <ul className="spot-status-list">
@@ -519,6 +839,8 @@ export const SpotForm = ({
             {!authToken && <p className="hint">ログインするとスポットを投稿できます。</p>}
           </div>
         );
+      default:
+        return null;
     }
   };
 
@@ -676,6 +998,7 @@ export const SpotForm = ({
       const payload = {
         title,
         description,
+        speechBubble: onelinePR.trim(),
         category,
         lat,
         lng,
@@ -704,6 +1027,7 @@ export const SpotForm = ({
 
       const spot = (await response.json()) as Spot;
       setStatusMessage("投稿が完了しました。リストと地図を確認してください。");
+      clearDraft(); // 下書きをクリア
       onCreated(spot);
       resetForm();
       onLocationReset();
@@ -715,7 +1039,7 @@ export const SpotForm = ({
     }
   };
 
-  const stepTitles: string[] = ["位置を選択", "プランを選択", "詳細を記入"];
+  const stepTitles: string[] = ["位置を選択", "プランを選択", "イベント詳細", "投稿者情報", "確認"];
 
   return (
     <form className="spot-wizard" onSubmit={handleSubmit}>

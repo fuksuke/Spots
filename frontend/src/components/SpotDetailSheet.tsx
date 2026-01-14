@@ -838,6 +838,18 @@ export const SpotDetailSheet = ({
                       </div>
                     </>
                   ) : null}
+                  {spot?.hashtags && spot.hashtags.trim() ? (
+                    <>
+                      <div className="modern-section-title">ハッシュタグ</div>
+                      <div className="hashtags-container">
+                        {spot.hashtags.split(/\s+/).filter(Boolean).map((tag, index) => (
+                          <span key={`${tag}-${index}`} className="hashtag-badge">
+                            {tag.startsWith('#') ? tag : `#${tag}`}
+                          </span>
+                        ))}
+                      </div>
+                    </>
+                  ) : null}
                   <div className="modern-bottom-actions">
                     <button type="button" onClick={() => onShare?.(spot)}>共有</button>
                     <button type="button" onClick={() => setIsReportModalOpen(true)}>通報</button>

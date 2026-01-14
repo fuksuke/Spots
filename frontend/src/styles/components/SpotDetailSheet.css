@@ -2300,3 +2300,29 @@
   border: none;
   cursor: pointer;
 }
+
+/* ============================================
+   Hashtags Section
+   ============================================ */
+
+.hashtags-container {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  padding: 0.5rem 0 1rem;
+}
+
+.hashtag-badge {
+  display: inline-block;
+  padding: 0.35rem 0.75rem;
+  background: #f1f5f9;
+  color: #3b82f6;
+  border-radius: 12px;
+  font-size: 0.85rem;
+  font-weight: 500;
+  transition: background-color 0.2s ease;
+}
+
+.hashtag-badge:hover {
+  background: #e2e8f0;
+}

@@ -9,6 +9,9 @@ import "mapbox-gl/dist/mapbox-gl.css";
 
 import { useMapTiles } from "../hooks/useMapTiles";
 import { SpotCalloutManager } from "../lib/map/SpotCalloutManager";
+import { TaskScheduler } from "../lib/map/TaskScheduler";
+import { PremiumLRUCache } from "../lib/map/PremiumLRUCache";
+import { FPSMonitor } from "../lib/map/FPSMonitor";
 import { parseLocalTimestamp } from "../lib/map/time";
 import { trackEvent } from "../lib/analytics";
 import type {
@@ -240,6 +243,7 @@ type InteractionParams = {
   calloutManagerRef: MutableRefObject<SpotCalloutManager | null>;
   renderMode: MapTileLayer | "canvas";
   calloutCandidates: MapTileFeature[];
+  fallbackSpots: MapTileFeature[];
   onSpotClick?: MapViewProps["onSpotClick"];
   onSpotView?: MapViewProps["onSpotView"];
   onSpotClickRef: MutableRefObject<MapViewProps["onSpotClick"]>;
@@ -248,6 +252,7 @@ type InteractionParams = {
   selectionMarkerRef: MutableRefObject<mapboxgl.Marker | null>;
   selectedLocation: Coordinates | null;
   focusCoordinates: Coordinates | null;
+  premiumCacheRef: MutableRefObject<PremiumLRUCache<string, MapTileFeature> | null>;
 };
 
 const useMapEventHandlers = ({
@@ -255,6 +260,7 @@ const useMapEventHandlers = ({
   calloutManagerRef,
   renderMode,
   calloutCandidates,
+  fallbackSpots,
   onSpotClick,
   onSpotView,
   onSpotClickRef,
@@ -262,7 +268,8 @@ const useMapEventHandlers = ({
   onSelectLocation,
   selectionMarkerRef,
   selectedLocation,
-  focusCoordinates
+  focusCoordinates,
+  premiumCacheRef
 }: InteractionParams) => {
   useEffect(() => {
     const map = mapRef.current;
@@ -283,7 +290,23 @@ const useMapEventHandlers = ({
     if (renderMode === "balloon" && calloutCandidates.length > 0) {
       const premium = calloutCandidates.filter((feature) => feature.premium);
       const regular = calloutCandidates.filter((feature) => !feature.premium);
-      const limitedPremium = premium.slice(0, MAX_CALLOUT_PREMIUM);
+
+      // Use PremiumLRUCache to manage premium spots (max 50)
+      const premiumCache = premiumCacheRef.current;
+      let limitedPremium = premium;
+      if (premiumCache) {
+        // Add premium spots to cache (LRU eviction happens automatically)
+        premium.forEach((feature) => {
+          premiumCache.set(feature.id, feature);
+        });
+
+        // Get cached premium spots (limited to cache size)
+        const cachedPremium = premiumCache.values();
+        limitedPremium = cachedPremium.slice(0, MAX_CALLOUT_PREMIUM);
+      } else {
+        limitedPremium = premium.slice(0, MAX_CALLOUT_PREMIUM);
+      }
+
       const remainingSlots = Math.max(0, MAX_CALLOUT_VISIBLE - limitedPremium.length);
       const limitedRegular = remainingSlots > 0 ? regular.slice(0, remainingSlots) : [];
       manager.sync([...limitedPremium, ...limitedRegular]);
@@ -321,7 +344,7 @@ const useMapEventHandlers = ({
         manager.clear();
       }
     };
-  }, [calloutCandidates, calloutManagerRef, mapRef, onSpotClickRef, onSpotViewRef, renderMode]);
+  }, [calloutCandidates, calloutManagerRef, mapRef, onSpotClickRef, onSpotViewRef, renderMode, premiumCacheRef]);
 
   useEffect(() => {
     const map = mapRef.current;
@@ -343,11 +366,44 @@ const useMapEventHandlers = ({
     };
 
     const handleCanvasClick = (event: mapboxgl.MapMouseEvent) => {
-      if (!onSelectLocation) return;
+      // First check for canvas-rendered spots if in canvas mode
+      if (renderMode === 'canvas' && fallbackSpots.length > 0) {
+        const clickPoint = event.point;
+        const CLICK_TOLERANCE = 10; // pixels
+        let nearestSpot: MapTileFeature | null = null;
+        let nearestDistance = CLICK_TOLERANCE;
+
+        // Find nearest spot within tolerance
+        fallbackSpots.forEach((feature) => {
+          const spotPoint = map.project([feature.geometry.lng, feature.geometry.lat]);
+          const dx = spotPoint.x - clickPoint.x;
+          const dy = spotPoint.y - clickPoint.y;
+          const distance = Math.sqrt(dx * dx + dy * dy);
+
+          if (distance < nearestDistance) {
+            nearestDistance = distance;
+            nearestSpot = feature;
+          }
+        });
+
+        // If we found a spot, trigger handlers
+        if (nearestSpot?.id) {
+          event.preventDefault();
+          onSpotView?.(nearestSpot.id);
+          onSpotClick?.(nearestSpot.id);
+          return;
+        }
+      }
+
+      // Check for non-canvas interactive features
       const features = map.queryRenderedFeatures(event.point, { layers: INTERACTIVE_LAYERS });
       if (features.length > 0) return;
-      const { lat, lng } = event.lngLat;
-      onSelectLocation({ lat, lng });
+
+      // If no spot found and onSelectLocation exists, handle location selection
+      if (onSelectLocation) {
+        const { lat, lng } = event.lngLat;
+        onSelectLocation({ lat, lng });
+      }
     };
 
     if (onSpotClick) {
@@ -365,7 +421,7 @@ const useMapEventHandlers = ({
       map.off("click", LAYER_CLUSTER, handleClusterClick);
       map.off("click", handleCanvasClick);
     };
-  }, [mapRef, onSpotClick, onSelectLocation, onSpotView]);
+  }, [mapRef, onSpotClick, onSelectLocation, onSpotView, renderMode, fallbackSpots]);
 
   useEffect(() => {
     const map = mapRef.current;
@@ -961,6 +1017,9 @@ export const MapView = ({
   const onSpotClickRef = useRef<MapViewProps['onSpotClick']>(onSpotClick);
   const onSpotViewRef = useRef<MapViewProps['onSpotView']>(onSpotView);
   const mountTimeRef = useRef<number | null>(null);
+  const taskSchedulerRef = useRef<TaskScheduler | null>(null);
+  const premiumCacheRef = useRef<PremiumLRUCache<string, MapTileFeature> | null>(null);
+  const fpsMonitorRef = useRef<FPSMonitor | null>(null);
 
   const { longitude: initialLongitude, latitude: initialLatitude, zoom: initialZoom } = initialView;
 
@@ -1023,6 +1082,53 @@ export const MapView = ({
       }
     };
   }, []);
+
+  // Initialize performance utilities
+  useEffect(() => {
+    // Initialize TaskScheduler for batching DOM updates
+    if (!taskSchedulerRef.current) {
+      taskSchedulerRef.current = new TaskScheduler();
+    }
+
+    // Initialize Premium LRU Cache (max 50 premium spots)
+    if (!premiumCacheRef.current) {
+      premiumCacheRef.current = new PremiumLRUCache<string, MapTileFeature>(50);
+    }
+
+    // Initialize FPS Monitor with degradation threshold
+    if (!fpsMonitorRef.current) {
+      const FPS_THRESHOLD = 30;
+      fpsMonitorRef.current = new FPSMonitor(
+        FPS_THRESHOLD,
+        (fps) => {
+          // Trigger degradation when FPS drops below threshold
+          console.warn(`[MapView] Low FPS detected: ${fps}. Triggering performance degradation.`);
+          if (!isLayerOverridden) {
+            setRenderMode('canvas');
+          }
+        },
+        60, // sampleSize: average over 60 frames (1 second at 60fps)
+        60  // checkInterval: check every 60 frames
+      );
+      fpsMonitorRef.current.start();
+    }
+
+    return () => {
+      // Cleanup on unmount
+      if (taskSchedulerRef.current) {
+        taskSchedulerRef.current.cancel();
+        taskSchedulerRef.current = null;
+      }
+      if (premiumCacheRef.current) {
+        premiumCacheRef.current.clear();
+        premiumCacheRef.current = null;
+      }
+      if (fpsMonitorRef.current) {
+        fpsMonitorRef.current.stop();
+        fpsMonitorRef.current = null;
+      }
+    };
+  }, [isLayerOverridden]);
 
   const handleLayerDensity = useCallback(
     (layer: MapTileLayer, nonClusterCount: number, zoom: number): MapTileLayer | 'canvas' => {
@@ -1228,6 +1334,7 @@ export const MapView = ({
     calloutManagerRef,
     renderMode,
     calloutCandidates,
+    fallbackSpots,
     onSpotClick,
     onSpotView,
     onSpotClickRef,
@@ -1235,7 +1342,8 @@ export const MapView = ({
     onSelectLocation,
     selectionMarkerRef,
     selectedLocation,
-    focusCoordinates
+    focusCoordinates,
+    premiumCacheRef
   });
   useCanvasContextSetup({ mapRef, canvasRef, contextRef: canvasContextRef });
 

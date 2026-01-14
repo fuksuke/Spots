@@ -339,6 +339,18 @@ export const SpotListView = ({ spots, isLoading, error, onSpotSelect, onSpotView
                                 </div>
                               </>
                             )}
+                            {spot?.hashtags && spot.hashtags.trim() && (
+                              <>
+                                <div className="modern-section-title">ハッシュタグ</div>
+                                <div className="hashtags-container">
+                                  {spot.hashtags.split(/\s+/).filter(Boolean).map((tag, index) => (
+                                    <span key={`${tag}-${index}`} className="hashtag-badge">
+                                      {tag.startsWith('#') ? tag : `#${tag}`}
+                                    </span>
+                                  ))}
+                                </div>
+                              </>
+                            )}
                             <div className="modern-bottom-actions">
                               <button type="button" onClick={(e) => e.stopPropagation()}>
                                 共有

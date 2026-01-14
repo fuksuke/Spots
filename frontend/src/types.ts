@@ -66,6 +66,7 @@ export type Spot = {
     priority: number;
   } | null;
   externalLinks?: SpotExternalLink[] | null;
+  hashtags?: string | null;
 };
 
 export type Coordinates = {

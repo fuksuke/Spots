@@ -2447,6 +2447,14 @@ select.input:focus {
     bottom: 0;
   }
 
+  /* Fix action bar position on trending page */
+  .layout-column:has(main.trending) .action-bar {
+    position: fixed;
+    left: 0;
+    right: 0;
+    bottom: 0;
+  }
+
   .scroll-footer {
     display: flex;
     justify-content: center;

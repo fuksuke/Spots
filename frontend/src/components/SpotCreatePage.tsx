@@ -33,6 +33,7 @@ export const SpotCreatePage = ({
   const [isCancelConfirmOpen, setCancelConfirmOpen] = useState(false);
   const [isVerificationOpen, setVerificationOpen] = useState(false);
   const [localPhoneVerified, setLocalPhoneVerified] = useState<boolean>(Boolean(profile?.phoneVerified));
+  const [draftSaveFn, setDraftSaveFn] = useState<(() => void) | null>(null);
 
   useEffect(() => {
     setLocalPhoneVerified(Boolean(profile?.phoneVerified));
@@ -53,7 +54,17 @@ export const SpotCreatePage = ({
           </button>
           <h1>スポット投稿</h1>
         </div>
-        <div className="spot-create-header-actions">{headerActions}</div>
+        <div className="spot-create-header-actions">
+          <button
+            type="button"
+            className="button secondary"
+            onClick={() => draftSaveFn?.()}
+            disabled={!draftSaveFn}
+            title="下書きを保存"
+          >
+            下書き保存
+          </button>
+        </div>
       </header>
       <main className="spot-create-main">
         <div className="spot-create-content">
@@ -67,6 +78,7 @@ export const SpotCreatePage = ({
             canPostRecurring={canPostRecurring}
             phoneVerified={localPhoneVerified}
             onRequirePhoneVerification={() => setVerificationOpen(true)}
+            onSaveDraft={(saveFn) => setDraftSaveFn(() => saveFn)}
           />
         </div>
       </main>

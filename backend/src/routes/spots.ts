@@ -9,6 +9,7 @@ import {
   likeSpotHandler,
   unlikeSpotHandler,
   popularSpotsHandler,
+  trendingNewSpotsHandler,
   recordSpotViewHandler,
   reportSpotHandler
 } from "../controllers/spotsController.js";
@@ -19,6 +20,7 @@ const router = Router();
 router.get("/", listSpotsHandler);
 router.post("/", requireAuth, createSpotHandler);
 router.get("/popular", popularSpotsHandler);
+router.get("/trending-new", trendingNewSpotsHandler);
 router.get("/:id", getSpotDetailHandler);
 router.get("/:id/comments", listCommentsHandler);
 router.post("/:id/comments", requireAuth, createCommentHandler);

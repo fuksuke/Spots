@@ -30,6 +30,7 @@ export type MapTileFeature = {
   status?: "upcoming" | "live" | "ended";
   spot?: {
     title: string;
+    speechBubble?: string;
     category: SpotCategory;
     startTime: string;
     endTime: string;
@@ -65,6 +66,7 @@ type TileCacheKey = `${number}/${number}/${number}`;
 type SpotDocumentLite = {
   id: string;
   title: string;
+  speechBubble?: string;
   category: SpotCategory;
   lat: number;
   lng: number;
@@ -142,6 +144,7 @@ const toSpotLite = (doc: FirebaseFirestore.DocumentSnapshot<FirebaseFirestore.Do
   return {
     id: doc.id,
     title: String(data.title ?? ""),
+    speechBubble: data.speech_bubble ? String(data.speech_bubble) : undefined,
     category: data.category as SpotCategory,
     lat: typeof data.lat === "number" ? data.lat : Number(data.lat),
     lng: typeof data.lng === "number" ? data.lng : Number(data.lng),
@@ -298,6 +301,7 @@ export const getMapTile = async (
       status: computeSpotStatus(spot.startTime, spot.endTime),
       spot: {
         title: spot.title,
+        speechBubble: spot.speechBubble,
         category: spot.category,
         startTime: spot.startTime,
         endTime: spot.endTime,

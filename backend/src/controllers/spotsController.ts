@@ -13,6 +13,7 @@ import {
   likeSpot,
   unlikeSpot,
   fetchPopularSpotsFromLeaderboard,
+  fetchTrendingNewSpots,
   recordSpotView
 } from "../services/firestoreService.js";
 import { createSpotReport } from "../services/spotReportService.js";
@@ -116,6 +117,31 @@ export const popularSpotsHandler = async (req: Request, res: Response, next: Nex
   }
 };
 
+const trendingNewSpotsQuerySchema = z.object({
+  limit: z.coerce.number().int().min(1).max(20).optional()
+});
+
+export const trendingNewSpotsHandler = async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const { limit } = trendingNewSpotsQuerySchema.parse(req.query);
+    let viewerId: string | undefined;
+    try {
+      const extractedViewerId = await extractUidFromAuthorization(req.headers.authorization);
+      viewerId = extractedViewerId ?? undefined;
+    } catch (error) {
+      if (error instanceof InvalidAuthTokenError) {
+        return res.status(401).json({ message: error.message });
+      }
+      throw error;
+    }
+
+    const spots = await fetchTrendingNewSpots(limit ?? 10, viewerId);
+    res.json(spots);
+  } catch (error) {
+    next(error);
+  }
+};
+
 export const recordSpotViewHandler = async (req: Request, res: Response, next: NextFunction) => {
   try {
     const body = recordSpotViewBodySchema.parse(req.body);
@@ -168,15 +194,43 @@ export const reportSpotHandler = async (req: Request, res: Response, next: NextF
   }
 };
 
+const phoneNumberSchema = z.string()
+  .optional()
+  .refine(
+    (val) => {
+      if (!val) return true;
+      const normalized = val.replace(/[^0-9]/g, '');
+      // 携帯: 070/080/090 + 8桁 = 11桁
+      if (/^(070|080|090)\d{8}$/.test(normalized)) return true;
+      // 固定: 0 + 9桁 = 10桁
+      if (/^0[1-9]\d{8}$/.test(normalized)) return true;
+      // フリーダイヤル: 0120 + 6桁 = 10桁
+      if (/^0120\d{6}$/.test(normalized)) return true;
+      return false;
+    },
+    { message: "電話番号の形式が正しくありません（10桁または11桁で入力してください）" }
+  );
+
 const createSpotSchema = z.object({
   title: z.string().min(1),
   description: z.string().min(1),
+  speechBubble: z.string().min(1).max(20),
   category: z.enum(SPOT_CATEGORY_VALUES),
   lat: z.coerce.number(),
   lng: z.coerce.number(),
   startTime: z.string().datetime(),
   endTime: z.string().datetime(),
-  imageUrl: z.string().url().optional()
+  imageUrl: z.string().url().optional(),
+  contact: z.object({
+    phone: phoneNumberSchema,
+    email: z.string().email("有効なメールアドレスを入力してください").optional()
+  }).optional(),
+  locationDetails: z.string().optional(),
+  externalLinks: z.array(z.object({
+    label: z.string(),
+    url: z.string().url()
+  })).optional(),
+  hashtags: z.string().optional()
 });
 
 export const createSpotHandler = async (req: Request, res: Response, next: NextFunction) => {

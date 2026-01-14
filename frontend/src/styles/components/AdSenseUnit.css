@@ -1,0 +1,156 @@
+/**
+ * AdSense Unit Styles
+ *
+ * Provides styling for Google AdSense ad units with:
+ * - Skeleton loading animation
+ * - "スポンサー" (Sponsor) label
+ * - Responsive design (mobile-first)
+ * - No layout shift (fixed min-height)
+ * - Smooth transitions
+ */
+
+/* ===================================================================
+   AdSense Wrapper
+   =================================================================== */
+
+.adsense-wrapper {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  margin: 1rem 0;
+}
+
+/* ===================================================================
+   Sponsor Label
+   =================================================================== */
+
+.adsense-label {
+  font-size: 0.7rem;
+  color: #94a3b8; /* Slate-400 */
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  padding-left: 0.25rem;
+  font-weight: 500;
+}
+
+/* ===================================================================
+   Ad Container
+   =================================================================== */
+
+.adsense-container {
+  position: relative;
+  min-height: 90px;
+  background: #f8fafc; /* Slate-50 */
+  border-radius: 8px;
+  overflow: hidden;
+  transition: opacity 0.3s ease;
+}
+
+.adsense-container.loading {
+  opacity: 0.6;
+}
+
+.adsense-container.loaded {
+  opacity: 1;
+  background: transparent;
+}
+
+/* ===================================================================
+   Skeleton Placeholder (Shimmer Animation)
+   =================================================================== */
+
+.adsense-skeleton {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    90deg,
+    #e2e8f0 0%,    /* Slate-200 */
+    #f1f5f9 50%,   /* Slate-100 */
+    #e2e8f0 100%
+  );
+  background-size: 200% 100%;
+  animation: skeleton-shimmer 1.5s ease-in-out infinite;
+  border-radius: 8px;
+}
+
+@keyframes skeleton-shimmer {
+  0% {
+    background-position: 200% 0;
+  }
+  100% {
+    background-position: -200% 0;
+  }
+}
+
+/* ===================================================================
+   Responsive Adjustments (Mobile)
+   =================================================================== */
+
+@media (max-width: 640px) {
+  .adsense-wrapper {
+    margin: 0.75rem 0;
+  }
+
+  .adsense-container {
+    min-height: 80px;
+  }
+}
+
+/* ===================================================================
+   Trending Page Specific
+   =================================================================== */
+
+.trending-content .adsense-wrapper {
+  margin: 1.5rem 0;
+}
+
+/* ===================================================================
+   Map Bottom Placement
+   Positioned above action bar (mobile only)
+   =================================================================== */
+
+.map-ad-placement {
+  position: fixed;
+  bottom: calc(var(--mobile-action-bar-base, 48px) + var(--safe-area-bottom, 0px) + 8px);
+  left: var(--safe-area-left, 0px);
+  right: var(--safe-area-right, 0px);
+  z-index: 11; /* Below action bar (z-index: 12) */
+  padding: 0 var(--mobile-padding-inline, 1rem);
+  pointer-events: none;
+}
+
+.map-ad-placement .adsense-wrapper {
+  pointer-events: auto;
+  margin: 0;
+  box-shadow: 0 -2px 12px rgba(0, 0, 0, 0.08);
+  border-radius: 12px;
+  background: #ffffff;
+  padding: 0.5rem;
+}
+
+/* Hide map ad on desktop (1024px+) */
+@media (min-width: 1024px) {
+  .map-ad-placement {
+    display: none;
+  }
+}
+
+/* ===================================================================
+   Accessibility
+   =================================================================== */
+
+.adsense-wrapper:focus-within {
+  outline: 2px solid #3b82f6; /* Blue-500 */
+  outline-offset: 2px;
+}
+
+/* ===================================================================
+   Print Media (Hide ads when printing)
+   =================================================================== */
+
+@media print {
+  .adsense-wrapper {
+    display: none;
+  }
+}

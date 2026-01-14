@@ -429,7 +429,7 @@ export const fetchActivePromotions = async () => {
       };
     })
     .filter((promotion): promotion is Exclude<typeof promotion, null> => promotion !== null)
-    .slice(0, 20);
+    .slice(0, 3);
 };
 
 type PublishResult = {
