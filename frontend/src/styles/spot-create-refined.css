@@ -1,0 +1,1141 @@
+/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+   Spot Create Page - Refined Design
+   Instagram/YouTube inspired, human-centered UI
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
+
+:root {
+  /* Primary Colors - Vibrant but professional */
+  --spot-primary: #0084ff;
+  --spot-primary-hover: #0073e6;
+  --spot-primary-light: #e8f4ff;
+
+  /* Success & Actions */
+  --spot-success: #00c853;
+  --spot-success-light: #e8f5e9;
+
+  /* Warning & Error */
+  --spot-error: #ff3b30;
+  --spot-error-light: #ffebee;
+
+  /* Neutrals - Modern gray scale */
+  --spot-bg: #fafafa;
+  --spot-surface: #ffffff;
+  --spot-border: #e0e0e0;
+  --spot-text: #1a1a1a;
+  --spot-text-secondary: #666666;
+  --spot-text-tertiary: #999999;
+
+  /* Shadows - Soft and layered */
+  --spot-shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.08);
+  --spot-shadow-md: 0 4px 12px rgba(0, 0, 0, 0.1);
+  --spot-shadow-lg: 0 8px 24px rgba(0, 0, 0, 0.12);
+
+  /* Radius - Consistent rounded corners */
+  --spot-radius-sm: 8px;
+  --spot-radius-md: 12px;
+  --spot-radius-lg: 16px;
+  --spot-radius-full: 999px;
+
+  /* Spacing - 4px grid */
+  --spot-space-xs: 4px;
+  --spot-space-sm: 8px;
+  --spot-space-md: 16px;
+  --spot-space-lg: 24px;
+  --spot-space-xl: 32px;
+  --spot-space-2xl: 48px;
+
+  /* Transitions */
+  --spot-transition: 200ms cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+   Page Layout
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
+
+.spot-create-page {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  background: var(--spot-bg);
+}
+
+/* Header - Fixed with blur effect */
+.spot-create-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--spot-space-md);
+  padding: var(--spot-space-md) var(--spot-space-lg);
+  padding-top: calc(var(--spot-space-md) + var(--safe-area-top));
+  padding-left: calc(var(--spot-space-lg) + var(--safe-area-left));
+  padding-right: calc(var(--spot-space-lg) + var(--safe-area-right));
+  background: rgba(255, 255, 255, 0.85);
+  backdrop-filter: saturate(180%) blur(20px);
+  border-bottom: 1px solid var(--spot-border);
+  position: sticky;
+  top: 0;
+  z-index: 100;
+}
+
+.spot-create-header-left {
+  display: flex;
+  align-items: center;
+  gap: var(--spot-space-md);
+}
+
+.spot-create-header-left h1 {
+  margin: 0;
+  font-size: 1.125rem;
+  font-weight: 600;
+  color: var(--spot-text);
+  letter-spacing: -0.01em;
+}
+
+.spot-create-header-actions {
+  display: flex;
+  align-items: center;
+  gap: var(--spot-space-sm);
+}
+
+/* Main Content Area */
+.spot-create-main {
+  flex: 1;
+  padding: var(--spot-space-lg);
+  padding-bottom: calc(var(--spot-space-xl) + var(--safe-area-bottom));
+  display: flex;
+  justify-content: center;
+}
+
+.spot-create-content {
+  width: 100%;
+  max-width: 100%;
+}
+
+/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+   Wizard Container
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
+
+.spot-wizard {
+  background: var(--spot-surface);
+  border-radius: var(--spot-radius-lg);
+  padding: var(--spot-space-xl);
+  box-shadow: var(--spot-shadow-md);
+  border: 1px solid var(--spot-border);
+  display: flex;
+  flex-direction: column;
+  gap: var(--spot-space-lg);
+  max-width: 680px;
+  margin: 0 auto;
+}
+
+.spot-step-fillable .spot-wizard {
+  max-width: 100%;
+}
+
+/* Header Section */
+.spot-wizard-header {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spot-space-sm);
+}
+
+.spot-wizard-header h2 {
+  margin: 0;
+  font-size: 1.75rem;
+  font-weight: 700;
+  color: var(--spot-text);
+  letter-spacing: -0.02em;
+}
+
+.spot-wizard-subtitle {
+  margin: 0;
+  font-size: 0.938rem;
+  color: var(--spot-text-secondary);
+  line-height: 1.5;
+}
+
+/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+   Progress Stepper - Modern dots with labels
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
+
+.spot-stepper {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--spot-space-sm);
+  padding: var(--spot-space-md) 0;
+}
+
+.spot-stepper-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: var(--spot-border);
+  transition: all var(--spot-transition);
+  position: relative;
+}
+
+.spot-stepper-dot.active {
+  background: var(--spot-primary);
+  width: 32px;
+  border-radius: var(--spot-radius-full);
+  box-shadow: 0 0 0 4px var(--spot-primary-light);
+}
+
+/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+   Step Container
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
+
+.spot-step-container {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spot-space-lg);
+  min-height: 400px;
+}
+
+.spot-step {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spot-space-lg);
+  animation: fadeInUp 300ms ease-out;
+}
+
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+   Step 1: Map Selection - Clean and minimal
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
+
+.spot-step-map {
+  gap: var(--spot-space-md);
+}
+
+.spot-map-summary-lead {
+  background: var(--spot-primary-light);
+  border-left: 4px solid var(--spot-primary);
+  padding: var(--spot-space-md);
+  border-radius: var(--spot-radius-sm);
+}
+
+.spot-map-summary-lead .hint {
+  margin: 0;
+  color: var(--spot-text);
+  font-size: 0.938rem;
+}
+
+.spot-map-wrapper {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spot-space-md);
+}
+
+.spot-map-shell {
+  border-radius: var(--spot-radius-md);
+  overflow: hidden;
+  box-shadow: var(--spot-shadow-md);
+  border: 2px solid var(--spot-border);
+  height: 400px;
+}
+
+/* Map Search */
+.spot-map-actions {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spot-space-md);
+}
+
+.spot-map-search {
+  position: relative;
+}
+
+.spot-map-search input[type="search"] {
+  width: 100%;
+  padding: var(--spot-space-md);
+  padding-left: var(--spot-space-xl);
+  border: 2px solid var(--spot-border);
+  border-radius: var(--spot-radius-full);
+  font-size: 1rem;
+  background: var(--spot-surface);
+  transition: all var(--spot-transition);
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='20' height='20' viewBox='0 0 24 24' fill='none' stroke='%23999' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Ccircle cx='11' cy='11' r='8'%3E%3C/circle%3E%3Cpath d='m21 21-4.35-4.35'%3E%3C/path%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: 12px center;
+}
+
+.spot-map-search input[type="search"]:focus {
+  outline: none;
+  border-color: var(--spot-primary);
+  box-shadow: 0 0 0 4px var(--spot-primary-light);
+}
+
+.spot-map-search-status {
+  position: absolute;
+  right: var(--spot-space-md);
+  top: 50%;
+  transform: translateY(-50%);
+  font-size: 0.875rem;
+  color: var(--spot-text-tertiary);
+}
+
+.spot-map-search-results {
+  position: absolute;
+  top: calc(100% + 8px);
+  left: 0;
+  right: 0;
+  background: var(--spot-surface);
+  border: 1px solid var(--spot-border);
+  border-radius: var(--spot-radius-md);
+  box-shadow: var(--spot-shadow-lg);
+  max-height: 240px;
+  overflow-y: auto;
+  z-index: 10;
+  list-style: none;
+  margin: 0;
+  padding: var(--spot-space-xs);
+}
+
+.spot-map-search-results li button {
+  width: 100%;
+  text-align: left;
+  padding: var(--spot-space-md);
+  border: none;
+  background: transparent;
+  border-radius: var(--spot-radius-sm);
+  font-size: 0.938rem;
+  color: var(--spot-text);
+  cursor: pointer;
+  transition: background var(--spot-transition);
+}
+
+.spot-map-search-results li button:hover {
+  background: var(--spot-bg);
+}
+
+.spot-map-action-buttons {
+  display: flex;
+  gap: var(--spot-space-sm);
+}
+
+.spot-chip {
+  padding: var(--spot-space-sm) var(--spot-space-md);
+  border-radius: var(--spot-radius-full);
+  border: 2px solid var(--spot-border);
+  background: var(--spot-surface);
+  color: var(--spot-text);
+  font-size: 0.875rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all var(--spot-transition);
+}
+
+.spot-chip:hover:not(:disabled) {
+  border-color: var(--spot-primary);
+  background: var(--spot-primary-light);
+  color: var(--spot-primary);
+}
+
+.spot-chip:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.spot-chip.subtle {
+  border-color: transparent;
+  background: var(--spot-bg);
+}
+
+/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+   Step 2: Plan Selection - Card grid
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
+
+.spot-plan-cards {
+  display: grid;
+  gap: var(--spot-space-md);
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+}
+
+.spot-plan-card {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: var(--spot-space-sm);
+  padding: var(--spot-space-lg);
+  border: 2px solid var(--spot-border);
+  border-radius: var(--spot-radius-md);
+  background: var(--spot-surface);
+  cursor: pointer;
+  transition: all var(--spot-transition);
+  text-align: left;
+}
+
+.spot-plan-card:hover:not(.locked) {
+  border-color: var(--spot-primary);
+  box-shadow: var(--spot-shadow-md);
+  transform: translateY(-2px);
+}
+
+.spot-plan-card.selected {
+  border-color: var(--spot-primary);
+  background: var(--spot-primary-light);
+  box-shadow: 0 0 0 4px rgba(0, 132, 255, 0.1);
+}
+
+.spot-plan-card.locked {
+  opacity: 0.6;
+  cursor: not-allowed;
+  background: var(--spot-bg);
+}
+
+.spot-plan-lock {
+  position: absolute;
+  top: var(--spot-space-md);
+  right: var(--spot-space-md);
+  font-size: 1.5rem;
+}
+
+.spot-plan-badge {
+  position: absolute;
+  top: var(--spot-space-sm);
+  right: var(--spot-space-sm);
+  padding: 2px 8px;
+  border-radius: var(--spot-radius-sm);
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  font-size: 0.688rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.spot-plan-title {
+  font-size: 1.125rem;
+  font-weight: 700;
+  color: var(--spot-text);
+  display: block;
+  margin-bottom: var(--spot-space-xs);
+}
+
+.spot-plan-desc {
+  font-size: 0.875rem;
+  color: var(--spot-text-secondary);
+  line-height: 1.5;
+  display: block;
+}
+
+.spot-plan-note {
+  font-size: 0.813rem;
+  color: var(--spot-text-tertiary);
+  font-style: italic;
+  display: block;
+  margin-top: var(--spot-space-xs);
+}
+
+.spot-step-hint {
+  margin: 0;
+  padding: var(--spot-space-md);
+  background: var(--spot-bg);
+  border-radius: var(--spot-radius-sm);
+  color: var(--spot-text-secondary);
+  font-size: 0.875rem;
+  text-align: center;
+}
+
+/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+   Step 3 & 4: Form Inputs - Instagram-inspired
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
+
+.spot-step-form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spot-space-lg);
+}
+
+.spot-plan-summary {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--spot-space-sm);
+  padding: var(--spot-space-sm) var(--spot-space-md);
+  background: var(--spot-primary-light);
+  border-radius: var(--spot-radius-full);
+  width: fit-content;
+}
+
+.spot-plan-summary-label {
+  font-size: 0.813rem;
+  color: var(--spot-text-secondary);
+}
+
+.spot-plan-summary-value {
+  font-size: 0.813rem;
+  font-weight: 600;
+  color: var(--spot-primary);
+}
+
+.form-group {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spot-space-sm);
+}
+
+.form-group label {
+  font-size: 0.938rem;
+  font-weight: 600;
+  color: var(--spot-text);
+  display: flex;
+  align-items: center;
+  gap: var(--spot-space-xs);
+}
+
+.input,
+.textarea,
+select.input {
+  width: 100%;
+  padding: var(--spot-space-md);
+  border: 2px solid var(--spot-border);
+  border-radius: var(--spot-radius-md);
+  font-size: 1rem;
+  color: var(--spot-text);
+  background: var(--spot-surface);
+  transition: all var(--spot-transition);
+  font-family: inherit;
+}
+
+.input:focus,
+.textarea:focus,
+select.input:focus {
+  outline: none;
+  border-color: var(--spot-primary);
+  box-shadow: 0 0 0 4px var(--spot-primary-light);
+}
+
+.input:disabled,
+.textarea:disabled,
+select.input:disabled {
+  background: var(--spot-bg);
+  color: var(--spot-text-tertiary);
+  cursor: not-allowed;
+}
+
+.textarea {
+  resize: vertical;
+  min-height: 100px;
+  line-height: 1.6;
+}
+
+.input-error {
+  border-color: var(--spot-error) !important;
+}
+
+.input-error:focus {
+  box-shadow: 0 0 0 4px var(--spot-error-light) !important;
+}
+
+.error-message {
+  margin: 0;
+  font-size: 0.813rem;
+  color: var(--spot-error);
+  display: flex;
+  align-items: center;
+  gap: var(--spot-space-xs);
+}
+
+.error-message::before {
+  content: "⚠️";
+  font-size: 0.875rem;
+}
+
+.hint {
+  margin: 0;
+  font-size: 0.875rem;
+  color: var(--spot-text-secondary);
+  line-height: 1.5;
+}
+
+/* Form Row - Side by side inputs */
+.form-row {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: var(--spot-space-md);
+}
+
+@media (min-width: 640px) {
+  .form-row {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+/* Contact Type Radio Buttons */
+.contact-radio-group {
+  display: flex;
+  gap: var(--spot-space-md);
+  padding: var(--spot-space-sm) 0;
+}
+
+.contact-radio-group label {
+  display: flex;
+  align-items: center;
+  gap: var(--spot-space-sm);
+  cursor: pointer;
+  font-weight: 500;
+}
+
+.contact-radio-group input[type="radio"] {
+  width: 20px;
+  height: 20px;
+  cursor: pointer;
+  accent-color: var(--spot-primary);
+}
+
+/* SNS Input Grid */
+.sns-input-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: var(--spot-space-sm);
+}
+
+@media (min-width: 640px) {
+  .sns-input-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+/* Image Preview */
+.image-preview {
+  width: 100%;
+  max-height: 300px;
+  object-fit: cover;
+  border-radius: var(--spot-radius-md);
+  border: 2px solid var(--spot-border);
+  margin-top: var(--spot-space-sm);
+}
+
+/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+   Step 5: Review - Preview modes
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
+
+.spot-step-review {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spot-space-xl);
+}
+
+.review-mode-toggle {
+  display: flex;
+  gap: var(--spot-space-sm);
+  padding: 4px;
+  background: var(--spot-bg);
+  border-radius: var(--spot-radius-md);
+  width: fit-content;
+}
+
+.review-mode-button {
+  padding: var(--spot-space-sm) var(--spot-space-md);
+  border: none;
+  background: transparent;
+  border-radius: var(--spot-radius-sm);
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--spot-text-secondary);
+  cursor: pointer;
+  transition: all var(--spot-transition);
+}
+
+.review-mode-button.active {
+  background: var(--spot-surface);
+  color: var(--spot-primary);
+  box-shadow: var(--spot-shadow-sm);
+}
+
+.review-preview {
+  padding: var(--spot-space-lg);
+  background: var(--spot-bg);
+  border-radius: var(--spot-radius-md);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 200px;
+}
+
+/* Balloon Preview */
+.spot-callout-preview {
+  background: var(--spot-surface);
+  border-radius: var(--spot-radius-md);
+  padding: var(--spot-space-md);
+  box-shadow: var(--spot-shadow-md);
+  max-width: 280px;
+  display: flex;
+  flex-direction: column;
+  gap: var(--spot-space-sm);
+}
+
+.spot-callout-title {
+  font-size: 1.125rem;
+  font-weight: 700;
+  color: var(--spot-text);
+}
+
+.spot-callout-pr {
+  font-size: 0.938rem;
+  color: var(--spot-text-secondary);
+  font-style: italic;
+}
+
+.spot-callout-category {
+  display: inline-flex;
+  padding: 4px 10px;
+  background: var(--spot-primary-light);
+  color: var(--spot-primary);
+  border-radius: var(--spot-radius-sm);
+  font-size: 0.75rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  width: fit-content;
+  letter-spacing: 0.5px;
+}
+
+.spot-callout-image {
+  width: 100%;
+  height: 160px;
+  object-fit: cover;
+  border-radius: var(--spot-radius-sm);
+  margin-top: var(--spot-space-sm);
+}
+
+/* Card Preview */
+.spot-card-preview {
+  background: var(--spot-surface);
+  border-radius: var(--spot-radius-md);
+  overflow: hidden;
+  box-shadow: var(--spot-shadow-md);
+  max-width: 400px;
+  width: 100%;
+}
+
+.spot-card-image {
+  width: 100%;
+  height: 200px;
+  object-fit: cover;
+}
+
+.spot-card-content {
+  padding: var(--spot-space-lg);
+  display: flex;
+  flex-direction: column;
+  gap: var(--spot-space-sm);
+}
+
+.spot-card-title {
+  margin: 0;
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: var(--spot-text);
+}
+
+.spot-card-description {
+  margin: 0;
+  font-size: 0.938rem;
+  color: var(--spot-text-secondary);
+  line-height: 1.6;
+}
+
+.spot-card-meta {
+  display: flex;
+  align-items: center;
+  gap: var(--spot-space-md);
+  flex-wrap: wrap;
+}
+
+.spot-card-category {
+  padding: 4px 10px;
+  background: var(--spot-primary-light);
+  color: var(--spot-primary);
+  border-radius: var(--spot-radius-sm);
+  font-size: 0.75rem;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.spot-card-time {
+  font-size: 0.875rem;
+  color: var(--spot-text-tertiary);
+}
+
+.spot-card-location {
+  font-size: 0.875rem;
+  color: var(--spot-text-secondary);
+}
+
+/* Review Summary List */
+.review-summary {
+  background: var(--spot-surface);
+  border: 1px solid var(--spot-border);
+  border-radius: var(--spot-radius-md);
+  padding: var(--spot-space-lg);
+}
+
+.review-summary h3 {
+  margin: 0 0 var(--spot-space-md) 0;
+  font-size: 1.125rem;
+  font-weight: 700;
+  color: var(--spot-text);
+}
+
+.review-summary-list {
+  display: grid;
+  gap: var(--spot-space-md);
+  margin: 0;
+}
+
+.review-summary-list dt {
+  font-size: 0.813rem;
+  font-weight: 600;
+  color: var(--spot-text-tertiary);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.review-summary-list dd {
+  margin: var(--spot-space-xs) 0 0 0;
+  font-size: 0.938rem;
+  color: var(--spot-text);
+  line-height: 1.6;
+}
+
+/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+   Status Messages & Verification
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
+
+.spot-status {
+  padding: var(--spot-space-md);
+  border-radius: var(--spot-radius-md);
+  font-size: 0.938rem;
+  line-height: 1.5;
+  display: flex;
+  align-items: center;
+  gap: var(--spot-space-sm);
+}
+
+.spot-status.success {
+  background: var(--spot-success-light);
+  color: var(--spot-success);
+  border-left: 4px solid var(--spot-success);
+}
+
+.spot-status.error {
+  background: var(--spot-error-light);
+  color: var(--spot-error);
+  border-left: 4px solid var(--spot-error);
+}
+
+.spot-status-list {
+  margin: 0;
+  padding-left: var(--spot-space-lg);
+  list-style: none;
+}
+
+.spot-status-list li {
+  font-size: 0.875rem;
+  color: var(--spot-error);
+  line-height: 1.6;
+  position: relative;
+  padding-left: var(--spot-space-md);
+}
+
+.spot-status-list li::before {
+  content: "•";
+  position: absolute;
+  left: 0;
+  font-weight: 700;
+}
+
+.spot-verification-banner {
+  padding: var(--spot-space-lg);
+  background: var(--spot-success-light);
+  border: 2px solid var(--spot-success);
+  border-radius: var(--spot-radius-md);
+  display: flex;
+  flex-direction: column;
+  gap: var(--spot-space-md);
+  align-items: center;
+  text-align: center;
+}
+
+.spot-verification-banner .status.success {
+  background: transparent;
+  border: none;
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--spot-success);
+  padding: 0;
+}
+
+/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+   Footer Navigation
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
+
+.spot-wizard-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--spot-space-md);
+  padding-top: var(--spot-space-md);
+  border-top: 1px solid var(--spot-border);
+}
+
+/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+   Buttons - Modern and inviting
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
+
+.button {
+  padding: var(--spot-space-md) var(--spot-space-xl);
+  border: none;
+  border-radius: var(--spot-radius-full);
+  font-size: 1rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all var(--spot-transition);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--spot-space-sm);
+  white-space: nowrap;
+}
+
+.button.primary {
+  background: var(--spot-primary);
+  color: white;
+  box-shadow: 0 2px 8px rgba(0, 132, 255, 0.3);
+}
+
+.button.primary:hover:not(:disabled) {
+  background: var(--spot-primary-hover);
+  box-shadow: 0 4px 12px rgba(0, 132, 255, 0.4);
+  transform: translateY(-1px);
+}
+
+.button.primary:active:not(:disabled) {
+  transform: translateY(0);
+}
+
+.button.primary:disabled {
+  background: var(--spot-border);
+  color: var(--spot-text-tertiary);
+  box-shadow: none;
+  cursor: not-allowed;
+}
+
+.button.secondary {
+  background: var(--spot-bg);
+  color: var(--spot-text);
+  border: 2px solid var(--spot-border);
+}
+
+.button.secondary:hover:not(:disabled) {
+  background: var(--spot-surface);
+  border-color: var(--spot-text-secondary);
+}
+
+.button.subtle {
+  background: transparent;
+  color: var(--spot-text-secondary);
+  padding: var(--spot-space-sm) var(--spot-space-md);
+}
+
+.button.subtle:hover:not(:disabled) {
+  color: var(--spot-text);
+  background: var(--spot-bg);
+}
+
+/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+   Cancel Modal - Clean overlay
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
+
+.spot-cancel-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.6);
+  backdrop-filter: blur(4px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--spot-space-lg);
+  z-index: 1000;
+  animation: fadeIn 200ms ease-out;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+.spot-cancel-dialog {
+  background: var(--spot-surface);
+  border-radius: var(--spot-radius-lg);
+  padding: var(--spot-space-xl);
+  box-shadow: var(--spot-shadow-lg);
+  max-width: 400px;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: var(--spot-space-md);
+  animation: scaleIn 200ms ease-out;
+}
+
+@keyframes scaleIn {
+  from {
+    opacity: 0;
+    transform: scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+.spot-cancel-dialog h2 {
+  margin: 0;
+  font-size: 1.375rem;
+  font-weight: 700;
+  color: var(--spot-text);
+}
+
+.spot-cancel-dialog .hint {
+  color: var(--spot-text-secondary);
+}
+
+.spot-cancel-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--spot-space-sm);
+  margin-top: var(--spot-space-md);
+}
+
+/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+   Fillable Card Design - Real Card Structure
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
+
+.spot-step-fillable {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spot-space-lg);
+  max-width: 600px;
+  margin: 0 auto;
+  width: 100%;
+}
+
+.fillable-instructions {
+  background: linear-gradient(135deg, #e0f2fe 0%, #bae6fd 100%);
+  border: 2px solid var(--spot-primary);
+  padding: var(--spot-space-md);
+  border-radius: var(--spot-radius-md);
+  text-align: center;
+}
+
+.fillable-instructions .hint {
+  margin: 0;
+  color: var(--spot-text);
+  font-size: 0.938rem;
+  font-weight: 600;
+}
+
+/* Fillable Card - Real Card Structure */
+.fillable-card-real {
+  background: var(--spot-surface);
+  border: 2px solid var(--spot-border);
+  border-radius: var(--spot-radius-sm);
+  overflow: hidden;
+  box-shadow: var(--spot-shadow-lg);
+  transition: all var(--spot-transition);
+  display: flex;
+  flex-direction: column;
+}
+
+.fillable-card-real:focus-within {
+  border-color: var(--spot-primary);
+  box-shadow: 0 0 0 4px var(--spot-primary-light), var(--spot-shadow-lg);
+}
+
+/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+   Responsive Adjustments
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
+
+@media (max-width: 640px) {
+  .spot-create-main {
+    padding: var(--spot-space-md);
+  }
+
+  .spot-wizard {
+    padding: var(--spot-space-lg);
+  }
+
+  .spot-wizard-header h2 {
+    font-size: 1.5rem;
+  }
+
+  .spot-plan-cards {
+    grid-template-columns: 1fr;
+  }
+
+  .spot-map-shell {
+    height: 300px;
+  }
+
+  .spot-wizard-footer {
+    flex-direction: column-reverse;
+    gap: var(--spot-space-sm);
+  }
+
+  .spot-wizard-footer .button {
+    width: 100%;
+  }
+}
+
+/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+   Micro-interactions & Delight
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
+
+/* Smooth focus rings */
+*:focus-visible {
+  outline: 2px solid var(--spot-primary);
+  outline-offset: 2px;
+}
+
+/* Loading state for buttons */
+.button:disabled {
+  position: relative;
+  pointer-events: none;
+}
+
+/* Smooth scrolling */
+.spot-step-container {
+  scroll-behavior: smooth;
+}
+
+/* Prevent layout shift */
+img {
+  display: block;
+  max-width: 100%;
+  height: auto;
+}
+
+/* Enhance touch targets on mobile */
+@media (hover: none) and (pointer: coarse) {
+  .button,
+  .spot-chip,
+  .spot-plan-card {
+    min-height: 44px;
+  }
+}

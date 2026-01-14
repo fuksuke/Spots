@@ -4,6 +4,8 @@ import { Coordinates, Spot, SpotCategory, SPOT_CATEGORY_VALUES } from "../types"
 import { SpotCreateMap } from "./SpotCreateMap";
 import { searchPlaces } from "../lib/mapboxGeocoding";
 import { formatPhoneNumber, validatePhoneNumber, validateEmail } from "../lib/phoneValidation";
+import { Avatar } from "./Avatar";
+import { Icon } from "./Icon";
 
 const categories: SpotCategory[] = [...SPOT_CATEGORY_VALUES];
 
@@ -542,99 +544,178 @@ export const SpotForm = ({
           </div>
         );
       case 2:
-        // Step 2: イベント詳細
+        // Step 2: イベント詳細（穴埋め式カード編集）
+        const formatScheduleDisplay = () => {
+          if (!startTime) return "タップして日時を入力";
+          const start = new Date(startTime);
+          const end = endTime ? new Date(endTime) : null;
+          const dateStr = `${start.getMonth() + 1}/${start.getDate()}`;
+          const startTimeStr = `${String(start.getHours()).padStart(2, '0')}:${String(start.getMinutes()).padStart(2, '0')}`;
+          const endTimeStr = end ? `${String(end.getHours()).padStart(2, '0')}:${String(end.getMinutes()).padStart(2, '0')}` : '';
+          return `${dateStr} ${startTimeStr}${endTimeStr ? ` - ${endTimeStr}` : ''}`;
+        };
+
         return (
-          <div className="spot-step spot-step-form">
-            <div className="spot-plan-summary">
-              <span className="spot-plan-summary-label">選択中のプラン</span>
-              <span className="spot-plan-summary-value">{activePlan?.title ?? "短期イベント"}</span>
+          <div className="spot-step spot-step-fillable">
+            <div className="fillable-instructions">
+              <p className="hint">
+                各項目をタップして情報を入力してください。
+              </p>
             </div>
-            <div className="form-group">
-              <label htmlFor="title">タイトル *</label>
-              <input
-                id="title"
-                className="input"
-                value={title}
-                onChange={(event) => setTitle(event.target.value)}
-                placeholder="渋谷駅前ライブ"
-                required
-              />
-            </div>
-            <div className="form-group">
-              <label htmlFor="description">説明 *</label>
-              <textarea
-                id="description"
-                className="textarea"
-                value={description}
-                onChange={(event) => setDescription(event.target.value)}
-                placeholder="出演者や雰囲気などの説明"
-                rows={3}
-                required
-              />
-            </div>
-            <div className="form-group">
-              <label htmlFor="onelinePR">ひとことPR *</label>
-              <input
-                id="onelinePR"
-                className="input"
-                value={onelinePR}
-                onChange={(event) => setOnelinePR(event.target.value)}
-                placeholder="マップ上の吹き出しに表示される短いキャッチコピー"
-                maxLength={20}
-                required
-              />
-              <p className="hint">最大20文字。地図の吹き出しに表示されます。</p>
-            </div>
-            <div className="form-group">
-              <label htmlFor="category">カテゴリ</label>
-              <select
-                id="category"
-                className="input"
-                value={category}
-                onChange={(event) => setCategory(event.target.value as SpotCategory)}
-              >
-                {categories.map((item) => (
-                  <option key={item} value={item}>
-                    {item.toUpperCase()}
-                  </option>
-                ))}
-              </select>
-            </div>
-            <div className="form-row">
-              <div className="form-group">
-                <label htmlFor="startTime">開始時刻 *</label>
-                <input
-                  id="startTime"
-                  type="datetime-local"
-                  className="input"
-                  value={startTime}
-                  onChange={(event) => setStartTime(event.target.value)}
-                  min={startTimeMin}
-                  required
-                />
+
+            {/* リアルタイムプレビューカード - 実際のSpotListViewと同じ構造 */}
+            <article className="fillable-card-real">
+              {/* Header with Avatar */}
+              <div className="modern-card-header">
+                <Avatar name="あなた" photoUrl={null} size={36} />
+                <span className="owner-name">あなた</span>
               </div>
-              <div className="form-group">
-                <label htmlFor="endTime">終了時刻 *</label>
+
+              {/* Hero Image */}
+              <div className="modern-hero">
+                <div
+                  className="modern-hero-image fillable-hero-trigger"
+                  onClick={() => document.getElementById('imageFile')?.click()}
+                  role="button"
+                  tabIndex={0}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' || e.key === ' ') {
+                      document.getElementById('imageFile')?.click();
+                    }
+                  }}
+                >
+                  {imagePreview ? (
+                    <img src={imagePreview} alt="選択中の画像" />
+                  ) : (
+                    <div className="modern-hero-placeholder fillable-empty">
+                      <div className="placeholder-icon">📷</div>
+                      <div className="placeholder-text">タップして画像を追加</div>
+                    </div>
+                  )}
+                </div>
                 <input
-                  id="endTime"
-                  type="datetime-local"
-                  className="input"
-                  value={endTime}
-                  min={startTime}
-                  onChange={(event) => setEndTime(event.target.value)}
-                  required
+                  id="imageFile"
+                  type="file"
+                  accept="image/*"
+                  onChange={(event) => handleImageFileChange(event.target.files?.[0] ?? null)}
+                  style={{ display: 'none' }}
                 />
+                {/* SNS Button (Instagram style) */}
+                <button type="button" className="modern-hero-social" aria-label="Instagram">
+                  <Icon name="camera" size={22} />
+                </button>
               </div>
-            </div>
-            <div className="form-group">
-              <label htmlFor="imageFile">イベント写真 (任意)</label>
-              <input
-                id="imageFile"
-                type="file"
-                accept="image/*"
-                onChange={(event) => handleImageFileChange(event.target.files?.[0] ?? null)}
-              />
-              {imagePreview && <img src={imagePreview} alt="選択中の画像プレビュー" className="image-preview" />}
+
+              {/* Content Area */}
+              <div className="modern-content">
+                {/* Title Row */}
+                <div className="modern-title-row">
+                  <div className="modern-titles fillable-editable">
+                    <input
+                      type="text"
+                      className={`modern-title fillable-input ${!title.trim() ? 'fillable-empty' : ''}`}
+                      value={title}
+                      onChange={(event) => setTitle(event.target.value)}
+                      placeholder="タップしてタイトルを入力..."
+                      maxLength={60}
+                    />
+                  </div>
+                  <div className="modern-stats">
+                    <div className="metric view">
+                      <Icon name="eyesFill" size={18} />
+                      0
+                    </div>
+                    <div className="metric like">
+                      <Icon name="heart" size={18} />
+                      0
+                    </div>
+                  </div>
+                </div>
+
+                {/* Schedule + Category */}
+                <div className="fillable-schedule-row">
+                  <div
+                    className={`modern-schedule fillable-editable ${!startTime ? 'fillable-empty' : ''}`}
+                    onClick={() => {
+                      const input = document.getElementById('startTimeInput');
+                      input?.focus();
+                      (input as HTMLInputElement)?.showPicker?.();
+                    }}
+                  >
+                    {formatScheduleDisplay()}
+                  </div>
+                  <select
+                    className="fillable-category-select"
+                    value={category}
+                    onChange={(event) => setCategory(event.target.value as SpotCategory)}
+                  >
+                    {categories.map((item) => (
+                      <option key={item} value={item}>
+                        {item.toUpperCase()}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                {/* Hidden datetime inputs */}
+                <div className="hidden-inputs" style={{ display: 'none' }}>
+                  <input
+                    id="startTimeInput"
+                    type="datetime-local"
+                    value={startTime}
+                    onChange={(event) => setStartTime(event.target.value)}
+                    min={startTimeMin}
+                    required
+                  />
+                  <input
+                    id="endTimeInput"
+                    type="datetime-local"
+                    value={endTime}
+                    onChange={(event) => setEndTime(event.target.value)}
+                    min={startTime}
+                    required
+                  />
+                </div>
+
+                {/* Catchcopy */}
+                <div className={`modern-catchcopy fillable-editable ${!onelinePR.trim() ? 'fillable-empty' : ''}`}>
+                  <input
+                    type="text"
+                    className="fillable-input catchcopy-input"
+                    value={onelinePR}
+                    onChange={(event) => setOnelinePR(event.target.value)}
+                    placeholder="💬 地図の吹き出しに表示されるPR文（20文字）"
+                    maxLength={20}
+                    required
+                  />
+                  {onelinePR.length > 0 && (
+                    <div className="char-counter">
+                      {onelinePR.length}/20
+                      {onelinePR.length >= 18 && <span className="warning">あと{20 - onelinePR.length}文字</span>}
+                    </div>
+                  )}
+                </div>
+
+                {/* Description */}
+                <div className={`modern-description fillable-editable ${!description.trim() ? 'fillable-empty' : ''}`}>
+                  <textarea
+                    className="fillable-input description-input"
+                    value={description}
+                    onChange={(event) => setDescription(event.target.value)}
+                    placeholder="イベントの詳細を入力...&#10;&#10;・出演者情報&#10;・会場の雰囲気&#10;・参加方法&#10;・注意事項など"
+                    rows={4}
+                    required
+                  />
+                </div>
+              </div>
+            </article>
+
+            {/* ヘルプメッセージ */}
+            <div className="fillable-help-compact">
+              <div className="help-item">📸 鮮明な画像</div>
+              <div className="help-item">✍️ 具体的なタイトル</div>
+              <div className="help-item">💬 魅力的なPR文</div>
+              <div className="help-item">📝 詳しい説明</div>
             </div>
           </div>
         );
@@ -1039,14 +1120,18 @@ export const SpotForm = ({
     }
   };
 
-  const stepTitles: string[] = ["位置を選択", "プランを選択", "イベント詳細", "投稿者情報", "確認"];
+  const stepTitles: string[] = ["位置を選択", "プランを選択", "カードを作成", "投稿者情報", "確認"];
 
   return (
     <form className="spot-wizard" onSubmit={handleSubmit}>
       <div className="spot-wizard-header">
         <div>
           <h2>{stepTitles[step] ?? "位置を選択"}</h2>
-          <p className="spot-wizard-subtitle">位置・プラン・詳細を順番に入力して投稿できます。</p>
+          <p className="spot-wizard-subtitle">
+            {step === 2
+              ? "カードを編集して、魅力的なイベント情報を作りましょう"
+              : "位置・プラン・カード作成と順番に進めて投稿を完成させます"}
+          </p>
         </div>
       </div>
 

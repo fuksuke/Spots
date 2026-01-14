@@ -1,0 +1,318 @@
+/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+   Fillable Card - Actual Design Match
+   Real SpotListView card structure with inline editing
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
+
+/* Hero Image - Clickable */
+.fillable-hero-trigger {
+  cursor: pointer;
+  transition: all 200ms ease;
+  position: relative;
+}
+
+.fillable-hero-trigger:hover {
+  opacity: 0.9;
+}
+
+.fillable-hero-trigger.fillable-empty {
+  min-height: 240px;
+}
+
+.modern-hero-placeholder.fillable-empty {
+  background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 1rem;
+  padding: 2rem;
+  cursor: pointer;
+  transition: all 200ms ease;
+}
+
+.modern-hero-placeholder.fillable-empty:hover {
+  background: linear-gradient(135deg, #e0f2fe 0%, #bae6fd 100%);
+}
+
+.modern-hero-placeholder.fillable-empty .placeholder-icon {
+  font-size: 4rem;
+  animation: floatIcon 3s ease-in-out infinite;
+}
+
+@keyframes floatIcon {
+  0%, 100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-10px);
+  }
+}
+
+.modern-hero-placeholder.fillable-empty .placeholder-text {
+  font-size: 1.125rem;
+  font-weight: 700;
+  color: #0084ff;
+  text-align: center;
+}
+
+/* Editable Areas */
+.fillable-editable {
+  position: relative;
+  transition: all 200ms ease;
+}
+
+.fillable-editable.fillable-empty {
+  border: 2px dashed #cbd5e1;
+  border-radius: 8px;
+  background: #f8fafc;
+}
+
+.fillable-editable:focus-within {
+  transform: scale(1.02);
+  z-index: 10;
+  box-shadow: 0 4px 12px rgba(0, 132, 255, 0.2);
+}
+
+/* Input Fields - Styled to Match Real Design */
+.fillable-input {
+  width: 100%;
+  border: none;
+  background: transparent;
+  font-family: inherit;
+  color: inherit;
+  font-size: inherit;
+  font-weight: inherit;
+  line-height: inherit;
+  padding: 0;
+  margin: 0;
+  resize: none;
+  outline: none;
+}
+
+.fillable-input::placeholder {
+  color: #94a3b8;
+  opacity: 1;
+}
+
+.fillable-input:focus::placeholder {
+  color: #cbd5e1;
+}
+
+/* Title Input */
+.modern-title.fillable-input {
+  font-size: 1.0rem;
+  font-weight: 900;
+  color: #0f172a;
+  padding: 4px;
+  transition: all 200ms ease;
+}
+
+.modern-title.fillable-input.fillable-empty {
+  background: #f8fafc;
+  border-radius: 6px;
+}
+
+.modern-title.fillable-input:focus {
+  background: white;
+  box-shadow: 0 0 0 2px #0084ff;
+  border-radius: 6px;
+}
+
+/* Schedule - Tap to Edit */
+.modern-schedule.fillable-editable {
+  cursor: pointer;
+  padding: 4px 8px;
+  border-radius: 6px;
+  transition: all 200ms ease;
+  display: inline-block;
+}
+
+.modern-schedule.fillable-editable.fillable-empty {
+  color: #94a3b8;
+  font-style: italic;
+}
+
+.modern-schedule.fillable-editable:hover {
+  background: #f1f5f9;
+  transform: scale(1.05);
+}
+
+.modern-schedule.fillable-editable:active {
+  transform: scale(1.1);
+  background: #e0f2fe;
+}
+
+.fillable-schedule-row {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.fillable-category-select {
+  padding: 4px 12px;
+  border: 2px solid #0084ff;
+  border-radius: 999px;
+  background: #e8f4ff;
+  color: #0084ff;
+  font-size: 0.75rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: all 200ms ease;
+  letter-spacing: 0.5px;
+}
+
+.fillable-category-select:hover {
+  background: #0084ff;
+  color: white;
+  transform: scale(1.05);
+}
+
+.fillable-category-select:focus {
+  outline: none;
+  box-shadow: 0 0 0 4px #e8f4ff;
+}
+
+/* Catchcopy Input */
+.modern-catchcopy.fillable-editable {
+  padding: 0.5rem 0.7rem;
+  border-radius: 10px;
+  background: #ffffff;
+  border: 2px solid rgba(194, 194, 194, 0.8);
+  box-shadow: 0 3px 6px rgba(119, 119, 119, 0.5);
+  position: relative;
+  transition: all 200ms ease;
+}
+
+.modern-catchcopy.fillable-editable.fillable-empty {
+  border-style: dashed;
+  box-shadow: 0 2px 4px rgba(119, 119, 119, 0.3);
+}
+
+.modern-catchcopy.fillable-editable:focus-within {
+  border-color: #fbbf24;
+  background: #fffbeb;
+  box-shadow: 0 4px 12px rgba(251, 191, 36, 0.4);
+  transform: scale(1.03);
+}
+
+.catchcopy-input.fillable-input {
+  font-weight: 800;
+  font-size: 1.1rem;
+  line-height: 1.4;
+  text-align: center;
+  color: #0f172a;
+  -webkit-text-stroke: 0.4px #0f172a;
+}
+
+.catchcopy-input.fillable-input::placeholder {
+  -webkit-text-stroke: 0;
+  font-weight: 600;
+  font-style: italic;
+}
+
+.char-counter {
+  position: absolute;
+  bottom: -24px;
+  right: 0;
+  font-size: 0.75rem;
+  color: #64748b;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.char-counter .warning {
+  color: #dc2626;
+  font-weight: 700;
+}
+
+/* Description Input */
+.modern-description.fillable-editable {
+  transition: all 200ms ease;
+}
+
+.modern-description.fillable-editable.fillable-empty {
+  min-height: 100px;
+}
+
+.modern-description.fillable-editable:focus-within {
+  transform: scale(1.01);
+  background: white;
+  border-radius: 8px;
+  padding: 8px;
+  margin: -8px;
+  box-shadow: 0 4px 12px rgba(0, 132, 255, 0.2);
+}
+
+.description-input.fillable-input {
+  color: #475569;
+  font-size: 0.9rem;
+  line-height: 1.6;
+  white-space: pre-wrap;
+  min-height: 80px;
+}
+
+/* Help Section - Compact */
+.fillable-help-compact {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+  padding: 1rem;
+  background: #f8fafc;
+  border-radius: 12px;
+  justify-content: center;
+}
+
+.help-item {
+  padding: 0.5rem 1rem;
+  background: white;
+  border-radius: 999px;
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: #475569;
+  border: 1px solid #e2e8f0;
+  white-space: nowrap;
+}
+
+/* Mobile Responsive */
+@media (max-width: 640px) {
+  .spot-step-fillable {
+    max-width: 100%;
+  }
+
+  .fillable-editable:focus-within {
+    transform: scale(1.01);
+  }
+
+  .modern-schedule.fillable-editable:active {
+    transform: scale(1.05);
+  }
+
+  .fillable-category-select:hover {
+    transform: scale(1.02);
+  }
+
+  .fillable-schedule-row {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .fillable-category-select {
+    align-self: flex-start;
+  }
+}
+
+/* Tap Feedback - Mobile */
+@media (hover: none) and (pointer: coarse) {
+  .fillable-editable:active {
+    transform: scale(1.05);
+    transition: transform 100ms ease;
+  }
+
+  .modern-schedule.fillable-editable:active {
+    transform: scale(1.08);
+  }
+}

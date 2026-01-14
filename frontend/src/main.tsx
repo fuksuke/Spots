@@ -3,6 +3,8 @@ import ReactDOM from "react-dom/client";
 import App from "./App";
 import "./styles/base.css";
 import "./styles/trending-refined.css";
+import "./styles/spot-create-refined.css";
+import "./styles/fillable-card.css";
 import "mapbox-gl/dist/mapbox-gl.css";
 import mapboxgl from "mapbox-gl";
 import { initSentry } from "./lib/sentry";
