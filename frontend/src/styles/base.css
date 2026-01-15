@@ -14,7 +14,7 @@
   --app-footer-height: var(--mobile-action-bar-base);
   --app-keyboard-offset: 0px;
   color: #0f172a;
-  font-family: "Inter", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  font-family: "Noto Sans JP", "Inter", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
   line-height: 1.5;
   background: #f1f5f9;
 }
@@ -680,17 +680,7 @@ button {
 
 .spot-create-main {
   flex: 1;
-  display: flex;
-  justify-content: center;
-  padding: 2rem;
   overflow-y: auto;
-}
-
-.spot-create-content {
-  width: min(760px, 100%);
-  display: flex;
-  flex-direction: column;
-  gap: 1.5rem;
 }
 
 @media (max-width: 768px) {
@@ -703,10 +693,6 @@ button {
 
   .spot-create-header h1 {
     font-size: 1.25rem;
-  }
-
-  .spot-create-main {
-    padding: 1.25rem;
   }
 }
 

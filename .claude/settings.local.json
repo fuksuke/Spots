@@ -1,0 +1,9 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npx vite:*)",
+      "Bash(git stash:*)",
+      "Bash(npm run build:*)"
+    ]
+  }
+}

@@ -67,20 +67,18 @@ export const SpotCreatePage = ({
         </div>
       </header>
       <main className="spot-create-main">
-        <div className="spot-create-content">
-          <SpotForm
-            selectedLocation={selectedLocation}
-            onSelectLocation={onSelectLocation}
-            onLocationReset={onLocationReset}
-            onCreated={onCreated}
-            authToken={authToken}
-            canPostLongTerm={canPostLongTerm}
-            canPostRecurring={canPostRecurring}
-            phoneVerified={localPhoneVerified}
-            onRequirePhoneVerification={() => setVerificationOpen(true)}
-            onSaveDraft={(saveFn) => setDraftSaveFn(() => saveFn)}
-          />
-        </div>
+        <SpotForm
+          selectedLocation={selectedLocation}
+          onSelectLocation={onSelectLocation}
+          onLocationReset={onLocationReset}
+          onCreated={onCreated}
+          authToken={authToken}
+          canPostLongTerm={canPostLongTerm}
+          canPostRecurring={canPostRecurring}
+          phoneVerified={localPhoneVerified}
+          onRequirePhoneVerification={() => setVerificationOpen(true)}
+          onSaveDraft={(saveFn) => setDraftSaveFn(() => saveFn)}
+        />
       </main>
 
       {isCancelConfirmOpen ? (

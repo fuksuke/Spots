@@ -1,0 +1,38 @@
+/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+   Spots Brand Design System - Clean & Minimal
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
+
+@import url('https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;600;700&display=swap');
+
+:root {
+  /* Brand Colors - Subtle use */
+  --spots-coral: #F16F66;
+  --spots-coral-light: #FEF5F4;
+  --spots-teal: #2ECFB0;
+  --spots-teal-light: #F0FAF8;
+  --spots-yellow: #F2CB29;
+
+  /* Neutrals */
+  --spots-bg: #F8F9FA;
+  --spots-surface: #FFFFFF;
+  --spots-border: #E5E7EB;
+  --spots-border-focus: #D1D5DB;
+  --spots-text: #111827;
+  --spots-text-secondary: #6B7280;
+  --spots-text-muted: #9CA3AF;
+
+  /* Spacing */
+  --spots-space-xs: 4px;
+  --spots-space-sm: 8px;
+  --spots-space-md: 16px;
+  --spots-space-lg: 24px;
+  --spots-space-xl: 32px;
+
+  /* Radius */
+  --spots-radius-sm: 6px;
+  --spots-radius-md: 10px;
+  --spots-radius-lg: 14px;
+
+  /* Typography */
+  --spots-font: 'Noto Sans JP', -apple-system, BlinkMacSystemFont, sans-serif;
+}

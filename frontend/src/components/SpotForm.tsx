@@ -65,7 +65,7 @@ export const SpotForm = ({
   onRequirePhoneVerification,
   onSaveDraft
 }: SpotFormProps) => {
-  const totalSteps = 5;
+  const totalSteps = 6;
   const [step, setStep] = useState(0);
   const [selectedPlan, setSelectedPlan] = useState<PostingPlan>("short_term");
   const [locationError, setLocationError] = useState<string | null>(null);
@@ -334,8 +334,8 @@ export const SpotForm = ({
         return;
       }
     }
-    // Step 3からStep 4に進む際に投稿者情報を保存（オートフィル用）
-    if (step === 3) {
+    // Step 4からStep 5に進む際に投稿者情報を保存（オートフィル用）
+    if (step === 4) {
       saveAutofillData({
         contactType,
         contactValue,
@@ -368,12 +368,16 @@ export const SpotForm = ({
       return !option || option.locked;
     }
     if (step === 2) {
-      // イベント詳細のバリデーション
-      return !title.trim() || !description.trim() || !onelinePR.trim() || !startTime || !endTime;
+      // 基本情報のバリデーション
+      return !title.trim() || !startTime || !endTime || !locationDetails.trim();
     }
     if (step === 3) {
+      // ビジュアル編集のバリデーション
+      return !onelinePR.trim() || !description.trim();
+    }
+    if (step === 4) {
       // 投稿者情報のバリデーション
-      if (!contactValue.trim() || !locationDetails.trim()) {
+      if (!contactValue.trim()) {
         return true;
       }
       // 連絡先のバリデーションエラーがある場合は次へ進めない
@@ -387,7 +391,7 @@ export const SpotForm = ({
       return false;
     }
     return false;
-  }, [isLastStep, step, selectedLocation, planOptions, selectedPlan, title, description, onelinePR, startTime, endTime, contactValue, contactType, locationDetails]);
+  }, [isLastStep, step, selectedLocation, planOptions, selectedPlan, title, startTime, endTime, locationDetails, onelinePR, description, contactValue, contactType]);
 
   useEffect(() => {
     if (phoneVerified) {
@@ -544,26 +548,82 @@ export const SpotForm = ({
           </div>
         );
       case 2:
-        // Step 2: イベント詳細（穴埋め式カード編集）
-        const formatScheduleDisplay = () => {
-          if (!startTime) return "タップして日時を入力";
-          const start = new Date(startTime);
-          const end = endTime ? new Date(endTime) : null;
-          const dateStr = `${start.getMonth() + 1}/${start.getDate()}`;
-          const startTimeStr = `${String(start.getHours()).padStart(2, '0')}:${String(start.getMinutes()).padStart(2, '0')}`;
-          const endTimeStr = end ? `${String(end.getHours()).padStart(2, '0')}:${String(end.getMinutes()).padStart(2, '0')}` : '';
-          return `${dateStr} ${startTimeStr}${endTimeStr ? ` - ${endTimeStr}` : ''}`;
-        };
-
+        // Step 2: 基本情報入力（タイトル、カテゴリ、日時、場所詳細）
+        return (
+          <div className="spot-step spot-step-form">
+            <p className="hint">イベントの基本情報を入力してください。</p>
+            <div className="form-group">
+              <label htmlFor="title">イベント名<span className="required-mark">*</span></label>
+              <input
+                id="title"
+                type="text"
+                className="input"
+                value={title}
+                onChange={(event) => setTitle(event.target.value)}
+                placeholder="イベント名を入力"
+                maxLength={60}
+                required
+              />
+            </div>
+            <div className="form-group">
+              <label htmlFor="category">カテゴリ<span className="required-mark">*</span></label>
+              <select
+                id="category"
+                className="input"
+                value={category}
+                onChange={(event) => setCategory(event.target.value as SpotCategory)}
+              >
+                {categories.map((item) => (
+                  <option key={item} value={item}>
+                    {item.toUpperCase()}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div className="form-row">
+              <div className="form-group">
+                <label htmlFor="startTime">開始日時<span className="required-mark">*</span></label>
+                <input
+                  id="startTime"
+                  type="datetime-local"
+                  className="input"
+                  value={startTime}
+                  onChange={(event) => setStartTime(event.target.value)}
+                  min={startTimeMin}
+                  required
+                />
+              </div>
+              <div className="form-group">
+                <label htmlFor="endTime">終了日時<span className="required-mark">*</span></label>
+                <input
+                  id="endTime"
+                  type="datetime-local"
+                  className="input"
+                  value={endTime}
+                  onChange={(event) => setEndTime(event.target.value)}
+                  min={startTime}
+                  required
+                />
+              </div>
+            </div>
+            <div className="form-group">
+              <label htmlFor="locationDetails">場所詳細<span className="required-mark">*</span></label>
+              <input
+                id="locationDetails"
+                className="input"
+                value={locationDetails}
+                onChange={(event) => setLocationDetails(event.target.value)}
+                placeholder="◯◯ビル 7F ガーデンルーム"
+                required
+              />
+            </div>
+          </div>
+        );
+      case 3:
+        // Step 3: ビジュアル編集（画像、キャッチコピー、詳細説明）
         return (
           <div className="spot-step spot-step-fillable">
-            <div className="fillable-instructions">
-              <p className="hint">
-                各項目をタップして情報を入力してください。
-              </p>
-            </div>
-
-            {/* リアルタイムプレビューカード - 実際のSpotListViewと同じ構造 */}
+            {/* リアルタイムプレビューカード */}
             <article className="fillable-card-real">
               {/* Header with Avatar */}
               <div className="modern-card-header">
@@ -571,8 +631,8 @@ export const SpotForm = ({
                 <span className="owner-name">あなた</span>
               </div>
 
-              {/* Hero Image */}
-              <div className="modern-hero">
+              {/* Hero Image - Input area */}
+              <div className={`modern-hero ${imagePreview ? 'fillable-hero-done' : 'fillable-hero-required'}`}>
                 <div
                   className="modern-hero-image fillable-hero-trigger"
                   onClick={() => document.getElementById('imageFile')?.click()}
@@ -585,9 +645,12 @@ export const SpotForm = ({
                   }}
                 >
                   {imagePreview ? (
-                    <img src={imagePreview} alt="選択中の画像" />
+                    <>
+                      <img src={imagePreview} alt="選択中の画像" />
+                      <span className="fillable-hero-check">✓</span>
+                    </>
                   ) : (
-                    <div className="modern-hero-placeholder fillable-empty">
+                    <div className="modern-hero-placeholder fillable-required">
                       <div className="placeholder-icon">📷</div>
                       <div className="placeholder-text">タップして画像を追加</div>
                     </div>
@@ -600,25 +663,14 @@ export const SpotForm = ({
                   onChange={(event) => handleImageFileChange(event.target.files?.[0] ?? null)}
                   style={{ display: 'none' }}
                 />
-                {/* SNS Button (Instagram style) */}
-                <button type="button" className="modern-hero-social" aria-label="Instagram">
-                  <Icon name="camera" size={22} />
-                </button>
               </div>
 
               {/* Content Area */}
               <div className="modern-content">
                 {/* Title Row */}
                 <div className="modern-title-row">
-                  <div className="modern-titles fillable-editable">
-                    <input
-                      type="text"
-                      className={`modern-title fillable-input ${!title.trim() ? 'fillable-empty' : ''}`}
-                      value={title}
-                      onChange={(event) => setTitle(event.target.value)}
-                      placeholder="タップしてタイトルを入力..."
-                      maxLength={60}
-                    />
+                  <div className="modern-titles">
+                    <span className="modern-title">{title || 'タイトル未入力'}</span>
                   </div>
                   <div className="modern-stats">
                     <div className="metric view">
@@ -634,51 +686,21 @@ export const SpotForm = ({
 
                 {/* Schedule + Category */}
                 <div className="fillable-schedule-row">
-                  <div
-                    className={`modern-schedule fillable-editable ${!startTime ? 'fillable-empty' : ''}`}
-                    onClick={() => {
-                      const input = document.getElementById('startTimeInput');
-                      input?.focus();
-                      (input as HTMLInputElement)?.showPicker?.();
-                    }}
-                  >
-                    {formatScheduleDisplay()}
+                  <div className="modern-schedule">
+                    {startTime ? (() => {
+                      const start = new Date(startTime);
+                      const end = endTime ? new Date(endTime) : null;
+                      const dateStr = `${start.getMonth() + 1}/${start.getDate()}`;
+                      const startTimeStr = `${String(start.getHours()).padStart(2, '0')}:${String(start.getMinutes()).padStart(2, '0')}`;
+                      const endTimeStr = end ? `${String(end.getHours()).padStart(2, '0')}:${String(end.getMinutes()).padStart(2, '0')}` : '';
+                      return `${dateStr} ${startTimeStr}${endTimeStr ? ` - ${endTimeStr}` : ''}`;
+                    })() : '日時未入力'}
                   </div>
-                  <select
-                    className="fillable-category-select"
-                    value={category}
-                    onChange={(event) => setCategory(event.target.value as SpotCategory)}
-                  >
-                    {categories.map((item) => (
-                      <option key={item} value={item}>
-                        {item.toUpperCase()}
-                      </option>
-                    ))}
-                  </select>
+                  <span className="modern-category-badge">{category.toUpperCase()}</span>
                 </div>
 
-                {/* Hidden datetime inputs */}
-                <div className="hidden-inputs" style={{ display: 'none' }}>
-                  <input
-                    id="startTimeInput"
-                    type="datetime-local"
-                    value={startTime}
-                    onChange={(event) => setStartTime(event.target.value)}
-                    min={startTimeMin}
-                    required
-                  />
-                  <input
-                    id="endTimeInput"
-                    type="datetime-local"
-                    value={endTime}
-                    onChange={(event) => setEndTime(event.target.value)}
-                    min={startTime}
-                    required
-                  />
-                </div>
-
-                {/* Catchcopy */}
-                <div className={`modern-catchcopy fillable-editable ${!onelinePR.trim() ? 'fillable-empty' : ''}`}>
+                {/* Catchcopy - Input required in this step */}
+                <div className={`modern-catchcopy fillable-editable ${onelinePR.trim() ? 'fillable-done' : 'fillable-required'}`}>
                   <input
                     type="text"
                     className="fillable-input catchcopy-input"
@@ -696,8 +718,8 @@ export const SpotForm = ({
                   )}
                 </div>
 
-                {/* Description */}
-                <div className={`modern-description fillable-editable ${!description.trim() ? 'fillable-empty' : ''}`}>
+                {/* Description - Input required in this step */}
+                <div className={`modern-description fillable-editable ${description.trim() ? 'fillable-done' : 'fillable-required'}`}>
                   <textarea
                     className="fillable-input description-input"
                     value={description}
@@ -709,53 +731,32 @@ export const SpotForm = ({
                 </div>
               </div>
             </article>
-
-            {/* ヘルプメッセージ */}
-            <div className="fillable-help-compact">
-              <div className="help-item">📸 鮮明な画像</div>
-              <div className="help-item">✍️ 具体的なタイトル</div>
-              <div className="help-item">💬 魅力的なPR文</div>
-              <div className="help-item">📝 詳しい説明</div>
-            </div>
           </div>
         );
-      case 3:
-        // Step 3: 投稿者情報（オートフィル対応）
+      case 4:
+        // Step 4: 投稿者情報（オートフィル対応）
         return (
           <div className="spot-step spot-step-form">
             <p className="hint">投稿者情報は次回以降、自動で入力されます。変更がなければそのまま進んでください。</p>
-            <div className="form-row">
-              <div className="form-group">
-                <label>連絡方法 *</label>
-                <div className="contact-radio-group">
-                  <label>
-                    <input type="radio" value="phone" checked={contactType === "phone"} onChange={() => setContactType("phone")} /> 電話番号
-                  </label>
-                  <label>
-                    <input type="radio" value="email" checked={contactType === "email"} onChange={() => setContactType("email")} /> メール
-                  </label>
-                </div>
-                <input
-                  type={contactType === "phone" ? "tel" : "email"}
-                  className={`input ${contactError ? 'input-error' : ''}`}
-                  value={contactValue}
-                  onChange={(event) => handleContactChange(event.target.value)}
-                  placeholder={contactType === "phone" ? "090-1234-5678" : "contact@example.com"}
-                  required
-                />
-                {contactError && <p className="error-message">{contactError}</p>}
+            <div className="form-group">
+              <label>連絡方法<span className="required-mark">*</span></label>
+              <div className="contact-radio-group">
+                <label>
+                  <input type="radio" value="phone" checked={contactType === "phone"} onChange={() => setContactType("phone")} /> 電話番号
+                </label>
+                <label>
+                  <input type="radio" value="email" checked={contactType === "email"} onChange={() => setContactType("email")} /> メール
+                </label>
               </div>
-              <div className="form-group">
-                <label htmlFor="locationDetails">場所詳細 *</label>
-                <input
-                  id="locationDetails"
-                  className="input"
-                  value={locationDetails}
-                  onChange={(event) => setLocationDetails(event.target.value)}
-                  placeholder="◯◯ビル 7F ガーデンルーム"
-                  required
-                />
-              </div>
+              <input
+                type={contactType === "phone" ? "tel" : "email"}
+                className={`input ${contactError ? 'input-error' : ''}`}
+                value={contactValue}
+                onChange={(event) => handleContactChange(event.target.value)}
+                placeholder={contactType === "phone" ? "090-1234-5678" : "contact@example.com"}
+                required
+              />
+              {contactError && <p className="error-message">{contactError}</p>}
             </div>
             <div className="form-group">
               <label htmlFor="homepageUrl">公式ホームページ (任意)</label>
@@ -774,28 +775,28 @@ export const SpotForm = ({
                   type="url"
                   className="input"
                   value={snsLinks.x}
-                  onChange={(event) => setSnsLinks((prev) => ({ ...prev, x: event.target.value }))}
+                  onChange={(event) => setSnsLinks((prev: typeof snsLinks) => ({ ...prev, x: event.target.value }))}
                   placeholder="X (Twitter) のURL"
                 />
                 <input
                   type="url"
                   className="input"
                   value={snsLinks.instagram}
-                  onChange={(event) => setSnsLinks((prev) => ({ ...prev, instagram: event.target.value }))}
+                  onChange={(event) => setSnsLinks((prev: typeof snsLinks) => ({ ...prev, instagram: event.target.value }))}
                   placeholder="Instagram のURL"
                 />
                 <input
                   type="url"
                   className="input"
                   value={snsLinks.youtube}
-                  onChange={(event) => setSnsLinks((prev) => ({ ...prev, youtube: event.target.value }))}
+                  onChange={(event) => setSnsLinks((prev: typeof snsLinks) => ({ ...prev, youtube: event.target.value }))}
                   placeholder="YouTube のURL"
                 />
                 <input
                   type="url"
                   className="input"
                   value={snsLinks.facebook}
-                  onChange={(event) => setSnsLinks((prev) => ({ ...prev, facebook: event.target.value }))}
+                  onChange={(event) => setSnsLinks((prev: typeof snsLinks) => ({ ...prev, facebook: event.target.value }))}
                   placeholder="Facebook のURL"
                 />
               </div>
@@ -812,8 +813,18 @@ export const SpotForm = ({
             </div>
           </div>
         );
-      case 4:
-        // Step 4: レビュー画面
+      case 5:
+        // Step 5: レビュー画面
+        const formatReviewSchedule = () => {
+          if (!startTime) return '';
+          const start = new Date(startTime);
+          const end = endTime ? new Date(endTime) : null;
+          const dateStr = `${start.getMonth() + 1}/${start.getDate()}`;
+          const startTimeStr = `${String(start.getHours()).padStart(2, '0')}:${String(start.getMinutes()).padStart(2, '0')}`;
+          const endTimeStr = end ? `${String(end.getHours()).padStart(2, '0')}:${String(end.getMinutes()).padStart(2, '0')}` : '';
+          return `${dateStr} ${startTimeStr}${endTimeStr ? ` - ${endTimeStr}` : ''}`;
+        };
+
         return (
           <div className="spot-step spot-step-review">
             <div className="review-mode-toggle">
@@ -835,27 +846,53 @@ export const SpotForm = ({
 
             {reviewMode === 'balloon' ? (
               <div className="review-preview review-preview-balloon">
-                <div className="spot-callout-preview">
-                  <div className="spot-callout-title">{title || 'タイトルなし'}</div>
-                  {onelinePR && <div className="spot-callout-pr">{onelinePR}</div>}
-                  <div className="spot-callout-category">{category.toUpperCase()}</div>
-                  {imagePreview && <img src={imagePreview} alt="イベント画像" className="spot-callout-image" />}
+                {/* 実際の吹き出しデザイン */}
+                <div className="map-callout">
+                  <div className="map-callout__bubble">
+                    <span className="map-callout__lamp" data-state="live"></span>
+                    <span className="map-callout__text">{onelinePR || title || 'タイトルなし'}</span>
+                  </div>
+                  <div className="map-callout__tail"></div>
                 </div>
               </div>
             ) : (
               <div className="review-preview review-preview-list">
-                <div className="spot-card-preview">
-                  {imagePreview && <img src={imagePreview} alt="イベント画像" className="spot-card-image" />}
-                  <div className="spot-card-content">
-                    <h3 className="spot-card-title">{title || 'タイトルなし'}</h3>
-                    <p className="spot-card-description">{description || '説明なし'}</p>
-                    <div className="spot-card-meta">
-                      <span className="spot-card-category">{category.toUpperCase()}</span>
-                      <span className="spot-card-time">{startTime ? new Date(startTime).toLocaleString('ja-JP') : ''}</span>
-                    </div>
-                    <div className="spot-card-location">{locationDetails || '場所詳細なし'}</div>
+                {/* 実際のカードデザイン */}
+                <article className="spot-list-card spot-mobile-card new-card">
+                  <div className="modern-card-header">
+                    <Avatar name="あなた" photoUrl={null} size={36} />
+                    <span className="owner-name">あなた</span>
                   </div>
-                </div>
+                  <div className="modern-hero">
+                    {imagePreview ? (
+                      <img src={imagePreview} alt="イベント画像" />
+                    ) : (
+                      <div className="modern-hero-placeholder">
+                        <span>{category.toUpperCase()}</span>
+                      </div>
+                    )}
+                  </div>
+                  <div className="modern-content">
+                    <div className="modern-title-row">
+                      <div className="modern-titles">
+                        <h3 className="modern-title">{title || 'タイトルなし'}</h3>
+                      </div>
+                      <div className="modern-stats">
+                        <div className="metric view">
+                          <Icon name="eyesFill" size={18} />
+                          0
+                        </div>
+                        <div className="metric like">
+                          <Icon name="heart" size={18} />
+                          0
+                        </div>
+                      </div>
+                    </div>
+                    <div className="modern-schedule">{formatReviewSchedule()}</div>
+                    {onelinePR && <div className="modern-catchcopy">{onelinePR}</div>}
+                    {description && <p className="modern-description">{description.length > 38 ? description.slice(0, 38) + '…' : description}</p>}
+                  </div>
+                </article>
               </div>
             )}
 
@@ -1025,8 +1062,18 @@ export const SpotForm = ({
     return errors;
   }, [authToken, description, endTime, imageFile, selectedLocation, startTime, title, contactValue, locationDetails]);
 
-  const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
+  // フォームのsubmitイベントは常にブロック（実際の送信はボタンクリックで行う）
+  const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
+  };
+
+  // 送信ボタンクリック時の処理
+  const handleSubmitClick = async () => {
+    // 最終ステップでない場合は何もしない
+    if (step !== 5) {
+      return;
+    }
+
     setStatusMessage(null);
     setErrorMessage(null);
     setFormErrors([]);
@@ -1038,12 +1085,14 @@ export const SpotForm = ({
 
     const { lat, lng } = selectedLocation!;
 
+    // SMS未認証の場合は認証モーダルを開いて終了
+    if (!phoneVerified) {
+      onRequirePhoneVerification?.();
+      return;
+    }
+
     setIsSubmitting(true);
     try {
-      if (!phoneVerified) {
-        onRequirePhoneVerification?.();
-        throw new Error("スポット投稿にはSMS本人確認が必要です。先に認証を完了してください。");
-      }
 
       let uploadedImageUrl: string | undefined;
       if (imageFile) {
@@ -1120,17 +1169,34 @@ export const SpotForm = ({
     }
   };
 
-  const stepTitles: string[] = ["位置を選択", "プランを選択", "カードを作成", "投稿者情報", "確認"];
+  const stepTitles: string[] = ["位置を選択", "プランを選択", "基本情報", "ビジュアル編集", "投稿者情報", "確認"];
+  const stepSubtitles: string[] = [
+    "地図をタップしてイベントの開催場所を指定してください",
+    "イベントの種類に合ったプランを選択してください",
+    "イベント名・日時・場所の詳細を入力してください",
+    "実際の表示イメージを確認しながら画像や説明文を編集できます",
+    "問い合わせ先やSNSリンクを入力してください",
+    "入力内容を確認して投稿を完了しましょう"
+  ];
+
+  // Enterキーによるフォーム送信を最終ステップ以外で防ぐ
+  const handleKeyDown = useCallback((event: React.KeyboardEvent<HTMLFormElement>) => {
+    if (event.key === 'Enter' && !isLastStep) {
+      // テキストエリアでは改行を許可
+      if ((event.target as HTMLElement).tagName === 'TEXTAREA') {
+        return;
+      }
+      event.preventDefault();
+    }
+  }, [isLastStep]);
 
   return (
-    <form className="spot-wizard" onSubmit={handleSubmit}>
+    <form className="spot-wizard" onSubmit={handleSubmit} onKeyDown={handleKeyDown}>
       <div className="spot-wizard-header">
         <div>
           <h2>{stepTitles[step] ?? "位置を選択"}</h2>
           <p className="spot-wizard-subtitle">
-            {step === 2
-              ? "カードを編集して、魅力的なイベント情報を作りましょう"
-              : "位置・プラン・カード作成と順番に進めて投稿を完成させます"}
+            {stepSubtitles[step] ?? ""}
           </p>
         </div>
       </div>
@@ -1153,27 +1219,6 @@ export const SpotForm = ({
 
       <div className="spot-step-container">{renderStepContent()}</div>
 
-      {isLastStep ? (
-        <div className="spot-verification-banner">
-          {phoneVerified ? (
-            <span className="status success">✅ SMS認証済みのアカウントです。</span>
-          ) : (
-            <>
-              <p className="hint">
-                投稿を完了する前にSMS本人確認が必要です。下のボタンから認証を済ませてください。
-              </p>
-              <button
-                type="button"
-                className="button subtle"
-                onClick={() => onRequirePhoneVerification?.()}
-              >
-                SMS認証を開始
-              </button>
-            </>
-          )}
-        </div>
-      ) : null}
-
       <div className="spot-wizard-footer">
         {step > 0 ? (
           <button type="button" className="button subtle" onClick={handlePreviousStep}>
@@ -1183,7 +1228,7 @@ export const SpotForm = ({
           <span aria-hidden="true" />
         )}
         {isLastStep ? (
-          <button type="submit" className="button primary" disabled={isSubmitting}>
+          <button type="button" className="button primary" onClick={handleSubmitClick} disabled={isSubmitting}>
             {isSubmitting ? "投稿中..." : "スポットを投稿"}
           </button>
         ) : (
