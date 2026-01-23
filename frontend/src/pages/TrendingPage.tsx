@@ -1,12 +1,11 @@
 
 import { useRef, useState, useEffect } from "react";
-import { AdSenseUnit } from "../features/spots/AdSenseUnit";
+import { AdPlaceholder } from "../components/ui/AdPlaceholder";
 import { TrendSection } from "../features/trending/TrendSection";
 import { usePopularSpots } from "../hooks/usePopularSpots";
 import { useTrendingSpots } from "../hooks/useTrendingSpots";
 import { useNewSpots } from "../hooks/useNewSpots";
 import { useBuzzSpots } from "../hooks/useBuzzSpots";
-import { ADSENSE_CONFIG } from "../config/adsense";
 import { Spot } from "../types";
 import { useAuth } from "../providers/AuthProvider";
 import "../features/trending/trending.css";
@@ -74,6 +73,11 @@ export const TrendingPage = ({
                     </div>
                 </header>
 
+                {/* Ad Placeholder (Top) */}
+                <div style={{ padding: '0 1rem', marginTop: '1rem' }}>
+                    <AdPlaceholder type="thin" label="スポンサーリンク" />
+                </div>
+
                 {/* 1. Popular (Ranked) */}
                 <TrendSection
                     title="人気ランキング"
@@ -84,13 +88,9 @@ export const TrendingPage = ({
                     showRank={true}
                 />
 
-                {/* AdSense Unit 1 */}
+                {/* Ad Placeholder (In-feed 1) */}
                 <div className="trend-ad-container">
-                    <AdSenseUnit
-                        slotId={ADSENSE_CONFIG.TRENDING_SLOT_ID}
-                        format="auto"
-                        className="trending-ad"
-                    />
+                    <AdPlaceholder type="card" label="スポンサー" />
                 </div>
 
                 {/* 2. Rising / Trending */}
@@ -111,13 +111,9 @@ export const TrendingPage = ({
                     onSpotClick={handleSpotClick}
                 />
 
-                {/* AdSense Unit 2 - Using same ID for now, or could be different if config allows */}
+                {/* Ad Placeholder (In-feed 2) */}
                 <div className="trend-ad-container">
-                    <AdSenseUnit
-                        slotId={ADSENSE_CONFIG.TRENDING_SLOT_ID}
-                        format="auto"
-                        className="trending-ad"
-                    />
+                    <AdPlaceholder type="card" label="スポンサー" />
                 </div>
 
                 {/* 4. Domestic Buzz (Japan) */}
@@ -128,6 +124,11 @@ export const TrendingPage = ({
                     isLoading={isLoadingBuzz}
                     onSpotClick={handleSpotClick}
                 />
+
+                {/* Ad Placeholder (Bottom) */}
+                <div style={{ padding: '0 1rem', marginBottom: '1rem' }}>
+                    <AdPlaceholder type="thin" label="スポンサーリンク" />
+                </div>
 
                 {mobileScrollFooter}
             </main>

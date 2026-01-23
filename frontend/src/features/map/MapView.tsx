@@ -23,6 +23,7 @@ import type {
   SpotCategory,
   TileCoordinate
 } from "../../types";
+import { AdPlaceholder } from "../../components/ui/AdPlaceholder";
 
 mapboxgl.accessToken = import.meta.env.VITE_MAPBOX_TOKEN ?? "";
 
@@ -1349,6 +1350,20 @@ export const MapView = ({
 
   return (
     <MapOuter role="presentation" ref={mapOuterRef}>
+      <div style={{
+        position: 'absolute',
+        top: 0,
+        left: 0,
+        width: '100%',
+        zIndex: 10,
+        display: 'flex',
+        justifyContent: 'flex-start',
+        paddingTop: '0.5rem',
+        paddingLeft: '0.5rem',
+        pointerEvents: 'none' /* Let clicks pass through empty space around the ad */
+      }}>
+        <AdPlaceholder type="thin" label="スポンサー" style={{ width: 'auto', minWidth: '300px', margin: 0 }} />
+      </div>
       <MapRoot ref={mapContainerRef} />
       <MapCanvas ref={canvasRef} aria-hidden="true" />
     </MapOuter>
