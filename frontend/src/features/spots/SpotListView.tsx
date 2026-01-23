@@ -215,7 +215,7 @@ export const SpotListView = ({ spots, isLoading, error, onSpotSelect, onSpotView
                         onClick={(e) => e.stopPropagation()}
                         aria-label="Instagram"
                       >
-                        <Icon name="instagram" size={24} />
+                        <img src="/logos/instagram-logo.png" alt="Instagram" />
                       </a>
                     );
                   } else if (xLink) {
@@ -228,7 +228,7 @@ export const SpotListView = ({ spots, isLoading, error, onSpotSelect, onSpotView
                         onClick={(e) => e.stopPropagation()}
                         aria-label="X (Twitter)"
                       >
-                        <Icon name="x" size={22} />
+                        <img src="/logos/x-logo.svg" alt="X" />
                       </a>
                     );
                   }
@@ -316,22 +316,22 @@ export const SpotListView = ({ spots, isLoading, error, onSpotSelect, onSpotView
                                 <div className="modern-section-title">関連リンク</div>
                                 <div className="modern-social-icons">
                                   {externalLinks.map((link) => {
-                                    let iconName: "x" | "instagram" | "youtube" | "facebook" | "globe" = "globe";
                                     let brandClass = "web";
                                     const urlLower = link.url.toLowerCase();
+                                    let logoSrc: string | null = null;
 
                                     if (urlLower.includes("twitter.com") || urlLower.includes("x.com")) {
-                                      iconName = "x";
                                       brandClass = "x";
+                                      logoSrc = "/logos/x-logo.svg";
                                     } else if (urlLower.includes("instagram.com")) {
-                                      iconName = "instagram";
                                       brandClass = "instagram";
+                                      logoSrc = "/logos/instagram-logo.png";
                                     } else if (urlLower.includes("youtube.com")) {
-                                      iconName = "youtube";
                                       brandClass = "youtube";
+                                      logoSrc = "/logos/youtube-logo.png";
                                     } else if (urlLower.includes("facebook.com")) {
-                                      iconName = "facebook";
                                       brandClass = "facebook";
+                                      logoSrc = "/logos/facebook-logo.png";
                                     }
 
                                     return (
@@ -344,7 +344,11 @@ export const SpotListView = ({ spots, isLoading, error, onSpotSelect, onSpotView
                                         onClick={(event) => event.stopPropagation()}
                                         aria-label={link.label}
                                       >
-                                        <Icon name={iconName} size={28} />
+                                        {logoSrc ? (
+                                          <img src={logoSrc} alt={link.label} />
+                                        ) : (
+                                          <Icon name="globe" size={28} />
+                                        )}
                                       </a>
                                     );
                                   })}

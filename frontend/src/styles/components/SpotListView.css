@@ -215,10 +215,10 @@
   position: absolute;
   bottom: 0.4rem;
   right: 0.5rem;
-  width: 36px;
-  height: 36px;
-  border-radius: 50%;
-  background: rgba(255, 255, 255, 0.15);
+  width: 44px;
+  height: 44px;
+  border-radius: 12px;
+  background: transparent;
   border: none;
   color: #ffffff;
   display: flex;
@@ -226,6 +226,7 @@
   justify-content: center;
   cursor: pointer;
   text-decoration: none;
+  overflow: hidden;
 }
 
 /* Header Overlay Styles */
@@ -247,16 +248,26 @@
 }
 
 :is(.spot-list-view, .spot-detail-sheet) .modern-hero-social:hover {
-  background: var(--modern-hero-social-bg-hover, rgba(255, 255, 255, 0.25));
+  transform: scale(1.05);
+}
+
+:is(.spot-list-view, .spot-detail-sheet) .modern-hero-social.instagram {
+  background: #E1306C;
+}
+
+:is(.spot-list-view, .spot-detail-sheet) .modern-hero-social.instagram img {
+  width: 28px;
+  height: 28px;
 }
 
 :is(.spot-list-view, .spot-detail-sheet) .modern-hero-social.x {
   width: 44px;
   height: 44px;
-  background: rgba(0, 0, 0, 0.6);
+  border-radius: 12px;
+  background: #000000;
 }
 
-:is(.spot-list-view, .spot-detail-sheet) .modern-hero-social.x svg {
+:is(.spot-list-view, .spot-detail-sheet) .modern-hero-social.x img {
   width: 24px;
   height: 24px;
 }
@@ -523,9 +534,9 @@
 }
 
 :is(.spot-list-view, .spot-detail-sheet) .modern-social-icon-link {
-  width: 48px;
-  height: 48px;
-  border-radius: 50%;
+  width: 56px;
+  height: 56px;
+  border-radius: 14px;
   display: flex !important;
   align-items: center;
   justify-content: center;
@@ -534,32 +545,51 @@
   font-size: 1.5rem;
   text-decoration: none;
   border: none;
+  overflow: hidden;
+  background: transparent;
 }
 
 :is(.spot-list-view, .spot-detail-sheet) .modern-social-icon-link:hover {
-  transform: scale(1.1);
+  transform: scale(1.05);
+}
+
+:is(.spot-list-view, .spot-detail-sheet) .modern-social-icon-link img {
+  width: 56px;
+  height: 56px;
+  object-fit: contain;
 }
 
 /* Brand Colors */
 :is(.spot-list-view, .spot-detail-sheet) .modern-social-icon-link.instagram {
-  background: linear-gradient(45deg, #f09433 0%, #e6683c 25%, #dc2743 50%, #cc2366 75%, #bc1888 100%);
+  background: #E1306C;
+}
+
+:is(.spot-list-view, .spot-detail-sheet) .modern-social-icon-link.instagram img {
+  width: 36px;
+  height: 36px;
 }
 
 :is(.spot-list-view, .spot-detail-sheet) .modern-social-icon-link.x {
   background: #000000;
-  color: white;
+  border-radius: 14px;
+}
+
+:is(.spot-list-view, .spot-detail-sheet) .modern-social-icon-link.x img {
+  width: 32px;
+  height: 32px;
 }
 
 :is(.spot-list-view, .spot-detail-sheet) .modern-social-icon-link.youtube {
-  background: #ff0000;
+  background: transparent;
 }
 
 :is(.spot-list-view, .spot-detail-sheet) .modern-social-icon-link.facebook {
-  background: #1877f2;
+  background: transparent;
 }
 
 :is(.spot-list-view, .spot-detail-sheet) .modern-social-icon-link.web {
   background: #64748b;
+  border-radius: 14px;
 }
 
 :is(.spot-list-view, .spot-detail-sheet) .modern-bottom-actions {
