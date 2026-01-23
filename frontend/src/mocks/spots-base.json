@@ -5,10 +5,15 @@
     "speechBubble": "今からライブ！",
     "description": "渋谷駅前で路上ライブ開催！",
     "category": "live",
-    "tags": ["ライブ", "渋谷", "ストリート", "音楽"],
+    "tags": [
+      "ライブ",
+      "渋谷",
+      "ストリート",
+      "音楽"
+    ],
     "lat": 35.6602,
     "lng": 139.7001,
-    "startTime": "2026-01-17T11:30:00.000Z",
+    "startTime": "2026-01-24T11:30:00.000Z",
     "endTime": "2026-01-26T23:00:00.000Z",
     "durationMinutes": 90,
     "imageUrl": null,
@@ -32,7 +37,7 @@
       "isFree": true
     },
     "isIndoor": false,
-    "createdAt": "2025-10-29T09:00:00.000Z",
+    "createdAt": "2026-01-24T09:00:00.000Z",
     "status": "upcoming",
     "defaultMapLayer": "balloon",
     "premium": false,
@@ -56,7 +61,12 @@
     "speechBubble": "この冬だけの”特別な体験”",
     "description": "横浜都心臨海部の各地で行われるイルミネーションイベントをつなぐキャンペーン「THE YOKOHAMA ILLUMINATION」を開催。\n\n観光地や商業施設、商店街などで展開される40を超えるイベントの発信とともに、街を巡って楽しめるデジタルスタンプラリーや、イルミネーション・夜景フォトコンテストなど、参加型企画も実施します。\n\n日本新三大夜景都市”横浜”の美しい夜景に光の輝きが重なる、この冬だけの”特別な体験”をお楽しみください。",
     "category": "cafe",
-    "tags": ["イルミネーション", "横浜", "冬", "イベント"],
+    "tags": [
+      "イルミネーション",
+      "横浜",
+      "冬",
+      "イベント"
+    ],
     "lat": 35.661,
     "lng": 139.6995,
     "startTime": "2026-01-14T00:00:00.000+09:00",
@@ -88,7 +98,7 @@
       "isFree": false
     },
     "isIndoor": false,
-    "createdAt": "2025-10-28T08:00:00.000Z",
+    "createdAt": "2026-01-23T08:00:00.000Z",
     "status": "live",
     "defaultMapLayer": "pulse",
     "premium": false,
@@ -112,7 +122,12 @@
     "speechBubble": "朝ヨガやってるよ",
     "description": "ガーデンルームで開催する朝ヨガ。",
     "category": "event",
-    "tags": ["ヨガ", "朝活", "イベント", "屋内"],
+    "tags": [
+      "ヨガ",
+      "朝活",
+      "イベント",
+      "屋内"
+    ],
     "lat": 35.658,
     "lng": 139.702,
     "startTime": "2026-01-14T09:00:00.000Z",
@@ -137,7 +152,7 @@
       "isFree": false
     },
     "isIndoor": true,
-    "createdAt": "2025-10-27T07:00:00.000Z",
+    "createdAt": "2026-01-23T12:00:00.000Z",
     "status": "upcoming",
     "defaultMapLayer": "balloon",
     "premium": false,
@@ -151,7 +166,12 @@
     "speechBubble": "DJ Somari緊急出演！",
     "description": "渋谷クラブで開催するプレミアムDJナイト。",
     "category": "event",
-    "tags": ["DJ", "ナイト", "クラブ", "プレミアム"],
+    "tags": [
+      "DJ",
+      "ナイト",
+      "クラブ",
+      "プレミアム"
+    ],
     "lat": 35.6589,
     "lng": 139.704,
     "startTime": "2026-01-14T12:00:00.000Z",
@@ -176,7 +196,7 @@
       "isFree": false
     },
     "isIndoor": true,
-    "createdAt": "2025-10-26T09:00:00.000Z",
+    "createdAt": "2026-01-23T20:00:00.000Z",
     "status": "upcoming",
     "defaultMapLayer": "balloon",
     "premium": true,

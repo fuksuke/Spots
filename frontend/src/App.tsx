@@ -22,9 +22,9 @@ import { ADSENSE_CONFIG } from "./config/adsense";
 import { setSentryUser } from "./lib/sentry";
 import { useSpotFeed } from "./hooks/useSpotFeed";
 import { useProfile } from "./hooks/useProfile";
-import { usePopularSpots } from "./hooks/usePopularSpots";
-import { useTrendingNewSpots } from "./hooks/useTrendingNewSpots";
-import { usePromotions } from "./hooks/usePromotions";
+// import { usePopularSpots } from "./hooks/usePopularSpots";
+// import { useTrendingNewSpots } from "./hooks/useTrendingNewSpots";
+// import { usePromotions } from "./hooks/usePromotions";
 import { useLayoutMetrics } from "./hooks/useLayoutMetrics";
 import { useCategoryTabs } from "./hooks/useCategoryTabs";
 import type { CategoryKey } from "./hooks/useCategoryTabs";
@@ -370,19 +370,10 @@ function App() {
     mutate: mutateSpots
   } = useSpotFeed(undefined, authToken, currentUser?.uid ?? null);
 
-  const {
-    spots: popularSpots,
-    isLoading: isLoadingPopularSpots,
-    error: popularError
-  } = usePopularSpots(6, authToken);
-
-  const {
-    trendingNewSpots,
-    isLoading: isLoadingTrendingNew,
-    error: trendingNewError
-  } = useTrendingNewSpots(10, authToken);
-
-  const { promotions, isLoading: isLoadingPromotions, error: promotionsError } = usePromotions();
+  /* Hooks removed for TrendingPage internal optimization */
+  // const { spots: popularSpots... }
+  // const { trendingNewSpots... }
+  // const { promotions... }
 
   const useMockTiles = import.meta.env.VITE_USE_MOCK_TILES === "true";
 
@@ -1305,19 +1296,13 @@ function App() {
           <Route
             path="/spots/trending"
             element={
-              <TrendingPage
-                popularSpots={popularSpots}
-                promotions={promotions}
-                isLoadingPopularSpots={isLoadingPopularSpots}
-                popularError={popularError}
-                trendingNewSpots={trendingNewSpots}
-                isLoadingTrendingNew={isLoadingTrendingNew}
-                trendingNewError={trendingNewError}
-                onSpotSelect={handleSpotSelect}
-                onSpotView={handleSpotViewFromSpot}
-                onPromotionSelect={(promotion) => handlePromotionSelect(promotion.spotId)}
-                mobileScrollFooter={MOBILE_SCROLL_FOOTER}
-              />
+              <Suspense fallback={<div className="loading-state">Loading...</div>}>
+                <TrendingPage
+                  onSpotSelect={handleSpotSelect}
+                  onSpotView={handleSpotViewFromSpot}
+                  mobileScrollFooter={MOBILE_SCROLL_FOOTER}
+                />
+              </Suspense>
             }
           />
           <Route path="*" element={<Navigate to="/spots" replace />} />
