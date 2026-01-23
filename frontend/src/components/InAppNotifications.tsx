@@ -95,14 +95,7 @@ export const InAppNotifications = ({
           )}
         </section>
 
-        {hasAdminAccess ? (
-          <footer className="notification-panel__footer">
-            <button type="button" className="button primary" onClick={onAdminClick}>
-              管理画面
-            </button>
-            <p className="hint">審査・通報の管理画面を開きます。</p>
-          </footer>
-        ) : null}
+
       </section>
     </div>
   );

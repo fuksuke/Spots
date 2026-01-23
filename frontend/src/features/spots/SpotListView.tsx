@@ -273,7 +273,7 @@ export const SpotListView = ({ spots, isLoading, error, onSpotSelect, onSpotView
                                 setLikedMap((prev) => ({ ...prev, [spot.id]: !isLikedLocal }));
                               }}
                             >
-                              <Icon name="heart" size={18} />
+                              <Icon name={isLikedLocal ? "heartFill" : "heart"} size={18} />
                               {likesLabelUpdated}
                             </div>
                           </div>

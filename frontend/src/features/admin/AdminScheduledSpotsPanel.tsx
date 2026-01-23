@@ -159,49 +159,41 @@ export const AdminScheduledSpotsPanel = ({
   }
 
   return (
-    <div className="panel admin-scheduled-panel">
-      <h2>管理者審査</h2>
-      <p className="hint">
-        ステータス: {statusFilter.toUpperCase()} / 表示件数: {spots.length}件
-      </p>
+    <div className="admin-scheduled-panel">
       <ul className="admin-scheduled-list">
         {spots.map((spot) => (
           <li key={spot.id} className="admin-scheduled-item">
-            <div className="admin-scheduled-main">
-              <span className="admin-scheduled-type">
-                {spot.announcementType === "long_term_campaign" ? "長期キャンペーン" : "短期告知"}
+            <div className="admin-card-header">
+              <span className="admin-type-badge">
+                {spot.announcementType === "long_term_campaign" ? "長期" : "短期"}
               </span>
-              <h3>{spot.title}</h3>
-              <p className="admin-scheduled-meta">
-                公開予定: {new Date(spot.publishAt).toLocaleString("ja-JP")}
-                <br />開始: {new Date(spot.startTime).toLocaleString("ja-JP")}
-                <br />投稿者: {spot.ownerId}
-              </p>
-              <p className="admin-scheduled-description">{spot.description}</p>
-              {spot.reviewNotes ? <p className="admin-scheduled-notes">メモ: {spot.reviewNotes}</p> : null}
+              <span className="admin-meta-inline">
+                {new Date(spot.publishAt).toLocaleDateString("ja-JP")} 公開予定
+              </span>
             </div>
+            <h3 className="admin-card-title">{spot.title}</h3>
+            <p className="admin-card-description">{spot.description}</p>
+            <div className="admin-card-meta">
+              <span>開始: {new Date(spot.startTime).toLocaleString("ja-JP", { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" })}</span>
+              <span>投稿者: {spot.ownerId}</span>
+            </div>
+            {spot.reviewNotes ? <p className="admin-card-notes">{spot.reviewNotes}</p> : null}
+
             {canReview ? (
-              <div className="admin-moderation-tools">
-                <div className="moderation-note">
-                  <label className="control">
-                    <span>審査コメント</span>
+              <div className="admin-review-section">
+                <details className="admin-review-details">
+                  <summary>コメント・テンプレート</summary>
+                  <div className="admin-review-fields">
                     <textarea
-                      className="textarea"
+                      className="admin-review-textarea"
                       value={getReviewDraft(spot.id).note}
-                      placeholder={
-                        statusFilter === "pending"
-                          ? "審査結果のコメントを入力してください"
-                          : ""
-                      }
+                      placeholder="審査コメント（却下時は必須）"
                       onChange={(event) => handleNoteChange(spot.id, event)}
-                      rows={3}
+                      rows={2}
                       aria-label="審査コメント"
                     />
-                  </label>
-                  <label className="control">
-                    <span>テンプレート</span>
                     <select
-                      className="input"
+                      className="admin-review-select"
                       value={getReviewDraft(spot.id).templateId ?? ""}
                       onChange={(event) => handleTemplateChange(spot.id, event)}
                     >
@@ -212,22 +204,22 @@ export const AdminScheduledSpotsPanel = ({
                         </option>
                       ))}
                     </select>
-                    {isTemplateLoading ? <span className="hint small">テンプレートを読み込み中...</span> : null}
-                    {templateError ? <span className="hint error">テンプレートの取得に失敗しました</span> : null}
-                  </label>
-                </div>
-                <div className="admin-scheduled-actions">
+                    {isTemplateLoading ? <span className="admin-hint">読み込み中...</span> : null}
+                    {templateError ? <span className="admin-hint error">取得失敗</span> : null}
+                  </div>
+                </details>
+                <div className="admin-action-buttons">
                   <button
                     type="button"
-                    className="button subtle"
+                    className="admin-btn-approve"
                     disabled={submittingId === spot.id}
                     onClick={() => void handleReview(spot, "approved")}
                   >
-                    承認
+                    承認する
                   </button>
                   <button
                     type="button"
-                    className="button subtle"
+                    className="admin-btn-reject"
                     disabled={submittingId === spot.id}
                     onClick={() => void handleReview(spot, "rejected")}
                   >
@@ -236,25 +228,23 @@ export const AdminScheduledSpotsPanel = ({
                 </div>
               </div>
             ) : (
-              <div className="admin-scheduled-status">
+              <div className="admin-status-row">
                 <span className={`badge status-${spot.status}`.trim()}>{spot.status.toUpperCase()}</span>
               </div>
             )}
-            <div className="admin-scheduled-meta-actions">
-              <button
-                type="button"
-                className="button subtle"
-                onClick={() => setExpandedSpotId((current) => (current === spot.id ? null : spot.id))}
-              >
-                {expandedSpotId === spot.id ? "履歴を閉じる" : "履歴を表示"}
-              </button>
-            </div>
+            <button
+              type="button"
+              className="admin-toggle-history"
+              onClick={() => setExpandedSpotId((current) => (current === spot.id ? null : spot.id))}
+            >
+              {expandedSpotId === spot.id ? "履歴を閉じる" : "履歴を表示"}
+            </button>
             {expandedSpotId === spot.id ? (
               <ReviewLogSection spotId={spot.id} authToken={authToken} templateLabelMap={templateLabelMap} />
             ) : null}
           </li>
         ))}
-        {spots.length === 0 && <li className="hint">{emptyMessage ?? "該当する告知はありません。"}</li>}
+        {spots.length === 0 && <li className="admin-empty">{emptyMessage ?? "該当する告知はありません。"}</li>}
       </ul>
     </div>
   );

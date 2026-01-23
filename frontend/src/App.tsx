@@ -9,7 +9,7 @@ import { SearchOverlay } from "./features/map/SearchOverlay";
 import { InAppNotifications } from "./components/InAppNotifications";
 import type { InAppNotification } from "./components/InAppNotifications";
 import { PromotionBanner } from "./features/spots/PromotionBanner";
-import { AdminDashboard } from "./features/admin/AdminDashboard";
+import { AdminPage } from "./features/admin/AdminPage";
 import { AccountPanel } from "./features/user/AccountPanel";
 import { SpotCreatePage } from "./features/spots/SpotCreatePage";
 import { SpotDetailSheet } from "./features/spots/SpotDetailSheet";
@@ -847,12 +847,17 @@ function App() {
     }
     trackEvent("admin_dashboard_open", {});
     setNotificationsOpen(false);
-    setAdminPanelOpen(true);
-  }, [authToken, currentUser, hasAdminClaim, triggerMessage]);
+    navigate("/admin");
+  }, [authToken, currentUser, hasAdminClaim, navigate, triggerMessage]);
 
   const handleNotificationsClick = useCallback(() => {
-    setNotificationsOpen((open) => !open);
-  }, []);
+    if (!currentUser || !authToken) {
+      triggerMessage("通知を確認するにはログインしてください");
+      setAuthModalOpen(true);
+      return;
+    }
+    setNotificationsOpen(true);
+  }, [authToken, currentUser, triggerMessage]);
 
   const handleNotificationDismiss = useCallback(
     (notification: InAppNotification) => {
@@ -1318,22 +1323,10 @@ function App() {
           <Route path="*" element={<Navigate to="/spots" replace />} />
         </Route>
         <Route path="/spots/new" element={spotCreateLayout} />
+        <Route path="/admin" element={<AdminPage />} />
       </Routes>
 
-      <div className={`floating-panel admin-panel ${isAdminPanelOpen ? "open" : ""}`.trim()} role="dialog" aria-hidden={!isAdminPanelOpen}>
-        <div className="floating-scrim" aria-hidden="true" onClick={() => setAdminPanelOpen(false)} />
-        <section className="floating-body">
-          {hasAdminClaim && authToken ? (
-            <AdminDashboard
-              authToken={authToken}
-              onClose={() => setAdminPanelOpen(false)}
-              onInspectSpot={handleAdminInspectSpot}
-            />
-          ) : (
-            <div className="panel">管理者権限がないか、ログインが必要です。</div>
-          )}
-        </section>
-      </div>
+
 
       <AccountPanel
         isOpen={isAccountPanelOpen}

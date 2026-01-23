@@ -177,6 +177,18 @@ export const AdminDashboard = ({ authToken, onClose, onInspectSpot }: AdminDashb
       {panelView === "scheduled" ? (
         <>
           <div className="admin-toolbar">
+            <div className="admin-search-row">
+              <input
+                type="search"
+                className="admin-search-input"
+                value={searchTerm}
+                onChange={handleSearchChange}
+                placeholder="タイトル / 投稿者IDで検索..."
+              />
+              <button type="button" className="button subtle compact" onClick={handleRefresh}>
+                再読込
+              </button>
+            </div>
             <div className="status-group" role="tablist" aria-label="ステータスフィルタ">
               {STATUS_OPTIONS.map((option) => (
                 <button
@@ -189,9 +201,9 @@ export const AdminDashboard = ({ authToken, onClose, onInspectSpot }: AdminDashb
                 </button>
               ))}
             </div>
-            <div className="filter-row">
-              <label className="filter control">
-                <span>種別</span>
+            <div className="admin-filter-compact">
+              <label className="filter-inline">
+                <span>種別:</span>
                 <select value={typeFilter} onChange={handleTypeChange}>
                   {TYPE_OPTIONS.map((option) => (
                     <option key={option.value} value={option.value}>
@@ -200,8 +212,8 @@ export const AdminDashboard = ({ authToken, onClose, onInspectSpot }: AdminDashb
                   ))}
                 </select>
               </label>
-              <label className="filter control">
-                <span>ソート</span>
+              <label className="filter-inline">
+                <span>ソート:</span>
                 <select value={sortKey} onChange={handleSortKeyChange}>
                   {SORT_OPTIONS.map((option) => (
                     <option key={option.value} value={option.value}>
@@ -210,18 +222,11 @@ export const AdminDashboard = ({ authToken, onClose, onInspectSpot }: AdminDashb
                   ))}
                 </select>
               </label>
-              <button type="button" className="button subtle" onClick={handleToggleSortDir}>
-                {sortDesc ? "▼降順" : "▲昇順"}
-              </button>
-              <label className="filter search">
-                <span className="sr-only">検索</span>
-                <input type="search" value={searchTerm} onChange={handleSearchChange} placeholder="タイトル / 投稿者ID" />
-              </label>
-              <button type="button" className="button subtle" onClick={handleRefresh}>
-                再読込
+              <button type="button" className="button-icon-only" onClick={handleToggleSortDir} aria-label={sortDesc ? "降順" : "昇順"}>
+                {sortDesc ? "▼" : "▲"}
               </button>
             </div>
-            <p className="hint small">{getStatusLabel(statusFilter)}: {filteredSpots.length}件表示中</p>
+            <p className="admin-result-hint">{getStatusLabel(statusFilter)}: {filteredSpots.length}件</p>
           </div>
           <AdminScheduledSpotsPanel
             spots={filteredSpots}

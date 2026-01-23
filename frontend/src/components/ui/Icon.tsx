@@ -23,6 +23,7 @@ import {
   PiCurrencyJpyFill,
   PiCalendarFill,
   PiHeart,
+  PiHeartFill,
   PiSealCheckFill,
   PiAddressBookFill,
   PiSpeakerSimpleHighFill,
@@ -30,7 +31,9 @@ import {
   PiXLogo,
   PiCheck,
   PiYoutubeLogo,
-  PiFacebookLogo
+  PiFacebookLogo,
+  PiLineSegments,
+  PiBoundingBox
 } from "react-icons/pi";
 
 const ICONS = {
@@ -47,7 +50,7 @@ const ICONS = {
   menu: PiListBullets,
   calendar: PiCalendarDots,
   camera: PiCameraPlus,
-  trend: PiChartLineUp,
+  trend: PiLineSegments,
   cafe: PiCoffee,
   refresh: PiArrowClockwise,
   gear: PiGear,
@@ -57,6 +60,7 @@ const ICONS = {
   currencyJpyFill: PiCurrencyJpyFill,
   calendarSimple: PiCalendarFill,
   heart: PiHeart,
+  heartFill: PiHeartFill,
   sealCheck: PiSealCheckFill,
   wechatLogo: PiAddressBookFill,
   speakerHigh: PiSpeakerSimpleHighFill,
@@ -64,7 +68,8 @@ const ICONS = {
   x: PiXLogo,
   check: PiCheck,
   youtube: PiYoutubeLogo,
-  facebook: PiFacebookLogo
+  facebook: PiFacebookLogo,
+  boundingBox: PiBoundingBox
 } as const;
 
 export type IconName = keyof typeof ICONS;

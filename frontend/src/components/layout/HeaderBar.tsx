@@ -1,5 +1,4 @@
 import { User } from "firebase/auth";
-
 import { Icon } from "../ui/Icon";
 
 export type HeaderBarProps = {
@@ -11,6 +10,8 @@ export type HeaderBarProps = {
   onAccountClick: () => void;
   language: string;
   onLanguageChange: (language: string) => void;
+  showAdminButton?: boolean;
+  onAdminClick?: () => void;
 };
 
 export const HeaderBar = ({
@@ -21,7 +22,9 @@ export const HeaderBar = ({
   onNotificationsClick,
   onAccountClick,
   language,
-  onLanguageChange
+  onLanguageChange,
+  showAdminButton,
+  onAdminClick
 }: HeaderBarProps) => {
   const renderActions = () => {
     if (!currentUser) {
@@ -34,6 +37,17 @@ export const HeaderBar = ({
 
     return (
       <div className="header-auth-buttons">
+        {showAdminButton && onAdminClick ? (
+          <button
+            type="button"
+            className="icon-button"
+            onClick={onAdminClick}
+            aria-label="管理画面"
+            title="管理画面へ"
+          >
+            <Icon name="boundingBox" label="管理画面" />
+          </button>
+        ) : null}
         <button
           type="button"
           className="icon-button"

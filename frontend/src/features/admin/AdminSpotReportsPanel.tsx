@@ -1,6 +1,6 @@
 import { useState } from "react";
 
-import { SpotReport, SpotReportStatus } from "../types";
+import { SpotReport, SpotReportStatus } from "../../types";
 
 const REASON_LABELS: Record<string, string> = {
   spam: "スパム・宣伝",
@@ -70,46 +70,41 @@ export const AdminSpotReportsPanel = ({
   }
 
   return (
-    <div className="panel admin-spot-reports-panel">
-      <h2>通報一覧</h2>
-      <p className="hint">
-        ステータス: {statusFilter === "open" ? "未対応" : "対応済み"} / 件数: {reports.length} 件
-      </p>
-      <ul className="spot-report-list">
+    <div className="admin-reports-panel">
+      <ul className="admin-report-list">
         {reports.map((report) => {
-          const createdAtLabel = new Date(report.createdAt).toLocaleString("ja-JP");
-          const resolvedAtLabel = report.resolvedAt ? new Date(report.resolvedAt).toLocaleString("ja-JP") : null;
+          const createdAtLabel = new Date(report.createdAt).toLocaleDateString("ja-JP");
           const reasonLabel = REASON_LABELS[report.reason] ?? report.reason;
           const isResolved = report.status === "resolved";
 
           return (
-            <li key={report.id} className="spot-report-card">
-              <div className="spot-report-main">
-                <div className="spot-report-header">
-                  <span className={`report-status ${isResolved ? "resolved" : "open"}`.trim()}>
-                    {isResolved ? "対応済み" : "未対応"}
-                  </span>
-                  <span className="report-reason">{reasonLabel}</span>
-                </div>
-                <p className="report-meta">
-                  通報日時: {createdAtLabel}
-                  {resolvedAtLabel ? ` / 対応日時: ${resolvedAtLabel}` : ""}
-                  <br />通報者: {report.reporterUid ? report.reporterUid : "匿名"}
-                  <br />スポットID: {report.spotId}
-                </p>
-                {report.details ? <p className="report-details">{report.details}</p> : <p className="report-details muted">詳細なし</p>}
+            <li key={report.id} className={`admin-report-card ${isResolved ? "resolved" : "open"}`}>
+              <div className="admin-report-header">
+                <span className={`admin-report-status ${isResolved ? "resolved" : "open"}`}>
+                  {isResolved ? "対応済み" : "未対応"}
+                </span>
+                <span className="admin-report-reason">{reasonLabel}</span>
+                <span className="admin-report-date">{createdAtLabel}</span>
               </div>
-              <div className="spot-report-actions">
+              <div className="admin-report-body">
+                <p className="admin-report-spot">スポット: {report.spotId}</p>
+                {report.details ? (
+                  <p className="admin-report-details">{report.details}</p>
+                ) : (
+                  <p className="admin-report-details muted">詳細なし</p>
+                )}
+              </div>
+              <div className="admin-report-actions">
                 <button
                   type="button"
-                  className="button subtle"
+                  className="admin-btn-secondary"
                   onClick={() => onInspectSpot?.(report.spotId)}
                 >
-                  スポットを表示
+                  スポットを確認
                 </button>
                 <button
                   type="button"
-                  className="button primary"
+                  className={isResolved ? "admin-btn-secondary" : "admin-btn-primary"}
                   disabled={Boolean(updatingId)}
                   onClick={() => handleUpdateStatus(report, isResolved ? "open" : "resolved")}
                 >
@@ -120,7 +115,7 @@ export const AdminSpotReportsPanel = ({
           );
         })}
         {reports.length === 0 ? (
-          <li className="empty-message">{statusFilter === "open" ? "未対応の通報はありません。" : "対応済み通報はありません。"}</li>
+          <li className="admin-empty">{statusFilter === "open" ? "未対応の通報はありません。" : "対応済み通報はありません。"}</li>
         ) : null}
       </ul>
     </div>

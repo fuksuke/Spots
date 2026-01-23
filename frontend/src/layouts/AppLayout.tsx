@@ -88,6 +88,8 @@ export const AppLayout = ({
                     onAccountClick={onAccountClick}
                     language={language}
                     onLanguageChange={onLanguageChange}
+                    showAdminButton={hasAdminClaim}
+                    onAdminClick={onAdminClick}
                 />
             }
             actionBar={

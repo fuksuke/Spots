@@ -1,4 +1,5 @@
 import useSWR from "swr";
+import { ADMIN_MOCK_MODE, MOCK_ANALYTICS_OVERVIEW } from "../mocks/mockAdminData";
 
 export type AnalyticsOverview = {
   timeRange: "24h";
@@ -27,6 +28,16 @@ const fetcher = async ([endpoint, token]: [string, string]) => {
 };
 
 export const useAdminAnalytics = (authToken?: string | null) => {
+  // モックモード
+  if (ADMIN_MOCK_MODE) {
+    return {
+      overview: MOCK_ANALYTICS_OVERVIEW,
+      error: undefined,
+      isLoading: false,
+      mutate: async () => MOCK_ANALYTICS_OVERVIEW
+    };
+  }
+
   const token = authToken?.trim();
   const key = token ? ["/api/admin/analytics/overview", token] : null;
   const { data, error, isLoading, mutate } = useSWR<AnalyticsOverview>(key, fetcher, {
