@@ -13,9 +13,9 @@
 
 /* Header */
 .spot-create-header {
-  display: flex;
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
   align-items: center;
-  justify-content: space-between;
   padding: var(--spots-space-sm) var(--spots-space-md);
   padding-top: calc(var(--spots-space-sm) + var(--safe-area-top));
   background: var(--spots-surface);
@@ -25,26 +25,38 @@
   z-index: 100;
 }
 
-.spot-create-header-left {
-  display: flex;
-  align-items: center;
-  gap: var(--spots-space-md);
+.header-left {
+  justify-self: start;
 }
 
-.spot-create-header-left h1 {
+.header-right {
+  justify-self: end;
+}
+
+.spot-create-header h1 {
   margin: 0;
   font-size: 1rem;
   font-weight: 600;
   color: var(--spots-text);
+  grid-column: 2;
+  text-align: center;
+  white-space: nowrap;
 }
 
-.spot-create-header .button.subtle {
-  color: var(--spots-text-secondary);
+/* キャンセルボタン */
+.spot-create-header .button.cancel {
+  color: var(--spots-text);
+  background: #f3f4f6;
+  /* グレー背景 */
   padding: var(--spots-space-sm) var(--spots-space-md);
+  font-size: 0.875rem;
+  font-weight: 600;
+  border-radius: var(--spots-radius-sm);
+  border: none;
 }
 
-.spot-create-header .button.subtle:hover {
-  color: var(--spots-coral);
+.spot-create-header .button.cancel:hover {
+  background: #e2e8f0;
 }
 
 .spot-create-header .button.secondary {
@@ -80,10 +92,10 @@
   display: flex;
   flex-direction: column;
   gap: var(--spots-space-md);
+  /* 画面高さを確保しつつスクロール可能に */
   flex: 1;
-  /* 親要素いっぱいに広げる */
-  min-height: 0;
-  /* flexアイテムの最小高さ制限解除 */
+  width: 100%;
+  height: auto;
 }
 
 .spot-wizard-header {
@@ -131,18 +143,18 @@
 
 /* Step Container */
 .spot-step-container {
-  flex: 1;
   display: flex;
   flex-direction: column;
-  min-height: 0;
+  /* 余白があれば伸ばしてフッターを押し下げる */
+  flex: 1;
 }
 
 .spot-step {
   display: flex;
   flex-direction: column;
   gap: var(--spots-space-md);
-  flex: 1;
-  min-height: 0;
+  /* コンテンツに応じて伸びる */
+  flex: initial;
 }
 
 .spot-step {
@@ -251,9 +263,9 @@
   display: flex;
   flex-direction: column;
   gap: var(--spots-space-sm);
-  flex: 1;
-  overflow-y: auto;
-  /* カードが多い場合はスクロール */
+  /* 内部スクロール廃止 */
+  overflow-y: visible;
+  flex: initial;
 }
 
 .spot-plan-card {
@@ -363,6 +375,11 @@ select.input {
   font-family: inherit;
   color: var(--spots-text);
   background: var(--spots-surface);
+  /* ネイティブスタイルのリセットとアンダーライン防止 */
+  appearance: none;
+  -webkit-appearance: none;
+  box-shadow: none;
+  background-image: none;
 }
 
 .input:focus,
@@ -691,6 +708,12 @@ select.input:focus {
   justify-content: space-between;
   padding-top: var(--spots-space-md);
   border-top: 1px solid var(--spots-border);
+  margin-top: auto;
+  /* 最下部に配置 */
+  background: var(--spots-surface);
+  position: static;
+  /* 固定解除 */
+  z-index: 10;
 }
 
 /* Buttons */
@@ -785,5 +808,22 @@ select.input:focus {
 
   .spot-map-shell {
     min-height: 260px;
+  }
+}
+
+/* Header Responsive */
+@media (max-width: 400px) {
+  .spot-create-header {
+    padding: var(--spots-space-xs) var(--spots-space-md);
+    padding-top: calc(var(--spots-space-xs) + var(--safe-area-top));
+  }
+
+  .spot-create-header h1 {
+    font-size: 0.938rem;
+  }
+
+  .spot-create-header .button {
+    padding: 6px 12px;
+    font-size: 0.8125rem;
   }
 }

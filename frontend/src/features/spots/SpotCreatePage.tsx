@@ -48,13 +48,13 @@ export const SpotCreatePage = ({
   return (
     <div className="spot-create-page">
       <header className="spot-create-header">
-        <div className="spot-create-header-left">
-          <button type="button" className="button subtle" onClick={() => setCancelConfirmOpen(true)}>
+        <div className="header-left">
+          <button type="button" className="button subtle cancel" onClick={() => setCancelConfirmOpen(true)}>
             キャンセル
           </button>
-          <h1>スポット投稿</h1>
         </div>
-        <div className="spot-create-header-actions">
+        <h1>スポット投稿</h1>
+        <div className="header-right">
           <button
             type="button"
             className="button secondary"

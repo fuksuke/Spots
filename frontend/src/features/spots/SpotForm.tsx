@@ -596,6 +596,9 @@ export const SpotForm = ({
                 value={category}
                 onChange={(event) => setCategory(event.target.value as SpotCategory)}
               >
+                <option value="" disabled>
+                  選択してください
+                </option>
                 {categories.map((item) => (
                   <option key={item} value={item}>
                     {item.toUpperCase()}
