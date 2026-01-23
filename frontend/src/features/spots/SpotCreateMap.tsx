@@ -74,6 +74,21 @@ export const SpotCreateMap = ({ value, onChange, initialView }: SpotCreateMapPro
     };
   }, []);
 
+  // コンテナのリサイズを監視して地図をリサイズする
+  useEffect(() => {
+    if (!containerRef.current || !mapRef.current) return;
+
+    const resizeObserver = new ResizeObserver(() => {
+      mapRef.current?.resize();
+    });
+
+    resizeObserver.observe(containerRef.current);
+
+    return () => {
+      resizeObserver.disconnect();
+    };
+  }, [mapRef.current]);
+
   useEffect(() => {
     const map = mapRef.current;
     if (!map) return;
