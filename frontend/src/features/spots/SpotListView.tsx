@@ -255,10 +255,10 @@ export const SpotListView = ({ spots, isLoading, error, onSpotSelect, onSpotView
                       />
                       {/* Content area containing title, stats, schedule, catch copy, and description */}
                       <div className="modern-content">
-                        <div className="modern-title-row">
-                          <div className="modern-titles">
+                        <div className="modern-header-row">
+                          <div className="modern-header-main">
                             <h3 className="modern-title">{mainTitle}</h3>
-                            {subTitle && <p className="modern-subtitle">{subTitle}</p>}
+                            <div className="modern-schedule">{scheduleLabel}</div>
                           </div>
                           <div className="modern-stats">
                             <div className="metric view">
@@ -278,8 +278,7 @@ export const SpotListView = ({ spots, isLoading, error, onSpotSelect, onSpotView
                             </div>
                           </div>
                         </div>
-                        {/* 3. Modern schedule: Underline only, no background */}
-                        <div className="modern-schedule">{scheduleLabel}</div>
+                        {subTitle && <p className="modern-subtitle">{subTitle}</p>}
                         {catchCopy && <div className="modern-catchcopy">{catchCopy}</div>}
                         {fullDesc && (
                           <>
@@ -316,18 +315,41 @@ export const SpotListView = ({ spots, isLoading, error, onSpotSelect, onSpotView
                               <>
                                 <div className="modern-section-title">関連リンク</div>
                                 <div className="modern-social-icons">
-                                  {externalLinks.map((link) => (
-                                    <a
-                                      key={`${link.label}-${link.url}`}
-                                      href={link.url}
-                                      target="_blank"
-                                      rel="noopener noreferrer"
-                                      onClick={(event) => event.stopPropagation()}
-                                    >
-                                      {link.label}
-                                    </a>
-                                  ))}
+                                  {externalLinks.map((link) => {
+                                    let iconName: "x" | "instagram" | "youtube" | "facebook" | "globe" = "globe";
+                                    let brandClass = "web";
+                                    const urlLower = link.url.toLowerCase();
+
+                                    if (urlLower.includes("twitter.com") || urlLower.includes("x.com")) {
+                                      iconName = "x";
+                                      brandClass = "x";
+                                    } else if (urlLower.includes("instagram.com")) {
+                                      iconName = "instagram";
+                                      brandClass = "instagram";
+                                    } else if (urlLower.includes("youtube.com")) {
+                                      iconName = "youtube";
+                                      brandClass = "youtube";
+                                    } else if (urlLower.includes("facebook.com")) {
+                                      iconName = "facebook";
+                                      brandClass = "facebook";
+                                    }
+
+                                    return (
+                                      <a
+                                        key={`${link.label}-${link.url}`}
+                                        href={link.url}
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                        className={`modern-social-icon-link ${brandClass}`}
+                                        onClick={(event) => event.stopPropagation()}
+                                        aria-label={link.label}
+                                      >
+                                        <Icon name={iconName} size={28} />
+                                      </a>
+                                    );
+                                  })}
                                 </div>
+
                               </>
                             )}
                             {spot?.hashtags && spot.hashtags.trim() && (
@@ -352,15 +374,15 @@ export const SpotListView = ({ spots, isLoading, error, onSpotSelect, onSpotView
                             </div>
                           </>
                         )}
-                      </div>
+                      </div >
                     </>
                   );
                 })()}
               </article>
             );
           })}
-        </div>
-      </div>
+        </div >
+      </div >
     </>
   );
 };

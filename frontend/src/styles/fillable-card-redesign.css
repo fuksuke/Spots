@@ -208,12 +208,12 @@
 
 /* Schedule display - normal style */
 .modern-schedule {
-  padding: var(--spots-space-xs) var(--spots-space-sm);
-  border-radius: var(--spots-radius-sm);
+  /* padding: var(--spots-space-xs) var(--spots-space-sm); */
+  /* border-radius: var(--spots-radius-sm); */
   font-size: 0.8125rem;
   color: var(--spots-text-secondary);
-  background: var(--spots-bg);
-  border: 1px solid var(--spots-border);
+  /* background: var(--spots-bg); */
+  /* border: 1px solid var(--spots-border); */
 }
 
 .fillable-category-select {
@@ -298,4 +298,3 @@
   line-height: 1.6;
   min-height: 60px;
 }
-

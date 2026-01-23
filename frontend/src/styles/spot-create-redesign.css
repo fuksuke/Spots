@@ -587,11 +587,19 @@ select.input:focus {
   gap: 0.75rem;
 }
 
-.review-preview-list .modern-title-row {
+.review-preview-list .modern-header-row {
   display: flex;
   justify-content: space-between;
   align-items: flex-start;
   gap: 1rem;
+  margin-bottom: 0.5rem;
+}
+
+.review-preview-list .modern-header-main {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  flex: 1;
 }
 
 .review-preview-list .modern-title {
@@ -599,6 +607,7 @@ select.input:focus {
   font-size: 1rem;
   font-weight: 600;
   color: #0f172a;
+  line-height: 1.3;
 }
 
 .review-preview-list .modern-stats {
@@ -616,18 +625,47 @@ select.input:focus {
 }
 
 .review-preview-list .modern-schedule {
-  font-size: 0.8125rem;
+  border: none;
+  background: none;
+  padding: 0;
+  font-size: 0.9rem;
+  /* 拡大 */
+  font-weight: 800;
+  display: block;
+  width: auto;
   color: #64748b;
+  /* text-decoration: underline 1px rgba(100, 116, 139, 0.4); なし */
 }
 
+.review-preview-list .modern-meta-row {
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  /* 左寄せに戻す */
+  width: 100%;
+  gap: 0.8rem;
+  /* height: 24px; 削除 */
+}
+
+.review-preview-list .modern-category-badge {
+  display: none;
+  /* 非表示 */
+}
+
+
 .review-preview-list .modern-catchcopy {
-  font-size: 0.9375rem;
-  font-weight: 600;
+  padding: 0.5rem 0.7rem;
+  border-radius: 10px;
+  background: #ffffff;
+  border: 2px solid rgba(194, 194, 194, 0.8);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15), 0 2px 4px rgba(0, 0, 0, 0.1);
+  font-weight: 800;
+  font-size: 1.1rem;
+  line-height: 1.4;
+  text-align: center;
+  white-space: pre-wrap;
   color: #0f172a;
-  padding: 0.75rem;
-  background: linear-gradient(135deg, #fefce8 0%, #fef3c7 100%);
-  border-radius: 8px;
-  border-left: 3px solid #f59e0b;
+  -webkit-text-stroke: 0.4px #0f172a;
 }
 
 .review-preview-list .modern-description {
@@ -825,5 +863,61 @@ select.input:focus {
   .spot-create-header .button {
     padding: 6px 12px;
     font-size: 0.8125rem;
+  }
+}
+
+/* プレビュー画面の改行対応 */
+.review-summary-list dd,
+.modern-description,
+.map-callout__text,
+.modern-title {
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+/* Status Toast */
+.status-toast {
+  position: fixed;
+  top: 80px;
+  left: 50%;
+  transform: translateX(-50%);
+  padding: 12px 24px;
+  background: rgba(30, 41, 59, 0.9);
+  color: white;
+  border-radius: 9999px;
+  z-index: 1200;
+  animation: fadeInOut 3s forwards;
+  font-weight: 600;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  pointer-events: none;
+  font-size: 0.875rem;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.status-toast.success {
+  background: var(--spots-teal);
+}
+
+@keyframes fadeInOut {
+  0% {
+    opacity: 0;
+    transform: translate(-50%, 10px);
+  }
+
+  10% {
+    opacity: 1;
+    transform: translate(-50%, 0);
+  }
+
+  90% {
+    opacity: 1;
+    transform: translate(-50%, 0);
+  }
+
+  100% {
+    opacity: 0;
+    transform: translate(-50%, -10px);
   }
 }

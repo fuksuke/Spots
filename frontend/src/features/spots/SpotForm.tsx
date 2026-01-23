@@ -1,4 +1,4 @@
-import { FormEvent, useCallback, useEffect, useMemo, useState } from "react";
+import { FormEvent, useCallback, useEffect, useMemo, useState, useRef } from "react";
 import { uploadImageFile } from "../../lib/storage";
 import { Coordinates, Spot, SpotCategory, SPOT_CATEGORY_VALUES } from "../../types";
 import { SpotCreateMap } from "./SpotCreateMap";
@@ -117,6 +117,19 @@ export const SpotForm = ({
   const [formErrors, setFormErrors] = useState<string[]>([]);
   const [reviewMode, setReviewMode] = useState<'balloon' | 'list'>('balloon');
   const startTimeMin = useMemo(() => toDatetimeLocal(new Date()), []);
+
+  // Refs for auto-resizing textarea
+  const descriptionRef = useRef<HTMLTextAreaElement>(null);
+
+  // Auto-resize description textarea
+  useEffect(() => {
+    if (descriptionRef.current) {
+      descriptionRef.current.style.height = 'auto';
+      // +2px prevents cutoff due to border/padding calculations
+      descriptionRef.current.style.height = `${descriptionRef.current.scrollHeight + 2}px`;
+    }
+  }, [description]);
+
   const planOptions = useMemo<PostingPlanOption[]>(
     () => [
       {
@@ -313,6 +326,12 @@ export const SpotForm = ({
         hashtags,
         savedAt: new Date().toISOString()
       };
+      const existingDraft = localStorage.getItem(DRAFT_KEY);
+      if (existingDraft) {
+        const shouldOverwrite = window.confirm('既に下書きが保存されています。上書きしますか？');
+        if (!shouldOverwrite) return;
+      }
+
       localStorage.setItem(DRAFT_KEY, JSON.stringify(draftData));
       setStatusMessage('下書きを保存しました');
       setTimeout(() => setStatusMessage(null), 3000);
@@ -397,7 +416,7 @@ export const SpotForm = ({
     }
     if (step === 2) {
       // 基本情報のバリデーション
-      return !title.trim() || !category || !startTime || !endTime || !locationDetails.trim();
+      return title.trim().length < 2 || !category || !startTime || !endTime || !locationDetails.trim();
     }
     if (step === 3) {
       // ビジュアル編集のバリデーション
@@ -443,40 +462,53 @@ export const SpotForm = ({
   }, [contactType, contactValue]);
 
   // マウント時に下書きを復元
+  const hasCheckedDraft = useRef(false);
   useEffect(() => {
+    if (hasCheckedDraft.current) return;
+
     const draft = loadDraft();
     if (draft) {
-      const shouldRestore = window.confirm(
-        `下書きが見つかりました（保存日時: ${new Date(draft.savedAt).toLocaleString('ja-JP')}）。\n復元しますか？`
-      );
-      if (shouldRestore) {
-        setStep(draft.step || 0);
-        setSelectedPlan(draft.selectedPlan || 'short_term');
-        if (draft.selectedLocation) {
-          onSelectLocation(draft.selectedLocation);
+      hasCheckedDraft.current = true;
+
+      // setTimeoutを使用してレンダリング後の実行を確実にし、ブラウザの挙動を安定させる
+      setTimeout(() => {
+        const shouldRestore = window.confirm(
+          `下書きが見つかりました（保存日時: ${new Date(draft.savedAt).toLocaleString('ja-JP')}）。\n復元しますか？`
+        );
+
+        if (shouldRestore) {
+          setStep(draft.step || 0);
+          setSelectedPlan(draft.selectedPlan || 'short_term');
+          if (draft.selectedLocation) {
+            onSelectLocation(draft.selectedLocation);
+          }
+          setTitle(draft.title || '');
+          setDescription(draft.description || '');
+          setOnelinePR(draft.onelinePR || ''); // 追加
+          setCategory(draft.category || '');
+          setStartTime(draft.startTime || toDatetimeLocal(new Date()));
+          setEndTime(draft.endTime || toDatetimeLocal(new Date(Date.now() + 60 * 60 * 1000)));
+          if (draft.imagePreview) {
+            setImagePreview(draft.imagePreview);
+          }
+          setContactType(draft.contactType || 'phone');
+          setContactValue(draft.contactValue || '');
+          setLocationDetails(draft.locationDetails || '');
+          setHomepageUrl(draft.homepageUrl || '');
+          setSnsLinks(draft.snsLinks || { x: '', instagram: '', youtube: '', facebook: '' });
+          setHashtags(draft.hashtags || '');
+          setStatusMessage('下書きを復元しました');
+          setTimeout(() => setStatusMessage(null), 3000);
+        } else {
+          clearDraft();
         }
-        setTitle(draft.title || '');
-        setDescription(draft.description || '');
-        setCategory(draft.category || '');
-        setStartTime(draft.startTime || toDatetimeLocal(new Date()));
-        setEndTime(draft.endTime || toDatetimeLocal(new Date(Date.now() + 60 * 60 * 1000)));
-        if (draft.imagePreview) {
-          setImagePreview(draft.imagePreview);
-        }
-        setContactType(draft.contactType || 'phone');
-        setContactValue(draft.contactValue || '');
-        setLocationDetails(draft.locationDetails || '');
-        setHomepageUrl(draft.homepageUrl || '');
-        setSnsLinks(draft.snsLinks || { x: '', instagram: '', youtube: '', facebook: '' });
-        setHashtags(draft.hashtags || '');
-        setStatusMessage('下書きを復元しました');
-        setTimeout(() => setStatusMessage(null), 3000);
-      } else {
-        clearDraft();
-      }
+      }, 100);
+    } else {
+      hasCheckedDraft.current = true;
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []); // マウント時のみ実行
+
 
   const renderStepContent = () => {
     switch (step) {
@@ -732,7 +764,7 @@ export const SpotForm = ({
                     className="fillable-input catchcopy-input"
                     value={onelinePR}
                     onChange={(event) => setOnelinePR(event.target.value)}
-                    placeholder="💬 地図の吹き出しに表示されるPR文（20文字）"
+                    placeholder="ひとことPR文（20文字）"
                     maxLength={20}
                     required
                   />
@@ -747,13 +779,27 @@ export const SpotForm = ({
                 {/* Description - Input required in this step */}
                 <div className={`modern-description fillable-editable ${description.trim() ? 'fillable-done' : 'fillable-required'}`}>
                   <textarea
+                    ref={descriptionRef}
                     className="fillable-input description-input"
                     value={description}
-                    onChange={(event) => setDescription(event.target.value)}
+                    onChange={(event) => {
+                      setDescription(event.target.value);
+                      // 高さ調整はuseEffectで行われるが、即時反映のためにここでも実行（+2pxで余裕を持たせる）
+                      event.target.style.height = 'auto';
+                      event.target.style.height = `${event.target.scrollHeight + 2}px`;
+                    }}
                     placeholder="イベントの詳細を入力...&#10;&#10;・出演者情報&#10;・会場の雰囲気&#10;・参加方法&#10;・注意事項など"
                     rows={4}
+                    maxLength={1000}
                     required
+                    style={{ overflow: 'hidden', minHeight: '100px' }}
                   />
+                  {description.length > 0 && (
+                    <div className="char-counter">
+                      {description.length}/1000
+                      {description.length >= 950 && <span className="warning">あと{1000 - description.length}文字</span>}
+                    </div>
+                  )}
                 </div>
               </div>
             </article>
@@ -898,9 +944,10 @@ export const SpotForm = ({
                     )}
                   </div>
                   <div className="modern-content">
-                    <div className="modern-title-row">
-                      <div className="modern-titles">
+                    <div className="modern-header-row">
+                      <div className="modern-header-main">
                         <h3 className="modern-title">{title || 'タイトルなし'}</h3>
+                        <div className="modern-schedule">{formatReviewSchedule()}</div>
                       </div>
                       <div className="modern-stats">
                         <div className="metric view">
@@ -913,7 +960,6 @@ export const SpotForm = ({
                         </div>
                       </div>
                     </div>
-                    <div className="modern-schedule">{formatReviewSchedule()}</div>
                     {onelinePR && <div className="modern-catchcopy">{onelinePR}</div>}
                     {description && <p className="modern-description">{description.length > 38 ? description.slice(0, 38) + '…' : description}</p>}
                   </div>
@@ -970,7 +1016,7 @@ export const SpotForm = ({
               </dl>
             </div>
 
-            {statusMessage ? <p className="spot-status success">{statusMessage}</p> : null}
+
             {formErrors.length > 0 ? (
               <ul className="spot-status-list">
                 {formErrors.map((item) => (
@@ -1217,6 +1263,13 @@ export const SpotForm = ({
           </p>
         </div>
       </div>
+
+      {statusMessage && (
+        <div className="status-toast success" role="status">
+          <Icon name="check" size={18} />
+          {statusMessage}
+        </div>
+      )}
 
       <div
         className="spot-stepper"
