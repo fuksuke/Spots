@@ -1,9 +1,9 @@
 import { ChangeEvent, useMemo, useState } from "react";
 
-import { useReviewLogs } from "../hooks/useReviewLogs";
-import { trackError, trackEvent } from "../lib/analytics";
-import { ScheduledSpot } from "../hooks/useScheduledSpots";
-import { useReviewTemplates } from "../hooks/useReviewTemplates";
+import { useReviewLogs } from "../../hooks/useReviewLogs";
+import { trackError, trackEvent } from "../../lib/analytics";
+import { ScheduledSpot } from "../../hooks/useScheduledSpots";
+import { useReviewTemplates } from "../../hooks/useReviewTemplates";
 
 type AdminScheduledSpotsPanelProps = {
   spots: ScheduledSpot[];

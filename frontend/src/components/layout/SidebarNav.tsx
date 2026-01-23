@@ -1,6 +1,6 @@
 import { User } from "firebase/auth";
 import { ReactNode } from "react";
-import { PageMode, ViewMode } from "../types";
+import { PageMode, ViewMode } from "../../types";
 
 export type SidebarNavProps = {
   currentUser: User | null;

@@ -1,7 +1,7 @@
 import { ReactNode, useEffect, useState } from "react";
-import { Coordinates, Spot, UserProfile } from "../types";
+import { Coordinates, Spot, UserProfile } from "../../types";
 import { SpotForm } from "./SpotForm";
-import { PhoneVerificationModal } from "./PhoneVerificationModal";
+import { PhoneVerificationModal } from "../auth/PhoneVerificationModal";
 
 export type SpotCreatePageProps = {
   selectedLocation: Coordinates | null;

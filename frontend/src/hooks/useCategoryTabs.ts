@@ -15,7 +15,7 @@ type UseCategoryTabsOptions = {
   onCategoryUnavailable?: (key: CategoryKey) => void;
 };
 
-type CategoryOption = {
+export type CategoryOption = {
   key: CategoryKey;
   label: string;
   color: string;

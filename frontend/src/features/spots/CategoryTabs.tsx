@@ -1,7 +1,7 @@
 import { CSSProperties, ReactNode, useMemo, useRef, useState } from "react";
-import { SpotCategory } from "../types";
-
-import { Icon } from "./Icon";
+import { Icon } from "../../components/ui/Icon";
+import { type CategoryKey, useCategoryTabs } from "../../hooks/useCategoryTabs";
+import { SpotCategory } from "../../types";
 
 type CategoryOption = {
   key: SpotCategory | "all" | string;
@@ -113,8 +113,8 @@ export const CategoryTabs = ({
         {templateOptions.map((option) => {
           const style: CSSProperties = option.color
             ? ({
-                "--tab-color": option.color
-              } as CSSProperties)
+              "--tab-color": option.color
+            } as CSSProperties)
             : {};
           return (
             <button

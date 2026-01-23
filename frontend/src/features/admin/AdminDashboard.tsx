@@ -1,11 +1,11 @@
 import { ChangeEvent, useMemo, useState } from "react";
 
-import { useAdminScheduledSpots } from "../hooks/useAdminScheduledSpots";
-import { useSpotReports } from "../hooks/useSpotReports";
-import { useAdminAnalytics } from "../hooks/useAdminAnalytics";
-import { ScheduledSpot } from "../hooks/useScheduledSpots";
-import { SpotReportStatus } from "../types";
-import { trackEvent } from "../lib/analytics";
+import { useAdminScheduledSpots } from "../../hooks/useAdminScheduledSpots";
+import { useSpotReports } from "../../hooks/useSpotReports";
+import { useAdminAnalytics } from "../../hooks/useAdminAnalytics";
+import { ScheduledSpot } from "../../hooks/useScheduledSpots";
+import { SpotReportStatus } from "../../types";
+import { trackEvent } from "../../lib/analytics";
 import { AdminScheduledSpotsPanel } from "./AdminScheduledSpotsPanel";
 import { AdminSpotReportsPanel } from "./AdminSpotReportsPanel";
 import { AdminAnalyticsPanel } from "./AdminAnalyticsPanel";

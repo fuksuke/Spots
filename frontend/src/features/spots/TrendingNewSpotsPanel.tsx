@@ -1,4 +1,6 @@
-import { Spot } from "../types";
+import { Spot } from "../../types";
+import { useTrendingNewSpots } from "../../hooks/useTrendingNewSpots";
+import { SpotListView } from "./SpotListView";
 
 type TrendingNewSpotsPanelProps = {
   spots: Spot[];

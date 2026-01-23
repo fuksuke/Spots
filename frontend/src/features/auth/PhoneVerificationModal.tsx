@@ -6,8 +6,8 @@ import {
   linkWithCredential
 } from "firebase/auth";
 
-import { auth } from "../lib/firebase";
-import { UserProfile } from "../types";
+import { auth } from "../../lib/firebase";
+import { UserProfile } from "../../types";
 
 const RESEND_INTERVAL_SECONDS = 60;
 const MAX_RESEND_ATTEMPTS = 3;

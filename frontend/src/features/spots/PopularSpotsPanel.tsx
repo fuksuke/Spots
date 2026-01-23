@@ -1,5 +1,9 @@
-import { Spot } from "../types";
-import { Promotion } from "../hooks/usePromotions";
+import { Spot } from "../../types";
+import { usePopularSpots } from "../../hooks/usePopularSpots";
+import { SpotListView } from "./SpotListView";
+import { Promotion } from "../../hooks/usePromotions";
+
+import { formatDate } from "../../lib/spotPresentation";
 
 type PopularSpotsPanelProps = {
   spots: Spot[];
@@ -159,7 +163,7 @@ export const PopularSpotsPanel = ({
               <div className="promotion-inline-body">
                 <h3 className="promotion-inline-headline">{promo.headline ?? "イベント情報"}</h3>
                 <p className="promotion-inline-date">
-                  公開: {new Date(promo.publishAt).toLocaleDateString("ja-JP")}
+                  公開: {formatDate(new Date(promo.publishAt))}
                 </p>
                 <div className="promotion-inline-actions">
                   {promo.ctaUrl && (

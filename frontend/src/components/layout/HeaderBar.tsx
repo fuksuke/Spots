@@ -1,6 +1,6 @@
 import { User } from "firebase/auth";
 
-import { Icon } from "./Icon";
+import { Icon } from "../ui/Icon";
 
 export type HeaderBarProps = {
   currentUser: User | null;

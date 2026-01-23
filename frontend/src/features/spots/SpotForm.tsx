@@ -1,11 +1,11 @@
 import { FormEvent, useCallback, useEffect, useMemo, useState } from "react";
-import { uploadImageFile } from "../lib/storage";
-import { Coordinates, Spot, SpotCategory, SPOT_CATEGORY_VALUES } from "../types";
+import { uploadImageFile } from "../../lib/storage";
+import { Coordinates, Spot, SpotCategory, SPOT_CATEGORY_VALUES } from "../../types";
 import { SpotCreateMap } from "./SpotCreateMap";
-import { searchPlaces } from "../lib/mapboxGeocoding";
-import { formatPhoneNumber, validatePhoneNumber, validateEmail } from "../lib/phoneValidation";
-import { Avatar } from "./Avatar";
-import { Icon } from "./Icon";
+import { searchPlaces } from "../../lib/mapboxGeocoding";
+import { formatPhoneNumber, validatePhoneNumber, validateEmail } from "../../lib/phoneValidation";
+import { Avatar } from "../../components/ui/Avatar";
+import { Icon } from "../../components/ui/Icon";
 
 const categories: SpotCategory[] = [...SPOT_CATEGORY_VALUES];
 
@@ -99,7 +99,7 @@ export const SpotForm = ({
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [onelinePR, setOnelinePR] = useState("");
-  const [category, setCategory] = useState<SpotCategory>("live");
+  const [category, setCategory] = useState<SpotCategory | "">("");
   const [startTime, setStartTime] = useState(() => toDatetimeLocal(new Date()));
   const [endTime, setEndTime] = useState(() => toDatetimeLocal(new Date(Date.now() + 60 * 60 * 1000)));
   const [imageFile, setImageFile] = useState<File | null>(null);
@@ -143,6 +143,33 @@ export const SpotForm = ({
     [canPostLongTerm, canPostRecurring]
   );
 
+  // Stepごとのメタデータ（タイトルと説明文）
+  const STEP_METADATA = [
+    {
+      title: "場所を選択",
+      description: "地図をクリックして、イベントの開催地を選択してください。"
+    },
+    {
+      title: "プランを選択",
+      description: "イベントの目的や期間に合わせて、最適なプランを選びましょう。"
+    },
+    {
+      title: "基本情報",
+      description: "イベントの名前や開催日時などの基本情報を教えてください。"
+    },
+    {
+      title: "ビジュアル編集",
+      description: "魅力的な写真や紹介文で、イベントをアピールしましょう。"
+    },
+    {
+      title: "投稿者情報",
+      description: "連絡先などの情報を入力してください。次回からは自動で入力されます。"
+    },
+    {
+      title: "確認",
+      description: "入力内容に間違いがないか確認してください。"
+    }
+  ];
 
   useEffect(() => {
     const current = planOptions.find((option) => option.id === selectedPlan);
@@ -165,6 +192,7 @@ export const SpotForm = ({
     }),
     [selectedLocation]
   );
+
 
   const handlePlanSelect = useCallback(
     (plan: PostingPlan) => {
@@ -369,7 +397,7 @@ export const SpotForm = ({
     }
     if (step === 2) {
       // 基本情報のバリデーション
-      return !title.trim() || !startTime || !endTime || !locationDetails.trim();
+      return !title.trim() || !category || !startTime || !endTime || !locationDetails.trim();
     }
     if (step === 3) {
       // ビジュアル編集のバリデーション
@@ -429,7 +457,7 @@ export const SpotForm = ({
         }
         setTitle(draft.title || '');
         setDescription(draft.description || '');
-        setCategory(draft.category || 'live');
+        setCategory(draft.category || '');
         setStartTime(draft.startTime || toDatetimeLocal(new Date()));
         setEndTime(draft.endTime || toDatetimeLocal(new Date(Date.now() + 60 * 60 * 1000)));
         if (draft.imagePreview) {
@@ -447,7 +475,7 @@ export const SpotForm = ({
         clearDraft();
       }
     }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []); // マウント時のみ実行
 
   const renderStepContent = () => {
@@ -455,10 +483,7 @@ export const SpotForm = ({
       case 0:
         return (
           <div className="spot-step spot-step-map">
-            <div className="spot-map-summary spot-map-summary-lead">
-              <p className="hint">地図をクリックして位置を選択してください。ピンをドラッグすることで微調整することもできます。</p>
-              {locationError ? <p className="spot-status error">{locationError}</p> : null}
-            </div>
+            {locationError ? <p className="spot-status error" style={{ marginBottom: "1rem" }}>{locationError}</p> : null}
             <div className="spot-map-wrapper">
               <div className="spot-map-shell">
                 <SpotCreateMap
@@ -544,14 +569,12 @@ export const SpotForm = ({
               })}
             </div>
             {planError ? <p className="spot-status error">{planError}</p> : null}
-            <p className="spot-step-hint">長期・定期イベントの投稿には有料プランが必要です。</p>
           </div>
         );
       case 2:
         // Step 2: 基本情報入力（タイトル、カテゴリ、日時、場所詳細）
         return (
           <div className="spot-step spot-step-form">
-            <p className="hint">イベントの基本情報を入力してください。</p>
             <div className="form-group">
               <label htmlFor="title">イベント名<span className="required-mark">*</span></label>
               <input
@@ -737,7 +760,6 @@ export const SpotForm = ({
         // Step 4: 投稿者情報（オートフィル対応）
         return (
           <div className="spot-step spot-step-form">
-            <p className="hint">投稿者情報は次回以降、自動で入力されます。変更がなければそのまま進んでください。</p>
             <div className="form-group">
               <label>連絡方法<span className="required-mark">*</span></label>
               <div className="contact-radio-group">
@@ -965,7 +987,7 @@ export const SpotForm = ({
   const resetForm = useCallback(() => {
     setTitle("");
     setDescription("");
-    setCategory("live");
+    setCategory("");
     setStartTime(toDatetimeLocal(new Date()));
     setEndTime(toDatetimeLocal(new Date(Date.now() + 60 * 60 * 1000)));
     setImageFile(null);
@@ -1114,8 +1136,8 @@ export const SpotForm = ({
         contactType === "phone"
           ? { phone: contactValue.trim() }
           : {
-              email: contactValue.trim()
-            };
+            email: contactValue.trim()
+          };
 
       const extraLinks = [
         homepageUrl ? { label: "公式サイト", url: homepageUrl.trim() } : null,
@@ -1169,15 +1191,7 @@ export const SpotForm = ({
     }
   };
 
-  const stepTitles: string[] = ["位置を選択", "プランを選択", "基本情報", "ビジュアル編集", "投稿者情報", "確認"];
-  const stepSubtitles: string[] = [
-    "地図をタップしてイベントの開催場所を指定してください",
-    "イベントの種類に合ったプランを選択してください",
-    "イベント名・日時・場所の詳細を入力してください",
-    "実際の表示イメージを確認しながら画像や説明文を編集できます",
-    "問い合わせ先やSNSリンクを入力してください",
-    "入力内容を確認して投稿を完了しましょう"
-  ];
+
 
   // Enterキーによるフォーム送信を最終ステップ以外で防ぐ
   const handleKeyDown = useCallback((event: React.KeyboardEvent<HTMLFormElement>) => {
@@ -1194,9 +1208,9 @@ export const SpotForm = ({
     <form className="spot-wizard" onSubmit={handleSubmit} onKeyDown={handleKeyDown}>
       <div className="spot-wizard-header">
         <div>
-          <h2>{stepTitles[step] ?? "位置を選択"}</h2>
+          <h2>{STEP_METADATA[step].title}</h2>
           <p className="spot-wizard-subtitle">
-            {stepSubtitles[step] ?? ""}
+            {STEP_METADATA[step].description}
           </p>
         </div>
       </div>

@@ -1,7 +1,7 @@
 import { useEffect, useRef } from "react";
 import mapboxgl from "mapbox-gl";
 import "mapbox-gl/dist/mapbox-gl.css";
-import { Coordinates } from "../types";
+import { Coordinates } from "../../types";
 
 type SpotCreateMapProps = {
   value: Coordinates | null;

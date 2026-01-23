@@ -10,7 +10,7 @@ import {
   updateProfile
 } from "firebase/auth";
 import { FirebaseError } from "firebase/app";
-import { auth } from "../lib/firebase";
+import { auth } from "../../lib/firebase";
 
 type AuthPanelProps = {
   user: User | null;

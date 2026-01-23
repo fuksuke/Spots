@@ -1,21 +1,21 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { FormEvent, PointerEvent as ReactPointerEvent, WheelEvent as ReactWheelEvent } from "react";
 
-import "../styles/components/SpotDetailSheet.css";
+import "../../styles/components/SpotDetailSheet.css";
 
-import { Avatar } from "./Avatar";
-import { Icon } from "./Icon";
+import { Avatar } from "../../components/ui/Avatar";
+import { Icon } from "../../components/ui/Icon";
 import { SpotMediaGallery } from "./SpotMediaGallery";
-import { ModernHero, ModernHeroPlaceholder } from "./ModernHero";
-import { ModernDetailList } from "./ModernDetailList";
-import { Spot } from "../types";
+import { ModernHero, ModernHeroPlaceholder } from "../../components/ui/ModernHero";
+import { ModernDetailList } from "../../components/ui/ModernDetailList";
+import { Spot } from "../../types";
 import {
   buildExternalLinks,
   buildSpotCatchCopy,
   buildSpotDetailItems,
   formatSpotSchedule,
   splitSpotTitle
-} from "../lib/spotPresentation";
+} from "../../lib/spotPresentation";
 
 const clamp = (value: number, min: number, max: number) => Math.min(Math.max(value, min), max);
 const PEEK_TRANSLATE = 50;

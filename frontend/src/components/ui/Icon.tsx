@@ -25,7 +25,9 @@ import {
   PiHeart,
   PiSealCheckFill,
   PiAddressBookFill,
-  PiSpeakerSimpleHighFill
+  PiSpeakerSimpleHighFill,
+  PiInstagramLogo,
+  PiXLogo
 } from "react-icons/pi";
 
 const ICONS = {
@@ -54,7 +56,9 @@ const ICONS = {
   heart: PiHeart,
   sealCheck: PiSealCheckFill,
   wechatLogo: PiAddressBookFill,
-  speakerHigh: PiSpeakerSimpleHighFill
+  speakerHigh: PiSpeakerSimpleHighFill,
+  instagram: PiInstagramLogo,
+  x: PiXLogo
 } as const;
 
 export type IconName = keyof typeof ICONS;

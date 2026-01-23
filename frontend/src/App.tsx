@@ -1,25 +1,22 @@
 import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Navigate, Route, Routes, useLocation, useNavigate, useSearchParams } from "react-router-dom";
-import { onAuthStateChanged, signOut, User } from "firebase/auth";
+import { signOut } from "firebase/auth";
 import { collection, doc, limit, onSnapshot, orderBy, query, updateDoc, where } from "firebase/firestore";
-import { MapView } from "./components/MapView";
-import type { MapViewProps } from "./components/MapView";
-import { SidebarNav } from "./components/SidebarNav";
-import { HeaderBar } from "./components/HeaderBar";
-import { ActionBar } from "./components/ActionBar";
-import { CategoryTabs } from "./components/CategoryTabs";
-import { SpotListView } from "./components/SpotListView";
-import { SpotDetailSheet } from "./components/SpotDetailSheet";
-import { SearchOverlay } from "./components/SearchOverlay";
+import { MapView } from "./features/map/MapView";
+import type { MapViewProps } from "./features/map/MapView";
+import { useAuth } from "./providers/AuthProvider";
+import { SearchOverlay } from "./features/map/SearchOverlay";
 import { InAppNotifications } from "./components/InAppNotifications";
 import type { InAppNotification } from "./components/InAppNotifications";
-import { PopularSpotsPanel } from "./components/PopularSpotsPanel";
-import { TrendingNewSpotsPanel } from "./components/TrendingNewSpotsPanel";
-import { PromotionBanner } from "./components/PromotionBanner";
-import { AdminDashboard } from "./components/AdminDashboard";
-import { AccountPanel } from "./components/AccountPanel";
-import { SpotCreatePage } from "./components/SpotCreatePage";
-import { AdSenseUnit } from "./components/AdSenseUnit";
+import { PromotionBanner } from "./features/spots/PromotionBanner";
+import { AdminDashboard } from "./features/admin/AdminDashboard";
+import { AccountPanel } from "./features/user/AccountPanel";
+import { SpotCreatePage } from "./features/spots/SpotCreatePage";
+import { SpotDetailSheet } from "./features/spots/SpotDetailSheet";
+import { AppLayout } from "./layouts/AppLayout";
+import { HomePage } from "./pages/HomePage";
+import { TrendingPage } from "./pages/TrendingPage";
+
 import { trackEvent, trackError, trackPageView } from "./lib/analytics";
 import { ADSENSE_CONFIG } from "./config/adsense";
 import { setSentryUser } from "./lib/sentry";
@@ -39,7 +36,7 @@ import { getOrCreateViewSessionId } from "./lib/viewSession";
 import { mockSpots } from "./mockData";
 import { Coordinates, Spot, SpotCategory, ViewMode, PageMode } from "./types";
 
-const AuthPanel = lazy(() => import("./components/AuthPanel").then((module) => ({ default: module.AuthPanel })));
+const AuthPanel = lazy(() => import("./features/auth/AuthPanel").then((module) => ({ default: module.AuthPanel })));
 
 const DEFAULT_HOME_VIEW: MapViewProps['initialView'] = {
   longitude: 139.7016,
@@ -141,8 +138,7 @@ function App() {
   const [isAccountPanelOpen, setAccountPanelOpen] = useState(false);
   const [selectedLocation, setSelectedLocation] = useState<Coordinates | null>(null);
   const [focusCoordinates, setFocusCoordinates] = useState<Coordinates | null>(null);
-  const [authToken, setAuthToken] = useState("");
-  const [currentUser, setCurrentUser] = useState<User | null>(null);
+  const { currentUser, authToken, hasAdminClaim } = useAuth();
   const [activeSpot, setActiveSpot] = useState<Spot | null>(null);
   const [appMessage, setAppMessage] = useState<string | null>(null);
   const [language, setLanguage] = useState<string>(() => {
@@ -157,7 +153,6 @@ function App() {
   const [isUpgradeModalOpen, setUpgradeModalOpen] = useState(false);
   const [isBillingLoading, setBillingLoading] = useState(false);
   const [billingError, setBillingError] = useState<string | null>(null);
-  const [hasAdminClaim, setHasAdminClaim] = useState(false);
   const [isAdminPanelOpen, setAdminPanelOpen] = useState(false);
   const [isNotificationsOpen, setNotificationsOpen] = useState(false);
   const [isSheetModalOpen, setSheetModalOpen] = useState(false);
@@ -181,6 +176,10 @@ function App() {
       document.body.classList.remove("modal-open");
     };
   }, [isAnyModalOpen]);
+
+
+
+
 
   const triggerMessage = useCallback((message: string) => {
     setAppMessage(message);
@@ -222,33 +221,7 @@ function App() {
     setSentryUser({ id: currentUser.uid, email: currentUser.email ?? undefined });
   }, [currentUser]);
 
-  useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, async (user) => {
-      if (user) {
-        try {
-          const [token, idTokenResult] = await Promise.all([user.getIdToken(), user.getIdTokenResult()]);
-          setCurrentUser(user);
-          setAuthToken(token);
-          setHasAdminClaim(Boolean(idTokenResult.claims?.admin));
-        } catch (error) {
-          console.warn("トークン取得に失敗しました", error);
-          setCurrentUser(user);
-          setAuthToken("");
-          setHasAdminClaim(false);
-        }
-      } else {
-        setCurrentUser(null);
-        setAuthToken("");
-        setHasAdminClaim(false);
-        setAdminPanelOpen(false);
-        knownSpotIdsRef.current = new Set();
-        notifiedSpotIdsRef.current = new Set();
-        notificationsInitializedRef.current = false;
-        setNotifications([]);
-      }
-    });
-    return unsubscribe;
-  }, []);
+
 
   useEffect(() => {
     const path = location.pathname.replace(/\/$/, "") || "/";
@@ -812,8 +785,8 @@ function App() {
         const response = await fetch(`/api/spots/${promotionIdSpotId}`, {
           headers: authToken
             ? {
-                Authorization: `Bearer ${authToken}`
-              }
+              Authorization: `Bearer ${authToken}`
+            }
             : undefined
         });
         if (!response.ok) {
@@ -1248,141 +1221,7 @@ function App() {
       window.removeEventListener('scroll', handleScroll);
     };
   }, [isListModeActive]);
-  const mainLayout = (
-    <div className="app-shell">
-      <SidebarNav
-        currentUser={currentUser}
-        notificationsCount={notificationsCount}
-        pageMode={pageMode}
-        viewMode={viewMode}
-        onLogoClick={handleLogoClick}
-        onSpotClick={handleSpotAction}
-        onLoginClick={handleLoginClick}
-        onSelectPage={handleSelectPage}
-        onModeToggle={handleModeToggle}
-        onRefreshClick={handleRefreshSpots}
-        onLanguageClick={handleLanguageClick}
-        onAccountClick={handleAccountPanelOpen}
-        onNotificationsClick={handleNotificationsClick}
-        showAdminButton={hasAdminClaim}
-        onAdminClick={handleAdminClick}
-      />
-      <div
-        ref={layoutRootRef}
-        className={[
-          "layout-column",
-          isMapHomeView ? "map-view" : "",
-          isListModeActive ? "list-mode" : "",
-          isListModeActive && isListHeaderHidden ? "list-header-hidden" : ""
-        ]
-          .filter(Boolean)
-          .join(" ")}
-      >
-        <HeaderBar
-          currentUser={currentUser}
-          notificationsCount={notificationsCount}
-          onLogoClick={handleLogoClick}
-          onLoginClick={handleLoginClick}
-          onNotificationsClick={handleNotificationsClick}
-          onAccountClick={handleAccountPanelOpen}
-          language={language}
-          onLanguageChange={setLanguage}
-        />
-        {isHomePage ? (
-          <CategoryTabs
-            options={categoryOptions}
-            activeKey={activeCategoryKey}
-            onSelect={handleCategorySelect}
-            onSearchToggle={handleSearchToggle}
-            onManageCategories={handleCategoryManagerOpen}
-          />
-        ) : (
-          <div className="category-spacer" aria-hidden="true" />
-        )}
-        {isHomePage ? (
-          <main
-            ref={mainRef}
-            className={`app-main content-area ${viewMode}`.trim()}
-            aria-label={homeMainAriaLabel}
-          >
-          {viewMode === "map" ? (
-            <MapView
-              initialView={DEFAULT_HOME_VIEW}
-              spots={displaySpots}
-              selectedLocation={selectedLocation}
-              onSelectLocation={handleSelectLocation}
-              focusCoordinates={focusCoordinates}
-              onSpotClick={handleMapSpotClick}
-              onSpotView={handleSpotViewById}
-              tileCategories={activeTileCategories}
-              authToken={authToken}
-            />
-          ) : (
-            <>
-              <SpotListView
-                spots={displaySpots}
-                isLoading={isLoadingSpots}
-                error={spotError}
-                onSpotSelect={handleSpotSelect}
-                onSpotView={handleSpotViewFromSpot}
-              />
-              {MOBILE_SCROLL_FOOTER}
-            </>
-          )}
-          </main>
-        ) : (
-          <main className="app-main content-area trending" aria-label="トレンドとプロモーション">
-            <div className="trending-content">
-              <header className="trending-header-hero">
-                <div className="trending-hero-background"></div>
-                <div className="trending-hero-content">
-                  <div className="trending-hero-icon">
-                    <span className="icon-fire">🔥</span>
-                    <span className="icon-star">✨</span>
-                  </div>
-                  <h1 className="trending-hero-title">トレンド</h1>
-                  <p className="trending-hero-subtitle">渋谷で今、話題のイベントを発見しよう</p>
-                </div>
-              </header>
 
-              {/* Google AdSense - Primary monetization placement */}
-              <AdSenseUnit
-                slotId={ADSENSE_CONFIG.TRENDING_SLOT_ID}
-                format="auto"
-                className="trending-ad"
-              />
-
-              <PopularSpotsPanel
-                spots={popularSpots}
-                promotions={promotions}
-                isLoading={isLoadingPopularSpots}
-                error={popularError}
-                onSpotSelect={handleSpotSelect}
-                onSpotView={handleSpotViewFromSpot}
-                onPromotionSelect={(promotion) => handlePromotionSelect(promotion.spotId)}
-              />
-
-              <TrendingNewSpotsPanel
-                spots={trendingNewSpots}
-                isLoading={isLoadingTrendingNew}
-                error={trendingNewError}
-                onSpotSelect={handleSpotSelect}
-                onSpotView={handleSpotViewFromSpot}
-              />
-            </div>
-            {MOBILE_SCROLL_FOOTER}
-          </main>
-        )}
-        <ActionBar
-          pageMode={pageMode}
-          viewMode={viewMode}
-          onSpotClick={handleSpotAction}
-          onSelectPage={handleSelectPage}
-          onModeToggle={handleModeToggle}
-        />
-      </div>
-    </div>
-  );
 
   const spotCreateLayout = (
     <SpotCreatePage
@@ -1403,10 +1242,82 @@ function App() {
     <>
       <Routes>
         <Route path="/" element={<Navigate to="/spots" replace />} />
-        <Route path="/spots" element={mainLayout} />
-        <Route path="/spots/trending" element={mainLayout} />
+        <Route
+          element={
+            <AppLayout
+              currentUser={currentUser}
+              notificationsCount={notificationsCount}
+              pageMode={pageMode}
+              viewMode={viewMode}
+              language={language}
+              hasAdminClaim={hasAdminClaim}
+              onLogoClick={handleLogoClick}
+              onSpotClick={handleSpotAction}
+              onLoginClick={handleLoginClick}
+              onSelectPage={handleSelectPage}
+              onModeToggle={handleModeToggle}
+              onRefreshClick={handleRefreshSpots}
+              onLanguageClick={handleLanguageClick}
+              onAccountClick={handleAccountPanelOpen}
+              onNotificationsClick={handleNotificationsClick}
+              onAdminClick={handleAdminClick}
+              onLanguageChange={setLanguage}
+              layoutRef={layoutRootRef}
+              isMapHomeView={isMapHomeView}
+              isListModeActive={isListModeActive}
+              isListHeaderHidden={isListHeaderHidden}
+            />
+          }
+        >
+          <Route
+            path="/spots"
+            element={
+              <HomePage
+                viewMode={viewMode}
+                categoryOptions={categoryOptions}
+                activeCategoryKey={activeCategoryKey}
+                onCategorySelect={handleCategorySelect}
+                onSearchToggle={handleSearchToggle}
+                onManageCategories={handleCategoryManagerOpen}
+                mainRef={mainRef}
+                homeMainAriaLabel={homeMainAriaLabel}
+                displaySpots={displaySpots}
+                selectedLocation={selectedLocation}
+                onSelectLocation={handleSelectLocation}
+                focusCoordinates={focusCoordinates}
+                onSpotClick={handleMapSpotClick}
+                onSpotView={handleSpotViewById}
+                onSpotSelectList={handleSpotSelect}
+                onSpotViewList={handleSpotViewFromSpot}
+                activeTileCategories={activeTileCategories}
+                authToken={authToken}
+                isLoadingSpots={isLoadingSpots}
+                spotError={spotError}
+                mobileScrollFooter={MOBILE_SCROLL_FOOTER}
+              />
+            }
+          />
+          <Route
+            path="/spots/trending"
+            element={
+              <TrendingPage
+                popularSpots={popularSpots}
+                promotions={promotions}
+                isLoadingPopularSpots={isLoadingPopularSpots}
+                popularError={popularError}
+                trendingNewSpots={trendingNewSpots}
+                isLoadingTrendingNew={isLoadingTrendingNew}
+                trendingNewError={trendingNewError}
+                onSpotSelect={handleSpotSelect}
+                onSpotView={handleSpotViewFromSpot}
+                onPromotionSelect={(promotion) => handlePromotionSelect(promotion.spotId)}
+                mobileScrollFooter={MOBILE_SCROLL_FOOTER}
+              />
+            }
+          />
+          <Route path="*" element={<Navigate to="/spots" replace />} />
+        </Route>
         <Route path="/spots/new" element={spotCreateLayout} />
-        <Route path="*" element={<Navigate to="/spots" replace />} />
       </Routes>
 
       <div className={`floating-panel admin-panel ${isAdminPanelOpen ? "open" : ""}`.trim()} role="dialog" aria-hidden={!isAdminPanelOpen}>
@@ -1483,7 +1394,7 @@ function App() {
                       <input
                         type="checkbox"
                         checked={checked}
-                        onChange={() => handleCategoryDraftToggle(key)}
+                        onChange={() => handleCategoryDraftToggle(key as CategoryKey)}
                         disabled={disabled}
                       />
                       <span
@@ -1627,12 +1538,12 @@ function App() {
       <InAppNotifications
         notifications={notifications}
         onSelect={handleNotificationSelect}
-      isOpen={isNotificationsOpen}
-      hasAdminAccess={hasAdminClaim}
-      onDismiss={handleNotificationDismiss}
-      onDismissAll={handleNotificationDismissAll}
-      onAdminClick={handleAdminClick}
-      onClose={() => setNotificationsOpen(false)}
+        isOpen={isNotificationsOpen}
+        hasAdminAccess={hasAdminClaim}
+        onDismiss={handleNotificationDismiss}
+        onDismissAll={handleNotificationDismissAll}
+        onAdminClick={handleAdminClick}
+        onClose={() => setNotificationsOpen(false)}
       />
 
       <SearchOverlay

@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
-import { ADSENSE_CONFIG } from '../config/adsense';
-import '../styles/components/AdSenseUnit.css';
+import { ADSENSE_CONFIG } from "../../config/adsense";
+import '../../styles/components/AdSenseUnit.css';
 
 /**
  * AdSense Unit Component Props
@@ -44,7 +44,7 @@ export const AdSenseUnit = ({
   className = '',
   testMode = false
 }: AdSenseUnitProps) => {
-  const adRef = useRef<HTMLDivElement>(null);
+  const insRef = useRef<HTMLModElement>(null);
   const [adLoaded, setAdLoaded] = useState(false);
   const [adFailed, setAdFailed] = useState(false);
   const initAttemptedRef = useRef(false);
@@ -65,7 +65,7 @@ export const AdSenseUnit = ({
      */
     const loadAd = () => {
       try {
-        if (adRef.current && window.adsbygoogle) {
+        if (insRef.current && window.adsbygoogle) {
           // Push ad to AdSense queue
           (window.adsbygoogle = window.adsbygoogle || []).push({});
           setAdLoaded(true);
@@ -126,7 +126,7 @@ export const AdSenseUnit = ({
 
         {/* AdSense ad unit */}
         <ins
-          ref={adRef}
+          ref={insRef}
           className="adsbygoogle"
           style={{ display: 'block' }}
           data-ad-client={ADSENSE_CONFIG.CLIENT_ID}

@@ -1,6 +1,6 @@
 import { FormEvent } from "react";
 // Spot やモックデータはこのコンポーネントでは使用しない
-import { Icon } from "./Icon";
+import { Icon } from "../../components/ui/Icon";
 
 const popularQueries = ["ライブ", "フードトラック", "DJセット", "朝活", "限定グッズ"];
 

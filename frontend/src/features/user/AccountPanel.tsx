@@ -1,11 +1,11 @@
-import "../styles/components/AccountPanel.css";
+import "../../styles/components/AccountPanel.css";
 
 import { ChangeEvent, KeyboardEvent, useEffect, useMemo, useRef, useState } from "react";
 import { User } from "firebase/auth";
 
-import { uploadAvatarFile } from "../lib/storage";
-import { UserProfile } from "../types";
-import { Icon } from "./Icon";
+import { uploadAvatarFile } from "../../lib/storage";
+import { UserProfile } from "../../types";
+import { Icon } from "../../components/ui/Icon";
 
 export type AccountPanelProps = {
   isOpen: boolean;
@@ -425,8 +425,8 @@ export const AccountPanel = ({
           {activeView === "summary"
             ? renderSummaryView()
             : activeView === "settings"
-            ? renderSettingsView()
-            : renderEditView()}
+              ? renderSettingsView()
+              : renderEditView()}
         </div>
       </section>
 

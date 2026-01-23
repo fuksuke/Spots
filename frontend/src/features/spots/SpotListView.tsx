@@ -1,13 +1,13 @@
-import "../styles/components/SpotListView.css";
+import "../../styles/components/SpotListView.css";
 
 import { useEffect, useMemo, useRef, useState } from "react";
 
-import type { Spot } from "../types";
-import { mockSpots } from "../mockData";
-import { Icon } from "./Icon";
-import { Avatar } from "./Avatar";
-import { ModernHero, ModernHeroPlaceholder } from "./ModernHero";
-import { ModernDetailList } from "./ModernDetailList";
+import type { Spot } from "../../types";
+import { mockSpots } from "../../mockData";
+import { Icon } from "../../components/ui/Icon";
+import { Avatar } from "../../components/ui/Avatar";
+import { ModernHero, ModernHeroPlaceholder } from "../../components/ui/ModernHero";
+import { ModernDetailList } from "../../components/ui/ModernDetailList";
 import {
   buildExternalLinks,
   buildMapSearchUrls,
@@ -16,8 +16,9 @@ import {
   collectSpotImages,
   formatSpotSchedule,
   splitSpotTitle
-} from "../lib/spotPresentation";
-import { trackEvent } from "../lib/analytics";
+} from "../../lib/spotPresentation";
+import { trackEvent } from "../../lib/analytics";
+import { useScrollParent } from "../../hooks/useScrollParent";
 
 // Extract likes and views from a spot. If undefined, treat as zero.
 const formatPopularity = (spot: Spot) => {
@@ -48,49 +49,34 @@ export const SpotListView = ({ spots, isLoading, error, onSpotSelect, onSpotView
   const errorState = useMockTiles ? null : error;
 
   const [sortKey, setSortKey] = useState<SortKey>("startTime");
+
   const [expandedSpotId, setExpandedSpotId] = useState<string | null>(null);
   // Map of liked state per spot id. This is only stored locally on the client.
+
   const [likedMap, setLikedMap] = useState<Record<string, boolean>>({});
   const listRef = useRef<HTMLDivElement | null>(null);
   const maxScrollDepthRef = useRef(0);
-
-  // Track which image index is currently shown for each spot. When a card
-  // contains multiple images, clicking on the page indicators will update
-  // this map to display the corresponding image.
-  const [imageIndexMap, setImageIndexMap] = useState<Record<string, number>>({});
-  const [touchStart, setTouchStart] = useState(0);
-  const [touchEnd, setTouchEnd] = useState(0);
-  const [isSwiping, setIsSwiping] = useState(false);
-
-  const handleTouchStart = (e: React.TouchEvent) => {
-    setTouchStart(e.targetTouches[0].clientX);
-    setIsSwiping(true);
-  };
-
-  const handleTouchMove = (e: React.TouchEvent) => {
-    if (isSwiping) {
-      setTouchEnd(e.targetTouches[0].clientX);
-    }
-  };
-
-  const handleTouchEnd = (spotId: string, images: string[]) => {
-    if (isSwiping) {
-      const swipeDistance = touchStart - touchEnd;
-      if (Math.abs(swipeDistance) > 50) {
-        const newIndex = (imageIndexMap[spotId] || 0) + (swipeDistance > 0 ? 1 : -1);
-        if (newIndex >= 0 && newIndex < images.length) {
-          setImageIndexMap((prev) => ({ ...prev, [spotId]: newIndex }));
-        }
-      }
-      setIsSwiping(false);
-    }
-  };
+  const scrollParent = useScrollParent(listRef);
 
   useEffect(() => {
-    const node = listRef.current;
-    if (!node) return;
+    if (!scrollParent) return;
+
     const handleScroll = () => {
-      const { scrollTop, scrollHeight, clientHeight } = node;
+      let scrollTop = 0;
+      let scrollHeight = 0;
+      let clientHeight = 0;
+
+      if (scrollParent instanceof Window) {
+        scrollTop = window.scrollY;
+        scrollHeight = document.documentElement.scrollHeight;
+        clientHeight = window.innerHeight;
+      } else {
+        const el = scrollParent as HTMLElement;
+        scrollTop = el.scrollTop;
+        scrollHeight = el.scrollHeight;
+        clientHeight = el.clientHeight;
+      }
+
       if (scrollHeight <= clientHeight) {
         maxScrollDepthRef.current = 1;
         return;
@@ -98,12 +84,13 @@ export const SpotListView = ({ spots, isLoading, error, onSpotSelect, onSpotView
       const depth = Math.min(1, scrollTop / (scrollHeight - clientHeight));
       maxScrollDepthRef.current = Math.max(maxScrollDepthRef.current, depth);
     };
-    node.addEventListener("scroll", handleScroll);
+
+    scrollParent.addEventListener("scroll", handleScroll);
     return () => {
-      node.removeEventListener("scroll", handleScroll);
+      scrollParent.removeEventListener("scroll", handleScroll);
       trackEvent("list_scroll_depth", { percent: maxScrollDepthRef.current });
     };
-  }, []);
+  }, [scrollParent]);
 
   // Sort the list according to the selected key.
   const sortedSpots = useMemo(() => {
@@ -199,10 +186,9 @@ export const SpotListView = ({ spots, isLoading, error, onSpotSelect, onSpotView
                   const mapUrls = buildMapSearchUrls(spot);
                   const { mainTitle, subTitle } = splitSpotTitle(spot.title);
                   const images = collectSpotImages(spot);
-                  const idx = imageIndexMap[spot.id] ?? 0;
-                  const imageCount = images.length > 0 ? images.length : 1;
-                  const validIdx = Math.min(Math.max(idx, 0), imageCount - 1);
-                  const src = images[validIdx] ?? null;
+                  // Always use first image if available
+                  const src = images.length > 0 ? images[0] : null;
+
                   // Determine updated like state and counts using local likedMap
                   const isLikedLocal = likedMap[spot.id] ?? false;
                   const displayLikesNumberLocal = likes + (isLikedLocal ? 1 : 0);
@@ -211,16 +197,52 @@ export const SpotListView = ({ spots, isLoading, error, onSpotSelect, onSpotView
                   const detailItems = buildSpotDetailItems(spot);
                   const externalLinks = buildExternalLinks(spot);
 
+                  // 1. Remove multiple image support (carousel). 
+                  // 2. Remove modern-card-header area, overlay on image.
+                  // 4. Social links: Instagram or X icon or hidden.
+                  let socialIconNode: React.ReactNode = null;
+                  const sns = spot.contact?.sns;
+                  const instagramLink = sns?.instagram || externalLinks.find(l => l.url.includes("instagram.com"))?.url;
+                  const xLink = sns?.x || sns?.twitter || externalLinks.find(l => l.url.includes("twitter.com") || l.url.includes("x.com"))?.url;
+
+                  if (instagramLink) {
+                    socialIconNode = (
+                      <a
+                        href={instagramLink}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="modern-hero-social instagram"
+                        onClick={(e) => e.stopPropagation()}
+                        aria-label="Instagram"
+                      >
+                        <Icon name="instagram" size={24} />
+                      </a>
+                    );
+                  } else if (xLink) {
+                    socialIconNode = (
+                      <a
+                        href={xLink}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="modern-hero-social x"
+                        onClick={(e) => e.stopPropagation()}
+                        aria-label="X (Twitter)"
+                      >
+                        <Icon name="x" size={22} />
+                      </a>
+                    );
+                  }
+
                   return (
                     <>
-                      {/* Modern card layout inspired by SpotDetailSheet */}
-                      {/* Card header displaying the owner information */}
-                      <div className="modern-card-header">
-                        <Avatar name={spot.ownerDisplayName ?? spot.ownerId} photoUrl={spot.ownerPhotoUrl ?? null} size={36} />
-                        <span className="owner-name">{spot.ownerDisplayName ?? spot.ownerId}</span>
-                      </div>
-                      {/* Hero section with image, page indicators and social overlay */}
+                      {/* Hero section with image overlay header and social icon */}
                       <ModernHero
+                        header={
+                          <div className="modern-hero-header-overlay">
+                            <Avatar name={spot.ownerDisplayName ?? spot.ownerId} photoUrl={spot.ownerPhotoUrl ?? null} size={32} />
+                            <span className="owner-name-overlay">{spot.ownerDisplayName ?? spot.ownerId}</span>
+                          </div>
+                        }
                         media={
                           src ? (
                             <img src={src} alt="" />
@@ -228,40 +250,8 @@ export const SpotListView = ({ spots, isLoading, error, onSpotSelect, onSpotView
                             <ModernHeroPlaceholder label={(spot.category ?? 'EVENT').toUpperCase()} />
                           )
                         }
-                        indicators={
-                          <div className="modern-hero-indicators">
-                            {(() => {
-                              const count = images.length > 0 ? images.length : 1;
-                              return Array.from({ length: count }, (_, idx) => (
-                                <span
-                                  key={idx}
-                                  className={(imageIndexMap[spot.id] ?? 0) === idx ? 'active' : ''}
-                                  onClick={(evt) => {
-                                    evt.stopPropagation();
-                                    setImageIndexMap((prev) => ({ ...prev, [spot.id]: idx }));
-                                  }}
-                                ></span>
-                              ));
-                            })()}
-                          </div>
-                        }
-                        socialButton={
-                          <button
-                            type="button"
-                            className="modern-hero-social"
-                            aria-label="Instagram"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                            }}
-                          >
-                            <Icon name="camera" size={22} />
-                          </button>
-                        }
-                        imageProps={{
-                          onTouchStart: handleTouchStart,
-                          onTouchMove: handleTouchMove,
-                          onTouchEnd: () => handleTouchEnd(spot.id, images)
-                        }}
+                        // No indicators as carousel is removed
+                        socialButton={socialIconNode}
                       />
                       {/* Content area containing title, stats, schedule, catch copy, and description */}
                       <div className="modern-content">
@@ -288,6 +278,7 @@ export const SpotListView = ({ spots, isLoading, error, onSpotSelect, onSpotView
                             </div>
                           </div>
                         </div>
+                        {/* 3. Modern schedule: Underline only, no background */}
                         <div className="modern-schedule">{scheduleLabel}</div>
                         {catchCopy && <div className="modern-catchcopy">{catchCopy}</div>}
                         {fullDesc && (

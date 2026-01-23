@@ -1,6 +1,6 @@
-import { PageMode, ViewMode } from "../types";
+import { PageMode, ViewMode } from "../../types";
 
-import { Icon } from "./Icon";
+import { Icon } from "../ui/Icon";
 
 export type ActionBarProps = {
   pageMode: PageMode;

@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import type { KeyedMutator } from "swr";
-import { FavoriteMutationResult, FollowMutationResult, LikeMutationResult, Spot } from "../types";
-import { SpotOwnerBadge } from "./SpotOwnerBadge";
+import { FavoriteMutationResult, FollowMutationResult, LikeMutationResult, Spot } from "../../types";
+import { SpotOwnerBadge } from "../../components/ui/SpotOwnerBadge";
 
 type SpotFeedProps = {
   spots: Spot[];
@@ -128,10 +128,10 @@ export const SpotFeed = ({
           return current.map((item) =>
             item.id === spot.id
               ? {
-                  ...item,
-                  likes: result.likes,
-                  likedByViewer: result.liked
-                }
+                ...item,
+                likes: result.likes,
+                likedByViewer: result.liked
+              }
               : item
           );
         }, { revalidate: false });
@@ -201,9 +201,9 @@ export const SpotFeed = ({
           const mapped = current.map((item) =>
             item.ownerId === ownerId
               ? {
-                  ...item,
-                  followedByViewer: result.following
-                }
+                ...item,
+                followedByViewer: result.following
+              }
               : item
           );
 
@@ -279,9 +279,9 @@ export const SpotFeed = ({
           return current.map((item) =>
             item.id === spot.id
               ? {
-                  ...item,
-                  favoritedByViewer: result.favorited
-                }
+                ...item,
+                favoritedByViewer: result.favorited
+              }
               : item
           );
         }, { revalidate: false });

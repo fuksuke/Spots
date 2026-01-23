@@ -16,8 +16,8 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: var(--spots-space-md) var(--spots-space-lg);
-  padding-top: calc(var(--spots-space-md) + var(--safe-area-top));
+  padding: var(--spots-space-sm) var(--spots-space-md);
+  padding-top: calc(var(--spots-space-sm) + var(--safe-area-top));
   background: var(--spots-surface);
   border-bottom: 1px solid var(--spots-border);
   position: sticky;
@@ -33,7 +33,7 @@
 
 .spot-create-header-left h1 {
   margin: 0;
-  font-size: 1.125rem;
+  font-size: 1rem;
   font-weight: 600;
   color: var(--spots-text);
 }
@@ -76,7 +76,11 @@
   border: 1px solid var(--spots-border);
   display: flex;
   flex-direction: column;
-  gap: var(--spots-space-lg);
+  gap: var(--spots-space-md);
+  flex: 1;
+  /* 親要素いっぱいに広げる */
+  min-height: 0;
+  /* flexアイテムの最小高さ制限解除 */
 }
 
 .spot-wizard-header {
@@ -88,15 +92,17 @@
 
 .spot-wizard-header h2 {
   margin: 0;
-  font-size: 1.25rem;
+  font-size: 1.125rem;
   font-weight: 600;
   color: var(--spots-text);
 }
 
 .spot-wizard-subtitle {
-  margin: var(--spots-space-xs) 0 0;
-  font-size: 0.875rem;
+  margin: var(--spots-space-xs) auto 0;
+  font-size: 0.8125rem;
   color: var(--spots-text-secondary);
+  max-width: 400px;
+  line-height: 1.5;
 }
 
 /* Stepper - Simple dots */
@@ -122,33 +128,42 @@
 
 /* Step Container */
 .spot-step-container {
-  min-height: 320px;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
 }
 
 .spot-step {
   display: flex;
   flex-direction: column;
   gap: var(--spots-space-md);
+  flex: 1;
+  min-height: 0;
+}
+
+.spot-map-wrapper {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: var(--spots-space-md);
+  min-height: 0;
 }
 
 /* Step 1: Map */
-.spot-map-summary-lead {
-  padding: var(--spots-space-md);
-  background: var(--spots-bg);
-  border-radius: var(--spots-radius-sm);
-}
-
-.spot-map-summary-lead .hint {
-  margin: 0;
-  font-size: 0.875rem;
-  color: var(--spots-text-secondary);
-}
-
 .spot-map-shell {
   border-radius: var(--spots-radius-md);
   overflow: hidden;
   border: 1px solid var(--spots-border);
-  height: 320px;
+  flex: 1;
+  /* 残りの領域を埋める */
+  min-height: 300px;
+  /* 最低限の高さは確保 */
+}
+
+.spot-create-map {
+  width: 100%;
+  height: 100%;
 }
 
 .spot-map-search input[type="search"] {
@@ -173,7 +188,7 @@
   background: var(--spots-surface);
   border: 1px solid var(--spots-border);
   border-radius: var(--spots-radius-sm);
-  box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
   list-style: none;
   margin: 0;
   padding: 0;
@@ -225,6 +240,9 @@
   display: flex;
   flex-direction: column;
   gap: var(--spots-space-sm);
+  flex: 1;
+  overflow-y: auto;
+  /* カードが多い場合はスクロール */
 }
 
 .spot-plan-card {
@@ -453,7 +471,7 @@ select.input:focus {
 .review-mode-button.active {
   background: var(--spots-surface);
   color: var(--spots-text);
-  box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
 }
 
 .review-preview {
@@ -755,6 +773,6 @@ select.input:focus {
   }
 
   .spot-map-shell {
-    height: 260px;
+    min-height: 260px;
   }
 }

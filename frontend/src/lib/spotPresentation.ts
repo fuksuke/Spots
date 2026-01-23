@@ -8,11 +8,13 @@ export type SpotDetailListItem = {
   href?: string;
 };
 
-const formatDate = (date: Date) =>
-  date.toLocaleDateString("ja-JP", { month: "2-digit", day: "2-digit" });
+// M/D format (e.g., "1/5")
+export const formatDate = (date: Date) =>
+  `${date.getMonth() + 1}/${date.getDate()}`;
 
-const formatTime = (date: Date) =>
-  date.toLocaleTimeString("ja-JP", { hour: "2-digit", minute: "2-digit", hour12: false });
+// H:mm format (e.g., "8:09")
+export const formatTime = (date: Date) =>
+  `${date.getHours()}:${date.getMinutes().toString().padStart(2, "0")}`;
 
 export const formatSpotSchedule = (startTime?: string | null, endTime?: string | null) => {
   if (!startTime) return "日程未設定";

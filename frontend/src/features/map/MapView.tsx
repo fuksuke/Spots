@@ -1,4 +1,4 @@
-import "../styles/components/MapView.css";
+import "../../styles/components/MapView.css";
 
 import { MutableRefObject, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import mapboxgl, { Map as MapboxMap } from "mapbox-gl";
@@ -7,13 +7,13 @@ import styled from 'styled-components';
 import type { Feature, FeatureCollection, Point } from "geojson";
 import "mapbox-gl/dist/mapbox-gl.css";
 
-import { useMapTiles } from "../hooks/useMapTiles";
-import { SpotCalloutManager } from "../lib/map/SpotCalloutManager";
-import { TaskScheduler } from "../lib/map/TaskScheduler";
-import { PremiumLRUCache } from "../lib/map/PremiumLRUCache";
-import { FPSMonitor } from "../lib/map/FPSMonitor";
-import { parseLocalTimestamp } from "../lib/map/time";
-import { trackEvent } from "../lib/analytics";
+import { useMapTiles } from "../../hooks/useMapTiles";
+import { SpotCalloutManager } from "../../lib/map/SpotCalloutManager";
+import { TaskScheduler } from "../../lib/map/TaskScheduler";
+import { PremiumLRUCache } from "../../lib/map/PremiumLRUCache";
+import { FPSMonitor } from "../../lib/map/FPSMonitor";
+import { parseLocalTimestamp } from "../../lib/map/time";
+import { trackEvent } from "../../lib/analytics";
 import type {
   Coordinates,
   MapTileFeature,
@@ -22,7 +22,7 @@ import type {
   Spot,
   SpotCategory,
   TileCoordinate
-} from "../types";
+} from "../../types";
 
 mapboxgl.accessToken = import.meta.env.VITE_MAPBOX_TOKEN ?? "";
 
@@ -200,12 +200,12 @@ const useGeoJsonSource = ({ mapRef, featureCollection, renderMode }: GeoJsonSour
     const data =
       renderMode === "canvas"
         ? {
-            type: "FeatureCollection" as const,
-            features: featureCollection.features.filter((feature) => {
-              const type = feature.properties?.featureType;
-              return type === "cluster" || feature.properties?.premium === true;
-            })
-          }
+          type: "FeatureCollection" as const,
+          features: featureCollection.features.filter((feature) => {
+            const type = feature.properties?.featureType;
+            return type === "cluster" || feature.properties?.premium === true;
+          })
+        }
         : featureCollection;
 
     source.setData(data as FeatureCollection<Point>);
