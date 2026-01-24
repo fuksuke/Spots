@@ -1,0 +1,130 @@
+import { useCallback, useState } from "react";
+import { useNavigate } from "react-router-dom";
+import { signOut } from "firebase/auth";
+
+import { useAuth } from "../../providers/AuthProvider";
+import { useProfile } from "../../hooks/useProfile";
+import { useSpotFeed } from "../../hooks/useSpotFeed";
+import { auth } from "../../lib/firebase";
+import { AccountLayout, AccountTab } from "./AccountLayout";
+import { AccountProfileView } from "./AccountProfileView";
+import { AccountSettingsView } from "./AccountSettingsView";
+import { AccountEditView } from "./AccountEditView";
+import { AccountArchiveView } from "./AccountArchiveView";
+import "./AccountPage.css";
+
+export const AccountPage = () => {
+    const navigate = useNavigate();
+    const { currentUser, authToken } = useAuth();
+    const [activeTab, setActiveTab] = useState<AccountTab>("profile");
+
+    const { profile: userProfile, mutate: mutateProfile } = useProfile(authToken);
+
+    const { data: spotData } = useSpotFeed(undefined, authToken, currentUser?.uid ?? null);
+
+    const mySpotCount = spotData?.filter((spot) => spot.ownerId === currentUser?.uid).length ?? 0;
+
+    const handleTabChange = useCallback((tab: AccountTab) => {
+        setActiveTab(tab);
+    }, []);
+
+    const handleShare = useCallback(async () => {
+        const shareData = {
+            title: userProfile?.displayName ?? "マイアカウント",
+            text: `${userProfile?.displayName ?? "ユーザー"} @Shibuya LiveMap`,
+            url: `https://shibuya-livemap.example/users/${currentUser?.uid}`
+        };
+        try {
+            if (navigator.share) {
+                await navigator.share(shareData);
+            } else if (navigator.clipboard) {
+                await navigator.clipboard.writeText(shareData.url);
+            }
+        } catch (error) {
+            console.warn("シェアに失敗しました", error);
+        }
+    }, [currentUser?.uid, userProfile?.displayName]);
+
+    const handleUpgrade = useCallback(() => {
+        // TODO: アップグレードモーダルへの遷移
+        navigate("/spots");
+    }, [navigate]);
+
+    const handlePrivateToggle = useCallback(async (next: boolean) => {
+        if (!authToken) return;
+        const response = await fetch("/api/profile", {
+            method: "PUT",
+            headers: {
+                "Content-Type": "application/json",
+                Authorization: `Bearer ${authToken}`
+            },
+            body: JSON.stringify({ isPrivateAccount: next })
+        });
+        if (!response.ok) {
+            throw new Error("設定の変更に失敗しました");
+        }
+        await mutateProfile();
+    }, [authToken, mutateProfile]);
+
+    const handleLogout = useCallback(async () => {
+        await signOut(auth);
+        navigate("/spots");
+    }, [navigate]);
+
+    const handleProfileSaved = useCallback(() => {
+        setActiveTab("profile");
+    }, []);
+
+    const handleProfileRefresh = useCallback(async () => {
+        await mutateProfile();
+    }, [mutateProfile]);
+
+    // 未ログイン時はリダイレクト
+    if (!currentUser) {
+        navigate("/spots");
+        return null;
+    }
+
+    const renderContent = () => {
+        switch (activeTab) {
+            case "profile":
+                return (
+                    <AccountProfileView
+                        user={currentUser}
+                        profile={userProfile ?? null}
+                        spotCount={mySpotCount}
+                        onShare={handleShare}
+                        onUpgrade={handleUpgrade}
+                    />
+                );
+            case "settings":
+                return (
+                    <AccountSettingsView
+                        isPrivateAccount={Boolean(userProfile?.isPrivateAccount)}
+                        onPrivateToggle={handlePrivateToggle}
+                        onLogout={handleLogout}
+                    />
+                );
+            case "edit":
+                return (
+                    <AccountEditView
+                        user={currentUser}
+                        profile={userProfile ?? null}
+                        authToken={authToken}
+                        onSaved={handleProfileSaved}
+                        onProfileRefresh={handleProfileRefresh}
+                    />
+                );
+            case "archive":
+                return <AccountArchiveView />;
+            default:
+                return null;
+        }
+    };
+
+    return (
+        <AccountLayout activeTab={activeTab} onTabChange={handleTabChange}>
+            {renderContent()}
+        </AccountLayout>
+    );
+};

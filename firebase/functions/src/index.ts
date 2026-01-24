@@ -5,6 +5,8 @@ import {
   rebuildPopularSpotsLeaderboard,
   publishDueScheduledSpots,
   expirePromotions,
+  archivePastSpots,
+  cleanupExpiredImages,
   resetPromotionQuotas,
   captureSentryException
 } from "@shibuya/backend";
@@ -101,6 +103,32 @@ export const tidyPromotions = functions
       await expirePromotions();
     } catch (error) {
       captureSentryException(error, { function: "tidyPromotions" });
+      throw error;
+    }
+  });
+
+export const archiveSpotsJob = functions
+  .region("asia-northeast1")
+  .pubsub.schedule("every 15 minutes")
+  .timeZone("Asia/Tokyo")
+  .onRun(async () => {
+    try {
+      await archivePastSpots();
+    } catch (error) {
+      captureSentryException(error, { function: "archiveSpotsJob" });
+      throw error;
+    }
+  });
+
+export const cleanupImagesJob = functions
+  .region("asia-northeast1")
+  .pubsub.schedule("every 24 hours")
+  .timeZone("Asia/Tokyo")
+  .onRun(async () => {
+    try {
+      await cleanupExpiredImages();
+    } catch (error) {
+      captureSentryException(error, { function: "cleanupImagesJob" });
       throw error;
     }
   });

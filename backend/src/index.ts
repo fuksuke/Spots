@@ -1,4 +1,9 @@
 import "dotenv/config";
+
+export * from "./services/spotReportService.js";
+export * from "./services/archiveService.js";
+export * from "./services/analyticsService.js";
+
 import { createApp } from "./app.js";
 
 const app = createApp();

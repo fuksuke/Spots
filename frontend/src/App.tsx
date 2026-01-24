@@ -10,7 +10,7 @@ import { InAppNotifications } from "./components/InAppNotifications";
 import type { InAppNotification } from "./components/InAppNotifications";
 import { PromotionBanner } from "./features/spots/PromotionBanner";
 import { AdminPage } from "./features/admin/AdminPage";
-import { AccountPanel } from "./features/user/AccountPanel";
+import { AccountPage } from "./features/user/AccountPage";
 import { SpotCreatePage } from "./features/spots/SpotCreatePage";
 import { SpotDetailSheet } from "./features/spots/SpotDetailSheet";
 import { AppLayout } from "./layouts/AppLayout";
@@ -893,8 +893,8 @@ function App() {
       setAuthModalOpen(true);
       return;
     }
-    setAccountPanelOpen(true);
-  }, [currentUser, triggerMessage]);
+    navigate("/account");
+  }, [currentUser, navigate, triggerMessage]);
 
   const handleAccountPanelClose = useCallback(() => {
     setAccountPanelOpen(false);
@@ -1309,25 +1309,8 @@ function App() {
         </Route>
         <Route path="/spots/new" element={spotCreateLayout} />
         <Route path="/admin" element={<AdminPage />} />
+        <Route path="/account" element={<AccountPage />} />
       </Routes>
-
-
-
-      <AccountPanel
-        isOpen={isAccountPanelOpen}
-        user={currentUser}
-        profile={userProfile ?? null}
-        spotCount={mySpotCount}
-        authToken={authToken}
-        onClose={handleAccountPanelClose}
-        onShare={handleAccountShare}
-        onUpgrade={handleUpgradeClick}
-        onLogout={handleAccountLogout}
-        onPrivateToggle={handleAccountPrivateToggle}
-        onProfileRefresh={() => {
-          void mutateProfile();
-        }}
-      />
 
       <div className={`auth-modal ${isAuthModalOpen ? "open" : ""}`.trim()} role="dialog" aria-hidden={!isAuthModalOpen}>
         <div className="modal-scrim" aria-hidden="true" onClick={() => setAuthModalOpen(false)} />

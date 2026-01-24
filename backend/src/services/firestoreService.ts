@@ -404,7 +404,6 @@ const applyCategoryBalance = (
     if (b.score !== a.score) return b.score - a.score;
     return new Date(b.spot.createdAt).getTime() - new Date(a.spot.createdAt).getTime();
   });
-
   return result.slice(0, targetCount);
 };
 
@@ -422,7 +421,12 @@ export const fetchSpots = async ({ category, followedUserIds, viewerId }: SpotFi
   }
 
   const snapshot = await query.limit(50).get();
-  const responses = snapshot.docs.map((doc) => toSpotResponse(doc));
+  let responses = snapshot.docs.map((doc) => toSpotResponse(doc));
+
+  // 終了したイベントを除外 (インメモリフィルタ)
+  const now = Date.now();
+  responses = responses.filter(spot => new Date(spot.endTime).getTime() > now);
+
   return enrichSpotsForViewer(responses, viewerId);
 };
 

@@ -1,0 +1,311 @@
+/* Account Layout - AdminLayoutと同様のシンプルなデザイン */
+
+.account-layout {
+    min-height: 100vh;
+    min-height: 100dvh;
+    display: flex;
+    flex-direction: column;
+    background: #f8fafc;
+}
+
+/* ヘッダー */
+.account-header {
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0.75rem 1.5rem;
+    background: #ffffff;
+    border-bottom: 1px solid #e2e8f0;
+    gap: 1rem;
+}
+
+.account-back-btn {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    padding: 0.5rem 0.75rem;
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+    background: #ffffff;
+    color: #64748b;
+    font-size: 0.85rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.15s ease;
+    flex-shrink: 0;
+}
+
+.account-back-btn:hover {
+    background: #f1f5f9;
+    color: #0f172a;
+    border-color: #cbd5e1;
+}
+
+.account-back-btn svg {
+    flex-shrink: 0;
+}
+
+.account-title {
+    margin: 0;
+    font-size: 1.1rem;
+    font-weight: 700;
+    color: #0f172a;
+    text-align: center;
+    white-space: nowrap;
+    flex: 1;
+    min-width: 0;
+}
+
+.account-header-right {
+    width: 80px;
+    flex-shrink: 0;
+}
+
+/* ボディ */
+.account-body {
+    flex: 1;
+    display: flex;
+    min-height: 0;
+}
+
+/* サイドナビゲーション（デスクトップ） */
+.account-nav-desktop {
+    display: flex;
+    flex-direction: column;
+    gap: 0.35rem;
+    width: 180px;
+    padding: 1rem;
+    background: #ffffff;
+    border-right: 1px solid #e2e8f0;
+    flex-shrink: 0;
+}
+
+.account-nav-btn {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    padding: 0.75rem 1rem;
+    border: none;
+    border-radius: 10px;
+    background: transparent;
+    color: #64748b;
+    font-size: 0.9rem;
+    font-weight: 500;
+    text-align: left;
+    cursor: pointer;
+    transition: all 0.15s ease;
+}
+
+.account-nav-btn svg {
+    flex-shrink: 0;
+    opacity: 0.7;
+}
+
+.account-nav-btn:hover {
+    background: #f1f5f9;
+    color: #0f172a;
+}
+
+.account-nav-btn:hover svg {
+    opacity: 1;
+}
+
+.account-nav-btn.active {
+    background: #FEF5F4;
+    color: #F16F66;
+    font-weight: 600;
+}
+
+.account-nav-btn.active svg {
+    opacity: 1;
+}
+
+/* コンテンツエリア */
+.account-content {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+    min-width: 0;
+}
+
+/* メインコンテンツ */
+.account-main {
+    flex: 1;
+    padding: 1.5rem;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+}
+
+/* モバイル用ボトムタブバー（デフォルト非表示） */
+.account-bottom-tabs {
+    display: none;
+}
+
+/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+   レスポンシブ対応
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
+
+/* タブレット (768px以下) */
+@media (max-width: 768px) {
+    .account-header {
+        padding: 0.6rem 1rem;
+    }
+
+    .account-back-btn {
+        padding: 0.5rem;
+    }
+
+    .account-back-text {
+        display: none;
+    }
+
+    .account-title {
+        font-size: 1rem;
+    }
+
+    .account-header-right {
+        width: 40px;
+    }
+
+    /* サイドナビを非表示 */
+    .account-nav-desktop {
+        display: none;
+    }
+
+    /* ボトムタブバーを表示 */
+    .account-bottom-tabs {
+        display: flex;
+        position: fixed;
+        bottom: 0;
+        left: 0;
+        right: 0;
+        z-index: 100;
+        background: #ffffff;
+        border-top: 1px solid #e2e8f0;
+        padding: 0.5rem 0.75rem;
+        padding-bottom: calc(0.5rem + env(safe-area-inset-bottom, 0));
+        gap: 0.5rem;
+    }
+
+    .account-bottom-tab {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 0.25rem;
+        padding: 0.5rem;
+        border: none;
+        border-radius: 10px;
+        background: transparent;
+        color: #94a3b8;
+        font-size: 0.7rem;
+        font-weight: 500;
+        cursor: pointer;
+        transition: all 0.15s ease;
+    }
+
+    .account-bottom-tab svg {
+        opacity: 0.7;
+    }
+
+    .account-bottom-tab:hover {
+        background: #f1f5f9;
+        color: #64748b;
+    }
+
+    .account-bottom-tab.active {
+        background: #FEF5F4;
+        color: #F16F66;
+        font-weight: 600;
+    }
+
+    .account-bottom-tab.active svg {
+        opacity: 1;
+    }
+
+    .account-bottom-tab-label {
+        font-size: 0.7rem;
+    }
+
+    /* メインコンテンツにボトムタブ分の余白 */
+    .account-main {
+        padding: 1rem;
+        padding-bottom: calc(4.5rem + env(safe-area-inset-bottom, 0));
+    }
+
+    .account-body {
+        flex-direction: column;
+    }
+}
+
+/* スマホ (480px以下) */
+@media (max-width: 480px) {
+    .account-header {
+        padding: 0.5rem 0.75rem;
+    }
+
+    .account-title {
+        font-size: 0.95rem;
+    }
+
+    .account-main {
+        padding: 0.75rem;
+        padding-bottom: calc(4.5rem + env(safe-area-inset-bottom, 0));
+    }
+
+    .account-bottom-tab {
+        padding: 0.4rem;
+    }
+
+    .account-bottom-tab svg {
+        width: 18px;
+        height: 18px;
+    }
+
+    .account-bottom-tab-label {
+        font-size: 0.65rem;
+    }
+}
+
+/* 横向きスマホ対応 */
+@media (max-width: 768px) and (orientation: landscape) {
+    .account-bottom-tabs {
+        padding: 0.35rem 1rem;
+    }
+
+    .account-bottom-tab {
+        flex-direction: row;
+        gap: 0.4rem;
+        padding: 0.4rem 0.75rem;
+    }
+
+    .account-bottom-tab svg {
+        width: 16px;
+        height: 16px;
+    }
+
+    .account-main {
+        padding-bottom: calc(3.5rem + env(safe-area-inset-bottom, 0));
+    }
+}
+
+/* 大画面 (1200px以上) */
+@media (min-width: 1200px) {
+    .account-nav-desktop {
+        width: 220px;
+        padding: 1.25rem;
+    }
+
+    .account-nav-btn {
+        padding: 0.85rem 1.25rem;
+        font-size: 0.95rem;
+    }
+
+    .account-main {
+        padding: 2rem;
+    }
+}

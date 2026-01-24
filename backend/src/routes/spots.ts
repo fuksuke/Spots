@@ -12,7 +12,8 @@ import {
   trendingNewSpotsHandler,
   recordSpotViewHandler,
   reportSpotHandler,
-  deleteSpotHandler
+  deleteSpotHandler,
+  listArchivedSpotsHandler
 } from "../controllers/spotsController.js";
 import { requireAuth } from "../middleware/requireAuth.js";
 import { reportLimiter } from "../middleware/rateLimit.js";
@@ -23,6 +24,7 @@ router.get("/", listSpotsHandler);
 router.post("/", requireAuth, createSpotHandler);
 router.get("/popular", popularSpotsHandler);
 router.get("/trending-new", trendingNewSpotsHandler);
+router.get("/archived", requireAuth, listArchivedSpotsHandler); // IDパラメータを持つルートより先に定義が必要
 router.get("/:id", getSpotDetailHandler);
 router.get("/:id/comments", listCommentsHandler);
 router.post("/:id/comments", requireAuth, createCommentHandler);

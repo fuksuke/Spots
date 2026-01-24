@@ -6,6 +6,7 @@ import { User } from "firebase/auth";
 import { uploadAvatarFile } from "../../lib/storage";
 import { UserProfile } from "../../types";
 import { Icon } from "../../components/ui/Icon";
+import { useArchivedSpots } from "../../hooks/useArchivedSpots";
 
 export type AccountPanelProps = {
   isOpen: boolean;
@@ -21,7 +22,7 @@ export type AccountPanelProps = {
   onProfileRefresh?: () => Promise<void> | void;
 };
 
-type AccountView = "summary" | "settings" | "edit";
+type AccountView = "summary" | "settings" | "edit" | "archive";
 
 const normalizeWebsite = (value: string) => {
   const trimmed = value.trim();
@@ -60,6 +61,8 @@ export const AccountPanel = ({
   const [editError, setEditError] = useState<string | null>(null);
   const [isSavingEdit, setIsSavingEdit] = useState(false);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
+
+  const { spots: archivedSpots, isLoading: isLoadingArchive } = useArchivedSpots();
 
   const displayName = profile?.displayName ?? user?.displayName ?? "ユーザー";
   const avatarUrl = profile?.photoUrl ?? user?.photoURL ?? undefined;
@@ -175,6 +178,14 @@ export const AccountPanel = ({
       setEditPhotoPreview(null);
     }
     setEditPhotoFile(null);
+  };
+
+  const openArchiveView = () => {
+    setActiveView("archive");
+  };
+
+  const closeArchiveView = () => {
+    setActiveView("summary");
   };
 
   const handlePhotoFileChange = (event: ChangeEvent<HTMLInputElement>) => {
@@ -315,6 +326,11 @@ export const AccountPanel = ({
             アップグレード
           </button>
         </div>
+        <div className="account-footer-links">
+          <button type="button" className="text-link" onClick={openArchiveView}>
+            過去の投稿を見る
+          </button>
+        </div>
       </div>
     </>
   );
@@ -394,6 +410,35 @@ export const AccountPanel = ({
       </div>
     );
   };
+  const renderArchiveView = () => (
+    <div className="account-archive-view">
+      <header className="account-archive-header">
+        <h2>過去の投稿</h2>
+      </header>
+      <div className="account-archive-body">
+        {isLoadingArchive ? (
+          <p className="status-message">読み込み中...</p>
+        ) : archivedSpots.length === 0 ? (
+          <p className="empty-message">アーカイブされた投稿はありません。</p>
+        ) : (
+          <ul className="archive-list">
+            {archivedSpots.map((spot) => (
+              <li key={spot.id} className="archive-item">
+                <span className="archive-date">
+                  {new Date(spot.startTime).toLocaleDateString("ja-JP", {
+                    year: "numeric",
+                    month: "2-digit",
+                    day: "2-digit"
+                  })}
+                </span>
+                <span className="archive-title">{spot.title}</span>
+              </li>
+            ))}
+          </ul>
+        )}
+      </div>
+    </div>
+  );
 
   if (!isOpen) {
     return null;
@@ -408,7 +453,7 @@ export const AccountPanel = ({
             type="button"
             className="text-button"
             onClick={
-              activeView === "edit" ? closeEditView : activeView === "settings" ? closeSettingsView : onClose
+              activeView === "edit" || activeView === "archive" ? closeEditView : activeView === "settings" ? closeSettingsView : onClose
             }
           >
             ← 戻る
@@ -426,7 +471,9 @@ export const AccountPanel = ({
             ? renderSummaryView()
             : activeView === "settings"
               ? renderSettingsView()
-              : renderEditView()}
+              : activeView === "edit"
+                ? renderEditView()
+                : renderArchiveView()}
         </div>
       </section>
 

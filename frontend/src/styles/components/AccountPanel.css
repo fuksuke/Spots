@@ -184,6 +184,8 @@
   display: flex;
   flex-direction: column;
   gap: 1.5rem;
+  height: 380px;
+  overflow-y: auto;
 }
 
 .account-header-actions {
@@ -406,4 +408,3 @@
   clip: rect(0, 0, 0, 0);
   border: 0;
 }
-

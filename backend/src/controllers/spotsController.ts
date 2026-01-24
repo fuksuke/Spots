@@ -22,6 +22,7 @@ import { PhoneVerificationRequiredError, SchedulingRuleError } from "../services
 import { extractUidFromAuthorization, InvalidAuthTokenError } from "../utils/auth.js";
 import { notifyAdminOfReport } from "../services/notificationService.js";
 
+import { fetchArchivedSpots } from "../services/archiveService.js";
 import { enforceRealtimeSpotWindow } from "./scheduledSpotsController.js";
 
 const listSpotsQuerySchema = z.object({
@@ -94,6 +95,20 @@ export const listSpotsHandler = async (req: Request, res: Response, next: NextFu
     if (error instanceof SchedulingRuleError) {
       return res.status(400).json({ message: error.message });
     }
+    next(error);
+  }
+};
+
+
+export const listArchivedSpotsHandler = async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const uid = (req as Request & { uid?: string }).uid;
+    if (!uid) {
+      return res.status(401).json({ message: "Authentication required" });
+    }
+    const spots = await fetchArchivedSpots(uid);
+    res.json(spots);
+  } catch (error) {
     next(error);
   }
 };
