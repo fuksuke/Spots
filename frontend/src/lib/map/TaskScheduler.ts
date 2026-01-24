@@ -32,9 +32,9 @@
  * ```
  */
 
-type TaskPriority = 'high' | 'normal' | 'low';
+export type TaskPriority = 'high' | 'normal' | 'low';
 
-interface Task {
+export interface Task {
   /** Unique identifier for the task */
   id: string;
   /** Task priority (high > normal > low) */

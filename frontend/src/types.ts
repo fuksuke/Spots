@@ -232,3 +232,15 @@ export type MapTileDiff = {
   op: "upsert" | "delete";
   feature?: MapTileFeature;
 };
+
+export type BatchTileRequest = {
+  tiles: Array<TileCoordinate & { since?: number; etag?: string }>;
+  layer?: MapTileLayer;
+  categories?: SpotCategory[];
+  premiumOnly?: boolean;
+};
+
+export type BatchTileResponse = {
+  tiles: Array<MapTileResponse & { notModified?: boolean; etag?: string }>;
+  batchGeneratedAt: number;
+};

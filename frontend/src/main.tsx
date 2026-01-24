@@ -12,15 +12,25 @@ import mapboxgl from "mapbox-gl";
 import { initSentry } from "./lib/sentry";
 import { BrowserRouter } from "react-router-dom";
 
+import { GlobalMapProvider } from "./features/map/GlobalMapProvider";
+import { mapTileCache } from "./lib/mapTileCache";
+
 mapboxgl.accessToken = import.meta.env.VITE_MAPBOX_TOKEN!;
 
 initSentry();
+
+// Cleanup expired cache entries on startup
+mapTileCache.cleanup().catch((error) => {
+  console.warn("Failed to cleanup map tile cache", error);
+});
 
 ReactDOM.createRoot(document.getElementById("root")!).render(
   <React.StrictMode>
     <BrowserRouter>
       <AuthProvider>
-        <App />
+        <GlobalMapProvider>
+          <App />
+        </GlobalMapProvider>
       </AuthProvider>
     </BrowserRouter>
   </React.StrictMode>

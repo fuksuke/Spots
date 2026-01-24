@@ -203,6 +203,8 @@ const createCalloutDom = (
   return { element: wrapper, update, destroy };
 };
 
+import { TaskScheduler } from "./TaskScheduler";
+
 export class SpotCalloutManager {
   private map: MapboxMap;
   private container: HTMLDivElement;
@@ -210,12 +212,21 @@ export class SpotCalloutManager {
   private onSelect: (spotId: string) => void;
   private recycledEntries: CalloutEntry[] = [];
   private maxPoolSize: number;
+  private scheduler: TaskScheduler;
+  private activeIds = new Set<string>();
 
-  constructor(map: MapboxMap, container: HTMLDivElement, onSelect: (spotId: string) => void, maxPoolSize = 32) {
+  constructor(
+    map: MapboxMap,
+    container: HTMLDivElement,
+    onSelect: (spotId: string) => void,
+    maxPoolSize = 32,
+    scheduler: TaskScheduler
+  ) {
     this.map = map;
     this.container = container;
     this.onSelect = onSelect;
     this.maxPoolSize = maxPoolSize;
+    this.scheduler = scheduler;
   }
 
   updateSelectHandler(onSelect: (spotId: string) => void) {
@@ -241,11 +252,57 @@ export class SpotCalloutManager {
     });
   }
 
-  sync(features: MapTileFeature[]) {
-    const activeIds = new Set(features.map((feature) => feature.id));
+  private updateOrCreate(feature: MapTileFeature) {
+    // If the feature is no longer active (removed by subsequent sync), skip
+    if (!this.activeIds.has(feature.id)) {
+      return;
+    }
 
+    const existing = this.entries.get(feature.id);
+    if (existing) {
+      existing.update(feature);
+      existing.lngLat = [feature.geometry.lng, feature.geometry.lat];
+      this.measure(existing);
+      this.position(existing);
+      return;
+    }
+
+    const recycled = this.recycledEntries.pop();
+    let entry: CalloutEntry;
+    if (recycled) {
+      recycled.update(feature);
+      recycled.lngLat = [feature.geometry.lng, feature.geometry.lat];
+      this.measure(recycled);
+      this.position(recycled);
+      recycled.visible = true;
+      recycled.element.style.display = "";
+      entry = recycled;
+    } else {
+      const { element, update, destroy } = createCalloutDom(feature, (spotId) => this.onSelect(spotId));
+      this.container.appendChild(element);
+      entry = {
+        element,
+        update,
+        destroy,
+        lngLat: [feature.geometry.lng, feature.geometry.lat],
+        width: 0,
+        height: 0,
+        visible: true
+      };
+      this.measure(entry);
+      this.position(entry);
+    }
+
+    this.entries.set(feature.id, entry);
+  }
+
+  sync(features: MapTileFeature[]) {
+    // 1. Update active IDs
+    this.activeIds = new Set(features.map((feature) => feature.id));
+
+    // 2. Immediate Removal
     this.entries.forEach((entry, spotId) => {
-      if (!activeIds.has(spotId)) {
+      if (!this.activeIds.has(spotId)) {
         entry.visible = false;
         entry.element.style.display = "none";
         if (this.recycledEntries.length < this.maxPoolSize) {
@@ -258,45 +315,23 @@ export class SpotCalloutManager {
       }
     });
 
+    // 3. Batched Creation/Update
+    const center = this.map.getCenter();
     features.forEach((feature) => {
-      const existing = this.entries.get(feature.id);
-      if (existing) {
-        existing.update(feature);
-        existing.lngLat = [feature.geometry.lng, feature.geometry.lat];
-        this.measure(existing);
-        this.position(existing);
-        return;
-      }
+      // Priority: High if within ~0.005 degrees (approx 500m) of center
+      const dist = Math.abs(feature.geometry.lng - center.lng) + Math.abs(feature.geometry.lat - center.lat);
+      const priority = dist < 0.005 ? "high" : "normal";
 
-      const recycled = this.recycledEntries.pop();
-      let entry: CalloutEntry;
-      if (recycled) {
-        recycled.update(feature);
-        recycled.lngLat = [feature.geometry.lng, feature.geometry.lat];
-        this.measure(recycled);
-        this.position(recycled);
-        entry = recycled;
-      } else {
-        const { element, update, destroy } = createCalloutDom(feature, (spotId) => this.onSelect(spotId));
-        this.container.appendChild(element);
-        entry = {
-          element,
-          update,
-          destroy,
-          lngLat: [feature.geometry.lng, feature.geometry.lat],
-          width: 0,
-          height: 0,
-          visible: true
-        };
-        this.measure(entry);
-        this.position(entry);
-      }
-
-      this.entries.set(feature.id, entry);
+      this.scheduler.schedule({
+        id: `callout-${feature.id}`,
+        priority,
+        execute: () => this.updateOrCreate(feature)
+      });
     });
   }
 
   clear() {
+    this.activeIds.clear();
     this.entries.forEach((entry) => {
       entry.element.remove();
       entry.destroy();

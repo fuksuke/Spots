@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 
 import type { MapTileLayer, MapTileResponse, SpotCategory, TileCoordinate } from "../types";
-import { fetchMapTile } from "../lib/mapTileApi";
+import { fetchMapTile, fetchMapTilesBatch } from "../lib/mapTileApi";
 import { mapTileCache } from "../lib/mapTileCache";
 import { buildMockTileResponses } from "../mockData";
 
@@ -93,6 +93,7 @@ export const useMapTiles = ({
       abortRef.current = controller;
 
       try {
+        // First, show cached results immediately
         const cachedResults = await Promise.all(
           sortedCoordinates.map((coordinate) => mapTileCache.get(coordinate))
         );
@@ -106,19 +107,42 @@ export const useMapTiles = ({
           }
         }
 
-        const freshResults = await Promise.all(
-          sortedCoordinates.map((coordinate, index) =>
-            fetchMapTile(coordinate, {
-              layer,
-              categories,
-              premiumOnly,
-              authToken,
-              since: cachedResults[index]?.generatedAt,
-              previous: cachedResults[index] ?? undefined,
-              signal: controller.signal
-            })
-          )
-        );
+        // Try batch fetch first
+        let freshResults: MapTileResponse[];
+        try {
+          freshResults = await fetchMapTilesBatch(sortedCoordinates, {
+            layer,
+            categories,
+            premiumOnly,
+            authToken,
+            signal: controller.signal
+          });
+        } catch (batchError) {
+          // Fallback to individual fetches if batch fails
+          if ((batchError as Error)?.name === "AbortError") {
+            throw batchError;
+          }
+
+          console.warn("Batch fetch failed, falling back to individual fetches", batchError);
+
+          const etagPromises = sortedCoordinates.map((coord) => mapTileCache.getETag(coord));
+          const etags = await Promise.all(etagPromises);
+
+          freshResults = await Promise.all(
+            sortedCoordinates.map((coordinate, index) =>
+              fetchMapTile(coordinate, {
+                layer,
+                categories,
+                premiumOnly,
+                authToken,
+                since: cachedResults[index]?.generatedAt,
+                previous: cachedResults[index] ?? undefined,
+                etag: etags[index],
+                signal: controller.signal
+              })
+            )
+          );
+        }
 
         if (!cancelled) {
           setTiles(freshResults);

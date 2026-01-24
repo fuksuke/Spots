@@ -8,7 +8,9 @@
       "Bash(tree:*)",
       "Bash(wc:*)",
       "Bash(du:*)",
-      "Bash(grep:*)"
+      "Bash(grep:*)",
+      "Bash(npm run type-check:*)",
+      "Bash(npm run typecheck:*)"
     ]
   }
 }
