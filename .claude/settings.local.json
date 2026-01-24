@@ -4,7 +4,11 @@
       "Bash(npx vite:*)",
       "Bash(git stash:*)",
       "Bash(npm run build:*)",
-      "Bash(npx tsc:*)"
+      "Bash(npx tsc:*)",
+      "Bash(tree:*)",
+      "Bash(wc:*)",
+      "Bash(du:*)",
+      "Bash(grep:*)"
     ]
   }
 }

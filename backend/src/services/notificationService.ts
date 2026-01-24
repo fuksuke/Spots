@@ -1,7 +1,8 @@
 import { firestore } from "./firebaseAdmin.js";
 import { Timestamp, FieldValue } from "firebase-admin/firestore";
+import { COLLECTIONS } from "../constants/collections.js";
 
-const ADMIN_ALERTS_COLLECTION = "admin_alerts";
+const ADMIN_ALERTS_COLLECTION = COLLECTIONS.ADMIN_ALERTS;
 
 export type AdminAlert = {
     id: string;

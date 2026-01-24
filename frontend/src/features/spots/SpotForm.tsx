@@ -6,6 +6,7 @@ import { searchPlaces } from "../../lib/mapboxGeocoding";
 import { formatPhoneNumber, validatePhoneNumber, validateEmail } from "../../lib/phoneValidation";
 import { Avatar } from "../../components/ui/Avatar";
 import { Icon } from "../../components/ui/Icon";
+import { toDatetimeLocal, toIsoString, parseLocalDateTime } from "../../lib/date";
 
 const categories: SpotCategory[] = [...SPOT_CATEGORY_VALUES];
 
@@ -19,26 +20,9 @@ type PostingPlanOption = {
   badge?: string;
 };
 
-const toDatetimeLocal = (date: Date) => {
-  const tzOffset = date.getTimezoneOffset() * 60000;
-  return new Date(date.getTime() - tzOffset).toISOString().slice(0, 16);
-};
-
-const toIsoString = (value: string) => {
-  if (!value) return "";
-  const date = new Date(value);
-  return Number.isNaN(date.getTime()) ? "" : date.toISOString();
-};
-
 
 const MAX_IMAGE_SIZE_MB = 5;
 const MAX_IMAGE_SIZE_BYTES = MAX_IMAGE_SIZE_MB * 1024 * 1024;
-
-const parseLocalDateTime = (value: string) => {
-  if (!value) return null;
-  const date = new Date(value);
-  return Number.isNaN(date.getTime()) ? null : date;
-};
 
 type SpotFormProps = {
   selectedLocation: Coordinates | null;

@@ -1309,7 +1309,7 @@ function App() {
         </Route>
         <Route path="/spots/new" element={spotCreateLayout} />
         <Route path="/admin" element={<AdminPage />} />
-        <Route path="/account" element={<AccountPage />} />
+        <Route path="/account/:tab?" element={<AccountPage />} />
       </Routes>
 
       <div className={`auth-modal ${isAuthModalOpen ? "open" : ""}`.trim()} role="dialog" aria-hidden={!isAuthModalOpen}>

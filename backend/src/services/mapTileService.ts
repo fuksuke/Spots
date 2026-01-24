@@ -4,6 +4,7 @@ import { LRUCache } from "lru-cache";
 import Supercluster, { type AnyProps, type ClusterFeature, type PointFeature } from "supercluster";
 
 import type { SpotCategory } from "../constants/categories.js";
+import { MS } from "../constants/time.js";
 
 import { firestore } from "./firebaseAdmin.js";
 
@@ -94,11 +95,11 @@ const MIN_ZOOM = 5;
 const MAX_ZOOM = 20;
 const MAX_TILE_RESULTS = 2000;
 const DOM_BUDGET = 300;
-const DEFAULT_NEXT_SYNC_MS = 60 * 1000;
+const DEFAULT_NEXT_SYNC_MS = MS.MINUTE;
 
 const tileCache = new LRUCache<TileCacheKey, TileComputation>({
   max: 100,
-  ttl: 60 * 1000
+  ttl: MS.MINUTE
 });
 
 const clampZoom = (zoom: number) => Math.max(MIN_ZOOM, Math.min(MAX_ZOOM, Math.floor(zoom)));

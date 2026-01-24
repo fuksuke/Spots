@@ -3,6 +3,7 @@ import { Timestamp } from "firebase-admin/firestore";
 import { z } from "zod";
 
 import { firebaseAuth, firestore } from "../services/firebaseAdmin.js";
+import { COLLECTIONS } from "../constants/collections.js";
 
 const router = Router();
 
@@ -22,7 +23,7 @@ router.post("/signup", async (req, res, next) => {
     });
 
     await firestore
-      .collection("users")
+      .collection(COLLECTIONS.USERS)
       .doc(userRecord.uid)
       .set({
         email: payload.email,

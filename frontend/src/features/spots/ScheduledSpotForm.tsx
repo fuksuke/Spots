@@ -1,19 +1,9 @@
 import { FormEvent, useEffect, useMemo, useState } from "react";
 import { Coordinates, SpotCategory, UserProfile, SPOT_CATEGORY_VALUES } from "../types";
 import { ScheduledSpot } from "../hooks/useScheduledSpots";
+import { toDatetimeLocal, toIsoString } from "../../lib/date";
 
 const categories: SpotCategory[] = [...SPOT_CATEGORY_VALUES];
-
-const toDatetimeLocal = (date: Date) => {
-  const tzOffset = date.getTimezoneOffset() * 60000;
-  return new Date(date.getTime() - tzOffset).toISOString().slice(0, 16);
-};
-
-const toIsoString = (value: string) => {
-  if (!value) return "";
-  const date = new Date(value);
-  return date.toISOString();
-};
 
 type ScheduledSpotFormProps = {
   authToken: string;

@@ -3,6 +3,7 @@ import { User } from "firebase/auth";
 
 import { UserProfile } from "../../types";
 import { Icon } from "../../components/ui/Icon";
+import { AccountArchiveView } from "./AccountArchiveView";
 import "./AccountPage.css";
 
 export type AccountProfileViewProps = {
@@ -10,6 +11,7 @@ export type AccountProfileViewProps = {
     profile: UserProfile | null;
     spotCount: number;
     onShare: () => void;
+    onEdit: () => void;
     onUpgrade: () => void;
 };
 
@@ -27,6 +29,7 @@ export const AccountProfileView = ({
     profile,
     spotCount,
     onShare,
+    onEdit,
     onUpgrade
 }: AccountProfileViewProps) => {
     const displayName = profile?.displayName ?? user?.displayName ?? "ユーザー";
@@ -86,12 +89,21 @@ export const AccountProfileView = ({
             </div>
 
             <div className="account-profile-actions">
-                <button type="button" className="button subtle" onClick={onShare}>
-                    共有
-                </button>
+                <div className="account-profile-actions-row">
+                    <button type="button" className="button subtle" onClick={onEdit}>
+                        編集
+                    </button>
+                    <button type="button" className="button subtle" onClick={onShare}>
+                        共有
+                    </button>
+                </div>
                 <button type="button" className="button primary" onClick={onUpgrade}>
                     アップグレード
                 </button>
+            </div>
+
+            <div className="account-profile-archive-section">
+                <AccountArchiveView />
             </div>
         </div>
     );

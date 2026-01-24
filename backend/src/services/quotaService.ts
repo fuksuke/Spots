@@ -1,11 +1,12 @@
 import { FieldPath } from "firebase-admin/firestore";
 
 import { getTierConfig } from "../constants/billing.js";
+import { COLLECTIONS } from "../constants/collections.js";
 
 import { firestore } from "./firebaseAdmin.js";
 import type { PosterTier, PromotionQuota } from "./posterProfileService.js";
 
-const USERS_COLLECTION = "users";
+const USERS_COLLECTION = COLLECTIONS.USERS;
 const BATCH_LIMIT = 300;
 
 type UserDocument = {

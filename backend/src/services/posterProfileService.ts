@@ -1,6 +1,8 @@
 import { Timestamp } from "firebase-admin/firestore";
 
 import { firestore } from "./firebaseAdmin.js";
+import { COLLECTIONS } from "../constants/collections.js";
+import { MS } from "../constants/time.js";
 
 export type PosterTier = "tier_a" | "tier_b" | "tier_c";
 
@@ -60,7 +62,7 @@ type UserDocument = {
 };
 
 export const getPosterProfile = async (uid: string): Promise<PosterProfile> => {
-  const snapshot = await firestore.collection("users").doc(uid).get();
+  const snapshot = await firestore.collection(COLLECTIONS.USERS).doc(uid).get();
   const data = (snapshot.data() as UserDocument) ?? {};
 
   return {
@@ -99,8 +101,8 @@ type SpotTiming = {
   announcementType: "short_term_notice" | "long_term_campaign";
 };
 
-const HOURS = 60 * 60 * 1000;
-const DAYS = 24 * HOURS;
+const HOURS = MS.HOUR;
+const DAYS = MS.DAY;
 
 export class SchedulingRuleError extends Error {
   constructor(message: string) {
@@ -162,7 +164,7 @@ export const assertQuotaAvailability = async ({
   if (announcementType === "short_term_notice" && typeof quota.short_term === "number") {
     const since = windowStartForQuota(publishAt, 7);
     const snapshot = await firestore
-      .collection("scheduled_spots")
+      .collection(COLLECTIONS.SCHEDULED_SPOTS)
       .where("owner_id", "==", uid)
       .where("announcement_type", "==", "short_term_notice")
       .where("publish_at", ">=", since)
@@ -174,7 +176,7 @@ export const assertQuotaAvailability = async ({
   if (announcementType === "long_term_campaign" && typeof quota.long_term === "number") {
     const since = windowStartForQuota(publishAt, 30);
     const snapshot = await firestore
-      .collection("scheduled_spots")
+      .collection(COLLECTIONS.SCHEDULED_SPOTS)
       .where("owner_id", "==", uid)
       .where("announcement_type", "==", "long_term_campaign")
       .where("publish_at", ">=", since)

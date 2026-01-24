@@ -1,6 +1,7 @@
 import { Timestamp } from "firebase-admin/firestore";
 
 import { firestore } from "./firebaseAdmin.js";
+import { MS } from "../constants/time.js";
 
 type AnalyticsOverview = {
   timeRange: "24h";
@@ -15,7 +16,7 @@ type AnalyticsOverview = {
   trend: Array<{ timestamp: string; activeUsers: number; spotViews: number }>;
 };
 
-const HOURS_24_MS = 24 * 60 * 60 * 1000;
+const HOURS_24_MS = MS.DAY;
 
 export const fetchAnalyticsOverview = async (): Promise<AnalyticsOverview> => {
   const now = Date.now();

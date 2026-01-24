@@ -1,6 +1,7 @@
 import { Timestamp } from "firebase-admin/firestore";
 
 import type { SpotCategory } from "../constants/categories.js";
+import { COLLECTIONS } from "../constants/collections.js";
 import { REVIEW_TEMPLATES } from "../constants/moderation.js";
 
 import { firestore } from "./firebaseAdmin.js";
@@ -100,8 +101,8 @@ type ScheduledSpotDocument = {
   owner_photo_url?: string | null;
 };
 
-const REVIEW_LOG_COLLECTION = "scheduled_spot_review_logs";
-const NOTIFICATIONS_COLLECTION = "notifications";
+const REVIEW_LOG_COLLECTION = COLLECTIONS.SCHEDULED_SPOT_REVIEW_LOGS;
+const NOTIFICATIONS_COLLECTION = COLLECTIONS.NOTIFICATIONS;
 
 type ReviewLogDocument = {
   spot_id: string;
@@ -216,7 +217,7 @@ export const createScheduledSpot = async (
     : "pending";
   const now = Timestamp.now();
 
-  const docRef = await firestore.collection("scheduled_spots").add({
+  const docRef = await firestore.collection(COLLECTIONS.SCHEDULED_SPOTS).add({
     title: input.title,
     description: input.description,
     category: input.category,
@@ -265,7 +266,7 @@ export const updateScheduledSpot = async (
   payload: UpdateScheduledSpotPayload,
   poster: PosterProfile
 ): Promise<ScheduledSpot> => {
-  const docRef = firestore.collection("scheduled_spots").doc(spotId);
+  const docRef = firestore.collection(COLLECTIONS.SCHEDULED_SPOTS).doc(spotId);
   const snapshot = await docRef.get();
   if (!snapshot.exists) {
     throw new SchedulingRuleError("予約投稿が見つかりませんでした。");
@@ -318,7 +319,7 @@ export const cancelScheduledSpot = async (
 ) => {
   const actorUid = typeof actor === "string" ? actor : actor.uid;
   const isAdmin = typeof actor === "string" ? false : Boolean(actor.isAdmin);
-  const docRef = firestore.collection("scheduled_spots").doc(spotId);
+  const docRef = firestore.collection(COLLECTIONS.SCHEDULED_SPOTS).doc(spotId);
   const snapshot = await docRef.get();
   if (!snapshot.exists) {
     throw new SchedulingRuleError("予約投稿が見つかりませんでした。");
@@ -357,7 +358,7 @@ export const listScheduledSpotsForAdmin = async ({
   publishStart,
   publishEnd
 }: AdminListParams = {}) => {
-  const collection = firestore.collection("scheduled_spots") as FirebaseFirestore.CollectionReference<ScheduledSpotDocument>;
+  const collection = firestore.collection(COLLECTIONS.SCHEDULED_SPOTS) as FirebaseFirestore.CollectionReference<ScheduledSpotDocument>;
   let query: FirebaseFirestore.Query<ScheduledSpotDocument> = collection;
 
   if (status) {
@@ -396,7 +397,7 @@ export const reviewScheduledSpot = async (
   payload: ApprovalPayload,
   actor: { uid: string; email?: string | null }
 ) => {
-  const docRef = firestore.collection("scheduled_spots").doc(spotId);
+  const docRef = firestore.collection(COLLECTIONS.SCHEDULED_SPOTS).doc(spotId);
   const snapshot = await docRef.get();
   if (!snapshot.exists) {
     throw new SchedulingRuleError("予約投稿が見つかりませんでした。");
@@ -422,7 +423,7 @@ export const reviewScheduledSpot = async (
   });
   if (payload.status === "approved" && payload.promotion) {
     const expiresAt = payload.promotion.expiresAt ?? current.start_time.toDate();
-    await firestore.collection("promotions").doc(spotId).set({
+    await firestore.collection(COLLECTIONS.PROMOTIONS).doc(spotId).set({
       spot_id: null,
       owner_id: current.owner_id,
       publish_at: current.publish_at,
@@ -449,13 +450,13 @@ export const reviewScheduledSpot = async (
     // BUT the requirement is "reviewScheduledSpot: published -> rejected (公開取り消し)".
 
     // Let's check "promotions" collection. It has "spot_id" and uses "spotId" (scheduled spot id) as doc id.
-    const promotionRef = firestore.collection("promotions").doc(spotId);
+    const promotionRef = firestore.collection(COLLECTIONS.PROMOTIONS).doc(spotId);
     const promotionSnap = await promotionRef.get();
     if (promotionSnap.exists) {
       const promoData = promotionSnap.data();
       if (promoData?.spot_id) {
         // Delete the public spot
-        await firestore.collection("spots").doc(promoData.spot_id).delete();
+        await firestore.collection(COLLECTIONS.SPOTS).doc(promoData.spot_id).delete();
       }
       // Mark promotion as ended/rejected
       await promotionRef.update({ status: "disabled" }); // or delete
@@ -599,7 +600,7 @@ export const publishDueScheduledSpots = async (): Promise<PublishResult> => {
 
     for (const doc of snapshot.docs) {
       const data = doc.data() as ScheduledSpotDocument;
-      const spotRef = await firestore.collection("spots").add({
+      const spotRef = await firestore.collection(COLLECTIONS.SPOTS).add({
         title: data.title,
         description: data.description,
         category: data.category,
@@ -619,7 +620,7 @@ export const publishDueScheduledSpots = async (): Promise<PublishResult> => {
         review_notes: null
       });
 
-      const promotionRef = firestore.collection("promotions").doc(doc.id);
+      const promotionRef = firestore.collection(COLLECTIONS.PROMOTIONS).doc(doc.id);
       const promotion = await promotionRef.get();
       if (promotion.exists) {
         await promotionRef.update({

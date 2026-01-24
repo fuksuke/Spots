@@ -418,6 +418,20 @@
     color: #dc2626;
 }
 
+.account-profile-actions .button.primary {
+    background: #F16F66;
+    color: #ffffff;
+    box-shadow: 0 4px 12px rgba(241, 111, 102, 0.25);
+    background-image: none;
+    /* Ensure gradient is removed */
+}
+
+.account-profile-actions .button.primary:hover {
+    background: #e55a51;
+    transform: translateY(-1px);
+    background-image: none;
+}
+
 /* Responsive */
 @media (max-width: 768px) {
     .account-profile-summary {
@@ -435,11 +449,23 @@
     }
 
     .account-profile-actions {
+        display: flex;
         flex-direction: column;
+        gap: 0.75rem;
         width: 100%;
     }
 
-    .account-profile-actions .button {
+    .account-profile-actions-row {
+        display: flex;
+        gap: 0.75rem;
+        width: 100%;
+    }
+
+    .account-profile-actions-row .button {
+        flex: 1;
+    }
+
+    .account-profile-actions .button.primary {
         width: 100%;
     }
 }

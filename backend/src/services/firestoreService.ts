@@ -4,6 +4,8 @@ import type { SpotCategory } from "../constants/categories.js";
 
 import { firestore } from "./firebaseAdmin.js";
 import type { PosterTier } from "./posterProfileService.js";
+import { sanitizeSpotIds, sanitizeUserIds as sanitizeFollowedUserIds } from "../utils/sanitize.js";
+import { MS } from "../constants/time.js";
 
 type SpotInput = {
   title: string;
@@ -188,19 +190,14 @@ const toSpotResponse = (doc: FirebaseFirestore.QueryDocumentSnapshot<SpotDocumen
 };
 
 const VIEW_SESSION_COLLECTION = "spot_view_sessions";
-const VIEW_SESSION_TTL_MS = 7 * 24 * 60 * 60 * 1000;
-const VIEW_DEDUPE_WINDOW_MS = 30 * 60 * 1000;
+const VIEW_SESSION_TTL_MS = 7 * MS.DAY;
+const VIEW_DEDUPE_WINDOW_MS = 30 * MS.MINUTE;
 
 type SpotViewSessionDocument = {
   spot_id: string;
   viewer_hash: string;
   last_view: Timestamp;
   expire_at: Timestamp;
-};
-
-const sanitizeSpotIds = (ids: unknown): string[] => {
-  if (!Array.isArray(ids)) return [];
-  return ids.map((value) => (typeof value === "string" ? value.trim() : "")).filter((value) => value.length > 0);
 };
 
 const enrichSpotsForViewer = async (spots: SpotResponse[], viewerId?: string) => {
@@ -641,11 +638,6 @@ export const unlikeSpot = async (spotId: string, userId: string): Promise<LikeMu
 
 type FollowedPostsOptions = {
   limit?: number;
-};
-
-const sanitizeFollowedUserIds = (ids: unknown): string[] => {
-  if (!Array.isArray(ids)) return [];
-  return ids.map((value) => (typeof value === "string" ? value.trim() : "")).filter((value) => value.length > 0);
 };
 
 export const likeComment = async (commentId: string, userId: string): Promise<CommentLikeMutationResult> => {

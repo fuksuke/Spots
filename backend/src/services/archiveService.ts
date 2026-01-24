@@ -2,9 +2,11 @@ import { Timestamp } from "firebase-admin/firestore";
 import { getStorage } from "firebase-admin/storage";
 import { firestore } from "./firebaseAdmin.js";
 import { notifySystemAlert } from "./notificationService.js";
+import { COLLECTIONS } from "../constants/collections.js";
+import { MS } from "../constants/time.js";
 
-const SPOTS_COLLECTION = "spots";
-const ARCHIVED_SPOTS_COLLECTION = "archived_spots";
+const SPOTS_COLLECTION = COLLECTIONS.SPOTS;
+const ARCHIVED_SPOTS_COLLECTION = COLLECTIONS.ARCHIVED_SPOTS;
 
 // アーカイブ時の保存データ型（最小限）
 type ArchivedSpotDocument = {
@@ -79,7 +81,7 @@ export const archivePastSpots = async () => {
  */
 export const cleanupExpiredImages = async () => {
     // 現在時刻から24時間前
-    const cleanupThreshold = new Date(Date.now() - 24 * 60 * 60 * 1000);
+    const cleanupThreshold = new Date(Date.now() - MS.DAY);
     const thresholdTimestamp = Timestamp.fromDate(cleanupThreshold);
 
     try {

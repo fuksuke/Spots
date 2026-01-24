@@ -1,5 +1,5 @@
-import { useCallback, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useCallback, useMemo } from "react";
+import { useNavigate, useParams } from "react-router-dom";
 import { signOut } from "firebase/auth";
 
 import { useAuth } from "../../providers/AuthProvider";
@@ -10,13 +10,20 @@ import { AccountLayout, AccountTab } from "./AccountLayout";
 import { AccountProfileView } from "./AccountProfileView";
 import { AccountSettingsView } from "./AccountSettingsView";
 import { AccountEditView } from "./AccountEditView";
-import { AccountArchiveView } from "./AccountArchiveView";
 import "./AccountPage.css";
 
 export const AccountPage = () => {
     const navigate = useNavigate();
+    const { tab } = useParams();
     const { currentUser, authToken } = useAuth();
-    const [activeTab, setActiveTab] = useState<AccountTab>("profile");
+
+    const activeTab = useMemo<AccountTab>(() => {
+        const validTabs: AccountTab[] = ["profile", "settings", "edit"];
+        if (tab && validTabs.includes(tab as AccountTab)) {
+            return tab as AccountTab;
+        }
+        return "profile";
+    }, [tab]);
 
     const { profile: userProfile, mutate: mutateProfile } = useProfile(authToken);
 
@@ -24,9 +31,9 @@ export const AccountPage = () => {
 
     const mySpotCount = spotData?.filter((spot) => spot.ownerId === currentUser?.uid).length ?? 0;
 
-    const handleTabChange = useCallback((tab: AccountTab) => {
-        setActiveTab(tab);
-    }, []);
+    const handleTabChange = useCallback((newTab: AccountTab) => {
+        navigate(`/account/${newTab}`);
+    }, [navigate]);
 
     const handleShare = useCallback(async () => {
         const shareData = {
@@ -72,8 +79,8 @@ export const AccountPage = () => {
     }, [navigate]);
 
     const handleProfileSaved = useCallback(() => {
-        setActiveTab("profile");
-    }, []);
+        handleTabChange("profile");
+    }, [handleTabChange]);
 
     const handleProfileRefresh = useCallback(async () => {
         await mutateProfile();
@@ -94,6 +101,7 @@ export const AccountPage = () => {
                         profile={userProfile ?? null}
                         spotCount={mySpotCount}
                         onShare={handleShare}
+                        onEdit={() => handleTabChange("edit")}
                         onUpgrade={handleUpgrade}
                     />
                 );
@@ -115,8 +123,6 @@ export const AccountPage = () => {
                         onProfileRefresh={handleProfileRefresh}
                     />
                 );
-            case "archive":
-                return <AccountArchiveView />;
             default:
                 return null;
         }

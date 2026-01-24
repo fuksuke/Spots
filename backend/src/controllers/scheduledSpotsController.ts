@@ -21,6 +21,7 @@ import {
   updateScheduledSpot
 } from "../services/scheduledSpotService.js";
 import { notifyAdminOfPendingSpot } from "../services/notificationService.js";
+import { ensureAdmin } from "../utils/admin.js";
 
 const announcementTypeSchema = z.enum(["short_term_notice", "long_term_campaign"]);
 
@@ -201,18 +202,6 @@ export const listScheduledSpotsHandler = async (req: Request, res: Response, nex
   } catch (error) {
     next(error);
   }
-};
-
-const ensureAdmin = (req: Request) => {
-  const uid = (req as Request & { uid?: string }).uid;
-  if (!uid) {
-    throw new SchedulingRuleError("Authentication required");
-  }
-  const isAdmin = (req as Request & { isAdmin?: boolean }).isAdmin;
-  if (!isAdmin) {
-    throw new SchedulingRuleError("この操作には管理者権限が必要です。");
-  }
-  return uid;
 };
 
 const adminListQuerySchema = z.object({

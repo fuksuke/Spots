@@ -5,6 +5,7 @@ import { z } from "zod";
 
 import { firebaseAuth, firestore } from "../services/firebaseAdmin.js";
 import { createBillingPortalSession, createCheckoutSession } from "../services/stripeService.js";
+import { COLLECTIONS } from "../constants/collections.js";
 
 const checkoutRequestSchema = z.object({
   plan: z.enum(["tier_b", "tier_a"]),
@@ -58,7 +59,7 @@ export const createCheckoutSessionHandler = async (req: Request, res: Response, 
       console.warn(`Failed to retrieve Firebase user for checkout session: ${uid}`, error);
     }
 
-    const userSnapshot = await firestore.collection("users").doc(uid).get();
+    const userSnapshot = await firestore.collection(COLLECTIONS.USERS).doc(uid).get();
     const userData = (userSnapshot.data() as { stripe_customer_id?: string | null }) ?? {};
     const stripeCustomerId = typeof userData.stripe_customer_id === "string" ? userData.stripe_customer_id.trim() : null;
 
@@ -92,7 +93,7 @@ export const createPortalSessionHandler = async (req: Request, res: Response, ne
 
     const { returnUrl } = portalRequestSchema.parse(req.body ?? {});
 
-    const userSnapshot = await firestore.collection("users").doc(uid).get();
+    const userSnapshot = await firestore.collection(COLLECTIONS.USERS).doc(uid).get();
     const userData = (userSnapshot.data() as { stripe_customer_id?: string | null }) ?? {};
     const stripeCustomerId = typeof userData.stripe_customer_id === "string" ? userData.stripe_customer_id.trim() : null;
 

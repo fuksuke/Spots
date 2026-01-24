@@ -1,6 +1,7 @@
 import type { NextFunction, Request, Response } from "express";
 import { z } from "zod";
 
+import { limitSchema, idParamSchema } from "../schemas/common.js";
 import {
   followUser,
   fetchFollowedSpots,
@@ -41,12 +42,10 @@ const followPayloadSchema = z
   }));
 
 const followedPostsQuerySchema = z.object({
-  limit: z.coerce.number().int().min(1).max(50).optional()
+  limit: limitSchema(50)
 });
 
-const commentLikeParamsSchema = z.object({
-  id: z.string().min(1)
-});
+const commentLikeParamsSchema = idParamSchema;
 
 export const likeSpotActionHandler = async (req: Request, res: Response, next: NextFunction) => {
   try {

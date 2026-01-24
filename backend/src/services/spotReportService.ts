@@ -1,8 +1,9 @@
 import { FieldValue, Timestamp } from "firebase-admin/firestore";
 
 import { firestore } from "./firebaseAdmin.js";
+import { COLLECTIONS } from "../constants/collections.js";
 
-const COLLECTION = "spot_reports";
+const COLLECTION = COLLECTIONS.SPOT_REPORTS;
 
 export type SpotReportStatus = "open" | "resolved";
 

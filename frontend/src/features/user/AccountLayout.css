@@ -48,6 +48,32 @@
     flex-shrink: 0;
 }
 
+.account-settings-btn {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    padding: 0.5rem 0.75rem;
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+    background: #ffffff;
+    color: #64748b;
+    font-size: 0.85rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.15s ease;
+    flex-shrink: 0;
+}
+
+.account-settings-btn:hover {
+    background: #f1f5f9;
+    color: #0f172a;
+    border-color: #cbd5e1;
+}
+
+.account-settings-btn svg {
+    flex-shrink: 0;
+}
+
 .account-title {
     margin: 0;
     font-size: 1.1rem;
@@ -60,7 +86,6 @@
 }
 
 .account-header-right {
-    width: 80px;
     flex-shrink: 0;
 }
 
@@ -161,6 +186,10 @@
 
     .account-back-text {
         display: none;
+    }
+
+    .account-settings-btn {
+        padding: 0.5rem;
     }
 
     .account-title {

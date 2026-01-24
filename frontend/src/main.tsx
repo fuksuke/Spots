@@ -5,8 +5,6 @@ import { AuthProvider } from "./providers/AuthProvider";
 import "./styles/base.css";
 import "./styles/trending-refined.css";
 import "./styles/spots-brand.css";
-import "./styles/spot-create-redesign.css";
-import "./styles/fillable-card-redesign.css";
 import "./styles/components/MapView.css";
 import "./styles/components/SpotListView.css";
 import "mapbox-gl/dist/mapbox-gl.css";

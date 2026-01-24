@@ -8,6 +8,8 @@ import { SPOT_CATEGORY_VALUES } from "../constants/categories.js";
 import { firebaseAuth, firestore } from "../services/firebaseAdmin.js";
 import type { SpotResponse } from "../services/firestoreService.js";
 import { fetchSpotsByIds } from "../services/firestoreService.js";
+import { sanitizeStringArray, sanitizeUserIds } from "../utils/sanitize.js";
+import { COLLECTIONS } from "../constants/collections.js";
 
 type UserDocData = {
   email?: string | null;
@@ -33,16 +35,6 @@ type UserDocData = {
   phone_verified?: boolean;
   phone_verified_at?: Timestamp | string;
   phone_hash?: string | null;
-};
-
-const toFollowedUserIds = (value: unknown): string[] => {
-  if (!Array.isArray(value)) return [];
-  return value.map((item) => (typeof item === "string" ? item : "")).filter((item) => item.length > 0);
-};
-
-const toStringArray = (value: unknown): string[] => {
-  if (!Array.isArray(value)) return [];
-  return value.map((item) => (typeof item === "string" ? item : "")).filter((item) => item.length > 0);
 };
 
 type ProfileResponse = {
@@ -72,7 +64,7 @@ type ProfileResponse = {
 };
 
 const ensureUserDocument = async (uid: string): Promise<{ data: UserDocData; ref: FirebaseFirestore.DocumentReference<UserDocData> }> => {
-  const userRef = firestore.collection("users").doc(uid) as FirebaseFirestore.DocumentReference<UserDocData>;
+  const userRef = firestore.collection(COLLECTIONS.USERS).doc(uid) as FirebaseFirestore.DocumentReference<UserDocData>;
   let snapshot = await userRef.get();
 
   if (!snapshot.exists) {
@@ -117,12 +109,12 @@ const ensureUserDocument = async (uid: string): Promise<{ data: UserDocData; ref
 const buildProfileResponse = async (uid: string): Promise<ProfileResponse> => {
   const { data } = await ensureUserDocument(uid);
 
-  const followedUserIds = toFollowedUserIds(data.followed_user_ids);
-  const favoriteSpotIds = toStringArray(data.favorite_spot_ids);
-  const followedCategories = toStringArray(data.followed_categories);
+  const followedUserIds = sanitizeUserIds(data.followed_user_ids);
+  const favoriteSpotIds = sanitizeStringArray(data.favorite_spot_ids);
+  const followedCategories = sanitizeStringArray(data.followed_categories);
   const promotionQuota = data.promotion_quota ?? {};
 
-  const followedUserDocs = followedUserIds.length > 0 ? await firestore.getAll(...followedUserIds.map((id) => firestore.collection("users").doc(id))) : [];
+  const followedUserDocs = followedUserIds.length > 0 ? await firestore.getAll(...followedUserIds.map((id) => firestore.collection(COLLECTIONS.USERS).doc(id))) : [];
   const followedUserDocMap = new Map<string, FirebaseFirestore.DocumentSnapshot<UserDocData>>();
   followedUserDocs.forEach((doc, idx) => {
     const id = followedUserIds[idx];
@@ -248,7 +240,7 @@ export const verifyPhoneHandler = async (req: Request, res: Response, next: Next
     }
 
     const now = Timestamp.now();
-    await firestore.collection("users").doc(uid).set(
+    await firestore.collection(COLLECTIONS.USERS).doc(uid).set(
       {
         phone_verified: true,
         phone_verified_at: now,
@@ -307,7 +299,7 @@ export const updateProfileHandler = async (req: Request, res: Response, next: Ne
     }
 
     if (Object.keys(updates).length > 0) {
-      await firestore.collection("users").doc(uid).set(updates, { merge: true });
+      await firestore.collection(COLLECTIONS.USERS).doc(uid).set(updates, { merge: true });
     }
 
     const profile = await buildProfileResponse(uid);

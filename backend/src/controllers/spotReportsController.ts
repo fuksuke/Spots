@@ -7,18 +7,7 @@ import {
   SpotReportStatus
 } from "../services/spotReportService.js";
 import { SchedulingRuleError } from "../services/posterProfileService.js";
-
-const ensureAdmin = (req: Request) => {
-  const uid = (req as Request & { uid?: string }).uid;
-  if (!uid) {
-    throw new SchedulingRuleError("Authentication required");
-  }
-  const isAdmin = (req as Request & { isAdmin?: boolean }).isAdmin;
-  if (!isAdmin) {
-    throw new SchedulingRuleError("この操作には管理者権限が必要です。");
-  }
-  return uid;
-};
+import { ensureAdmin } from "../utils/admin.js";
 
 const listQuerySchema = z.object({
   status: z.enum(["open", "resolved"]).optional(),
