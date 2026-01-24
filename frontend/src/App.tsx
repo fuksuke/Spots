@@ -7,7 +7,7 @@ import type { MapViewProps } from "./features/map/MapView";
 import { useAuth } from "./providers/AuthProvider";
 import { SearchOverlay } from "./features/map/SearchOverlay";
 import { InAppNotifications } from "./components/InAppNotifications";
-import type { InAppNotification } from "./components/InAppNotifications";
+import type { InAppNotification, NotificationType } from "./components/InAppNotifications";
 import { PromotionBanner } from "./features/spots/PromotionBanner";
 import { AdminPage } from "./features/admin/AdminPage";
 import { AccountPage } from "./features/user/AccountPage";
@@ -65,6 +65,7 @@ const MOBILE_SCROLL_FOOTER = (
 type NotificationDoc = {
   body?: string;
   title?: string;
+  type?: NotificationType;
   metadata?: {
     spotId?: string | null;
   };
@@ -295,9 +296,12 @@ function App() {
             id: docSnap.id,
             docId: docSnap.id,
             source: "remote" as const,
+            type: data.type,
+            title: typeof data.title === "string" ? data.title : undefined,
             message: typeof data.body === "string" ? data.body : typeof data.title === "string" ? data.title : "通知があります",
             createdAt: createdAtValue,
             spotId: data.metadata?.spotId ?? null,
+            metadata: data.metadata ?? undefined,
             priority: data.priority === "high" ? "high" : "standard"
           } satisfies InAppNotification;
         });

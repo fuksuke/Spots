@@ -21,6 +21,7 @@ import { createSpotReport } from "../services/spotReportService.js";
 import { PhoneVerificationRequiredError, SchedulingRuleError } from "../services/posterProfileService.js";
 import { extractUidFromAuthorization, InvalidAuthTokenError } from "../utils/auth.js";
 import { notifyAdminOfReport } from "../services/notificationService.js";
+import { sendNotification, sendBatchNotifications, fetchFollowerIds } from "../services/userNotificationService.js";
 
 import { fetchArchivedSpots } from "../services/archiveService.js";
 import { enforceRealtimeSpotWindow } from "./scheduledSpotsController.js";
@@ -260,6 +261,25 @@ export const createSpotHandler = async (req: Request, res: Response, next: NextF
     }
     await enforceRealtimeSpotWindow(uid, new Date(payload.startTime));
     const spot = await createSpot({ ...payload, ownerId: uid });
+
+    // Notify followers about the new post (async, non-blocking)
+    (async () => {
+      try {
+        const followerIds = await fetchFollowerIds(uid);
+        if (followerIds.length > 0) {
+          await sendBatchNotifications(
+            followerIds,
+            "new_post",
+            "新しい投稿があります",
+            `「${spot.title}」が投稿されました`,
+            { spotId: spot.id, spotTitle: spot.title, ownerUid: uid }
+          );
+        }
+      } catch (err) {
+        console.error("Failed to send new post notifications to followers:", err);
+      }
+    })();
+
     res.status(201).json(spot);
   } catch (error) {
     if (error instanceof PhoneVerificationRequiredError) {
@@ -369,6 +389,7 @@ export const unlikeSpotHandler = async (req: Request, res: Response, next: NextF
 export const deleteSpotHandler = async (req: Request, res: Response, next: NextFunction) => {
   try {
     const uid = (req as Request & { uid?: string }).uid;
+    const isAdmin = (req as Request & { isAdmin?: boolean }).isAdmin;
     if (!uid) {
       return res.status(401).json({ message: "Authentication required" });
     }
@@ -376,10 +397,26 @@ export const deleteSpotHandler = async (req: Request, res: Response, next: NextF
     if (!spot) {
       return res.status(404).json({ message: "Spot not found" });
     }
-    if (spot.ownerId !== uid) {
+
+    const isOwner = spot.ownerId === uid;
+    if (!isOwner && !isAdmin) {
       return res.status(403).json({ message: "この投稿を削除する権限がありません" });
     }
+
     await deleteSpot(req.params.id);
+
+    // If admin deleted someone else's spot, notify the owner
+    if (isAdmin && !isOwner) {
+      sendNotification({
+        userId: spot.ownerId,
+        type: "admin_action",
+        title: "投稿が削除されました",
+        body: `管理者によって「${spot.title}」が削除されました`,
+        metadata: { spotId: spot.id, spotTitle: spot.title, deletedByAdmin: true },
+        priority: "high"
+      }).catch((err) => console.error("Failed to send admin deletion notification:", err));
+    }
+
     res.status(200).json({ status: "ok" });
   } catch (error) {
     next(error);

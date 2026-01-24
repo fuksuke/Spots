@@ -1,0 +1,21 @@
+src/components/ui/ModernDetailList.tsx(4,41): error TS2307: Cannot find module '../lib/spotPresentation' or its corresponding type declarations.
+src/features/admin/AdminAnalyticsPanel.tsx(1,35): error TS2307: Cannot find module '../hooks/useAdminAnalytics' or its corresponding type declarations.
+src/features/admin/AdminAnalyticsPanel.tsx(71,50): error TS7006: Parameter 'point' implicitly has an 'any' type.
+src/features/admin/AdminPage.tsx(55,97): error TS2345: Argument of type 'ScheduledSpotStatus' is not assignable to parameter of type 'AdminScheduledSpotFilters | undefined'.
+  Type 'string' is not assignable to type 'AdminScheduledSpotFilters'.
+src/features/admin/AdminPage.tsx(62,28): error TS2339: Property 'dismissNotification' does not exist on type '{ notifications: AdminNotification[]; unreadCount: number; isLoading: boolean; markAsRead: () => Promise<void>; markAllAsRead: () => Promise<void>; error?: undefined; } | { ...; }'.
+src/features/admin/AdminPage.tsx(62,49): error TS2339: Property 'dismissAll' does not exist on type '{ notifications: AdminNotification[]; unreadCount: number; isLoading: boolean; markAsRead: () => Promise<void>; markAllAsRead: () => Promise<void>; error?: undefined; } | { ...; }'.
+src/features/map/hooks/useInteractiveMap.ts(191,48): error TS2339: Property 'id' does not exist on type 'never'.
+src/features/map/hooks/useInteractiveMap.ts(193,46): error TS2339: Property 'id' does not exist on type 'never'.
+src/features/map/hooks/useInteractiveMap.ts(194,47): error TS2339: Property 'id' does not exist on type 'never'.
+src/features/spots/PromotionBanner.tsx(1,27): error TS2307: Cannot find module '../hooks/usePromotions' or its corresponding type declarations.
+src/features/spots/ScheduledSpotForm.tsx(2,78): error TS2307: Cannot find module '../types' or its corresponding type declarations.
+src/features/spots/ScheduledSpotForm.tsx(3,31): error TS2307: Cannot find module '../hooks/useScheduledSpots' or its corresponding type declarations.
+src/features/spots/ScheduledSpotsPanel.tsx(2,31): error TS2307: Cannot find module '../hooks/useScheduledSpots' or its corresponding type declarations.
+src/features/user/ProfilePanel.tsx(3,49): error TS2307: Cannot find module '../types' or its corresponding type declarations.
+src/features/user/ProfilePanel.tsx(4,24): error TS2307: Cannot find module './Avatar' or its corresponding type declarations.
+src/features/user/ProfilePanel.tsx(5,34): error TS2307: Cannot find module '../lib/storage' or its corresponding type declarations.
+src/features/user/ProfilePanel.tsx(384,33): error TS7006: Parameter 'item' implicitly has an 'any' type.
+src/features/user/ProfilePanel.tsx(410,33): error TS7006: Parameter 'spot' implicitly has an 'any' type.
+src/hooks/useTrendingNewSpots.ts(55,53): error TS2345: Argument of type 'unknown' is not assignable to parameter of type 'string | null'.
+src/lib/map/TaskScheduler.ts(213,5): error TS2717: Subsequent property declarations must have the same type.  Property 'requestIdleCallback' must be of type '(callback: IdleRequestCallback, options?: IdleRequestOptions | undefined) => number', but here has type '(callback: (deadline: IdleDeadline) => void, options?: { timeout: number; } | undefined) => number'.

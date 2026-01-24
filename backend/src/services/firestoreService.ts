@@ -132,6 +132,20 @@ export type CommentListResponse = {
   nextCursor?: string;
 };
 
+/**
+ * User notification preferences
+ * Controls which notification types a user wants to receive
+ */
+export type NotificationPreferences = {
+  like?: boolean;
+  follow?: boolean;
+  new_post?: boolean;
+  post_approved?: boolean;
+  post_rejected?: boolean;
+  post_active?: boolean;
+  admin_action?: boolean;
+};
+
 type UserDocument = {
   followed_user_ids?: string[];
   display_name?: string | null;
@@ -140,6 +154,7 @@ type UserDocument = {
   favorite_spot_ids?: string[];
   followed_categories?: string[];
   phone_verified?: boolean;
+  notification_preferences?: NotificationPreferences;
 };
 
 export type FollowMutationResult = {
@@ -580,11 +595,26 @@ export const createComment = async (spotId: string, comment: CommentInput) => {
 export type LikeMutationResult = {
   liked: boolean;
   likes: number;
+  ownerId: string;
+  wasAlreadyLiked: boolean;
 };
 
 export type CommentLikeMutationResult = {
   liked: boolean;
   likes: number;
+  ownerId: string;
+  wasAlreadyLiked: boolean;
+};
+
+// Notification Preferences
+export const updateNotificationPreferences = async (uid: string, preferences: NotificationPreferences): Promise<void> => {
+  if (!uid) {
+    throw new Error("Missing user ID");
+  }
+
+  await firestore.collection("users").doc(uid).update({
+    notification_preferences: preferences
+  });
 };
 
 export const likeSpot = async (spotId: string, userId: string): Promise<LikeMutationResult> => {
@@ -597,17 +627,19 @@ export const likeSpot = async (spotId: string, userId: string): Promise<LikeMuta
       throw new Error("Spot not found");
     }
 
-    const currentLikes = (spotSnapshot.data()?.likes ?? 0) as number;
+    const spotData = spotSnapshot.data() as SpotDocument;
+    const currentLikes = (spotData?.likes ?? 0) as number;
+    const ownerId = spotData.owner_id;
     const likeSnapshot = await transaction.get(likeRef);
 
     if (likeSnapshot.exists) {
-      return { liked: true, likes: currentLikes } satisfies LikeMutationResult;
+      return { liked: true, likes: currentLikes, ownerId, wasAlreadyLiked: true } satisfies LikeMutationResult;
     }
 
     transaction.set(likeRef, { user_id: userId, spot_id: spotId, created_at: Timestamp.now() });
     transaction.update(spotRef, { likes: currentLikes + 1 });
 
-    return { liked: true, likes: currentLikes + 1 } satisfies LikeMutationResult;
+    return { liked: true, likes: currentLikes + 1, ownerId, wasAlreadyLiked: false } satisfies LikeMutationResult;
   });
 };
 
@@ -621,18 +653,20 @@ export const unlikeSpot = async (spotId: string, userId: string): Promise<LikeMu
       throw new Error("Spot not found");
     }
 
-    const currentLikes = (spotSnapshot.data()?.likes ?? 0) as number;
+    const spotData = spotSnapshot.data() as SpotDocument;
+    const currentLikes = (spotData?.likes ?? 0) as number;
+    const ownerId = spotData.owner_id;
     const likeSnapshot = await transaction.get(likeRef);
 
     if (!likeSnapshot.exists) {
-      return { liked: false, likes: currentLikes } satisfies LikeMutationResult;
+      return { liked: false, likes: currentLikes, ownerId, wasAlreadyLiked: false } satisfies LikeMutationResult;
     }
 
     const nextLikes = Math.max(currentLikes - 1, 0);
     transaction.delete(likeRef);
     transaction.update(spotRef, { likes: nextLikes });
 
-    return { liked: false, likes: nextLikes } satisfies LikeMutationResult;
+    return { liked: false, likes: nextLikes, ownerId, wasAlreadyLiked: true } satisfies LikeMutationResult;
   });
 };
 
@@ -651,10 +685,11 @@ export const likeComment = async (commentId: string, userId: string): Promise<Co
     }
 
     const data = commentSnapshot.data() as CommentDocument;
+    const ownerId = data.user_id;
     const likeSnapshot = await transaction.get(likeRef);
 
     if (likeSnapshot.exists) {
-      return { liked: true, likes: data.likes } satisfies CommentLikeMutationResult;
+      return { liked: true, likes: data.likes, ownerId, wasAlreadyLiked: true } satisfies CommentLikeMutationResult;
     }
 
     transaction.set(likeRef, {
@@ -664,7 +699,7 @@ export const likeComment = async (commentId: string, userId: string): Promise<Co
     });
     transaction.update(commentRef, { likes: data.likes + 1 });
 
-    return { liked: true, likes: data.likes + 1 } satisfies CommentLikeMutationResult;
+    return { liked: true, likes: data.likes + 1, ownerId, wasAlreadyLiked: false } satisfies CommentLikeMutationResult;
   });
 };
 
@@ -679,17 +714,18 @@ export const unlikeComment = async (commentId: string, userId: string): Promise<
     }
 
     const data = commentSnapshot.data() as CommentDocument;
+    const ownerId = data.user_id;
     const likeSnapshot = await transaction.get(likeRef);
 
     if (!likeSnapshot.exists) {
-      return { liked: false, likes: data.likes } satisfies CommentLikeMutationResult;
+      return { liked: false, likes: data.likes, ownerId, wasAlreadyLiked: false } satisfies CommentLikeMutationResult;
     }
 
     const nextLikes = Math.max(data.likes - 1, 0);
     transaction.delete(likeRef);
     transaction.update(commentRef, { likes: nextLikes });
 
-    return { liked: false, likes: nextLikes } satisfies CommentLikeMutationResult;
+    return { liked: false, likes: nextLikes, ownerId, wasAlreadyLiked: true } satisfies CommentLikeMutationResult;
   });
 };
 

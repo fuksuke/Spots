@@ -52,14 +52,14 @@ export const AdminPage = () => {
     // 通報
     const [reportStatusFilter, setReportStatusFilter] = useState<SpotReportStatus>("open");
 
-    const { adminScheduledSpots, error, isLoading, mutate } = useAdminScheduledSpots(authToken, statusFilter);
+    const { adminScheduledSpots, error, isLoading, mutate } = useAdminScheduledSpots(authToken, { status: statusFilter });
     const shouldFetchReports = activeTab === "reports" ? authToken : undefined;
     const { spotReports, error: reportsError, isLoading: isLoadingReports, mutate: mutateReports } = useSpotReports(shouldFetchReports, reportStatusFilter);
     const shouldFetchAnalytics = activeTab === "analytics" ? authToken : undefined;
     const { overview, error: analyticsError, isLoading: isLoadingAnalytics } = useAdminAnalytics(shouldFetchAnalytics);
 
     // 通知
-    const { notifications, dismissNotification, dismissAll } = useAdminNotifications(currentUser?.uid);
+    const { notifications, markAsRead, markAllAsRead } = useAdminNotifications(currentUser?.uid);
 
     useEffect(() => {
         if (!currentUser || !hasAdminClaim) {
@@ -119,7 +119,7 @@ export const AdminPage = () => {
                 <section className="admin-notifications">
                     <div className="admin-notifications-header">
                         <span className="admin-notifications-title">通知 ({notifications.length})</span>
-                        <button type="button" className="admin-notifications-dismiss-all" onClick={dismissAll}>
+                        <button type="button" className="admin-notifications-dismiss-all" onClick={() => void markAllAsRead()}>
                             すべて既読にする
                         </button>
                     </div>
@@ -130,7 +130,7 @@ export const AdminPage = () => {
                                 <button
                                     type="button"
                                     className="admin-notification-dismiss"
-                                    onClick={() => dismissNotification(n.id)}
+                                    onClick={() => void markAsRead(n.id)}
                                     aria-label="既読にする"
                                 >
                                     ×

@@ -1,4 +1,4 @@
-import { AnalyticsOverview } from "../hooks/useAdminAnalytics";
+import { AnalyticsOverview } from "../../hooks/useAdminAnalytics";
 
 const formatNumber = (value: number) => value.toLocaleString("ja-JP");
 

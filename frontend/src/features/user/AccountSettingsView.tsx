@@ -1,20 +1,27 @@
 import { useState } from "react";
+import { NotificationSettings } from "./NotificationSettings";
+import type { NotificationPreferences } from "../../types";
 
 export type AccountSettingsViewProps = {
     isPrivateAccount: boolean;
+    notificationPreferences: NotificationPreferences | undefined;
     onPrivateToggle: (next: boolean) => Promise<void> | void;
+    onSavePreferences: (prefs: NotificationPreferences) => Promise<void>;
     onLogout: () => Promise<void> | void;
     onUpgrade: () => void;
 };
 
 export const AccountSettingsView = ({
     isPrivateAccount: initialPrivate,
+    notificationPreferences,
     onPrivateToggle,
+    onSavePreferences,
     onLogout,
     onUpgrade
 }: AccountSettingsViewProps) => {
     const [isPrivateAccount, setIsPrivateAccount] = useState(initialPrivate);
     const [isTogglingPrivate, setIsTogglingPrivate] = useState(false);
+    const [isSavingPrefs, setIsSavingPrefs] = useState(false);
     const [settingsMessage, setSettingsMessage] = useState<string | null>(null);
     const [settingsError, setSettingsError] = useState<string | null>(null);
     const [isLogoutConfirmOpen, setIsLogoutConfirmOpen] = useState(false);
@@ -32,6 +39,20 @@ export const AccountSettingsView = ({
             setSettingsError(message);
         } finally {
             setIsTogglingPrivate(false);
+        }
+    };
+
+    const handleSavePreferences = async (newPrefs: NotificationPreferences) => {
+        setIsSavingPrefs(true);
+        setSettingsError(null);
+        try {
+            await onSavePreferences(newPrefs);
+            setSettingsMessage("通知設定を保存しました。");
+        } catch (error) {
+            const message = error instanceof Error ? error.message : "設定の保存に失敗しました";
+            setSettingsError(message);
+        } finally {
+            setIsSavingPrefs(false);
         }
     };
 
@@ -70,6 +91,14 @@ export const AccountSettingsView = ({
                 </label>
                 {settingsMessage ? <p className="status success">{settingsMessage}</p> : null}
                 {settingsError ? <p className="status error">{settingsError}</p> : null}
+            </div>
+
+            <div className="settings-section">
+                <NotificationSettings
+                    preferences={notificationPreferences}
+                    onSave={handleSavePreferences}
+                    isSaving={isSavingPrefs}
+                />
             </div>
 
             <div className="settings-section">

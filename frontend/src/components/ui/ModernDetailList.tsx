@@ -1,7 +1,7 @@
 import type { MouseEvent } from "react";
 import { Icon } from "./Icon";
 import type { IconName } from "./Icon";
-import type { SpotDetailListItem } from "../lib/spotPresentation";
+import type { SpotDetailListItem } from "../../lib/spotPresentation";
 
 type ModernDetailListProps = {
   items: SpotDetailListItem[];

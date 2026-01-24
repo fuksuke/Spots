@@ -1,14 +1,47 @@
 import { Spot } from "../types";
 
+export type NotificationType =
+  | "like"
+  | "follow"
+  | "new_post"
+  | "post_approved"
+  | "post_rejected"
+  | "post_active"
+  | "post_ended"
+  | "admin_action"
+  | "moderation"
+  | "system";
+
 export type InAppNotification = {
   id: string;
   message: string;
+  title?: string;
+  type?: NotificationType;
   createdAt: string;
   source: "local" | "remote";
   spot?: Spot;
   spotId?: string | null;
   priority?: "standard" | "high";
   docId?: string | null;
+  metadata?: Record<string, unknown>;
+};
+
+const NOTIFICATION_ICONS: Record<NotificationType, string> = {
+  like: "❤️",
+  follow: "👤",
+  new_post: "📍",
+  post_approved: "✅",
+  post_rejected: "❌",
+  post_active: "🎉",
+  post_ended: "⏰",
+  admin_action: "⚠️",
+  moderation: "📋",
+  system: "📢"
+};
+
+const getNotificationIcon = (type?: NotificationType): string => {
+  if (!type) return "🔔";
+  return NOTIFICATION_ICONS[type] ?? "🔔";
 };
 
 type InAppNotificationsProps = {
@@ -69,7 +102,13 @@ export const InAppNotifications = ({
                   key={notification.id}
                   className={`notification-card ${notification.priority === "high" ? "notification-card-urgent" : ""}`.trim()}
                 >
+                  <div className="notification-icon" aria-hidden="true">
+                    {getNotificationIcon(notification.type)}
+                  </div>
                   <div className="notification-main">
+                    {notification.title ? (
+                      <p className="notification-title">{notification.title}</p>
+                    ) : null}
                     <p className="notification-message">{notification.message}</p>
                     <time className="notification-time" dateTime={notification.createdAt}>
                       {new Date(notification.createdAt).toLocaleTimeString("ja-JP", { hour: "2-digit", minute: "2-digit" })}

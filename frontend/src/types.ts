@@ -164,6 +164,16 @@ export type TileCoordinate = {
   y: number;
 };
 
+export type NotificationPreferences = {
+  like?: boolean;
+  follow?: boolean;
+  newPost?: boolean;
+  postApproved?: boolean;
+  postRejected?: boolean;
+  postActive?: boolean;
+  adminAction?: boolean;
+};
+
 export type UserProfile = {
   uid: string;
   email: string | null;
@@ -191,6 +201,7 @@ export type UserProfile = {
   stripeCustomerId: string | null;
   phoneVerified: boolean;
   phoneVerifiedAt: string | null;
+  notificationPreferences?: NotificationPreferences;
 };
 
 export type ReviewLog = {

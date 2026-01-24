@@ -13,6 +13,7 @@ import {
   unlikeComment,
   unlikeSpot
 } from "../services/firestoreService.js";
+import { sendNotification } from "../services/userNotificationService.js";
 
 const likePayloadSchema = z
   .object({
@@ -61,6 +62,18 @@ export const likeSpotActionHandler = async (req: Request, res: Response, next: N
     }
 
     const result = await likeSpot(spotId, uid);
+
+    // Send notification if this is a new like and the liker is not the owner
+    if (!result.wasAlreadyLiked && result.ownerId !== uid) {
+      sendNotification({
+        userId: result.ownerId,
+        type: "like",
+        title: "いいねされました",
+        body: "あなたの投稿にいいねがつきました",
+        metadata: { spotId, likerUid: uid }
+      }).catch((err) => console.error("Failed to send like notification:", err));
+    }
+
     res.status(200).json(result);
   } catch (error) {
     next(error);
@@ -129,6 +142,18 @@ export const likeCommentActionHandler = async (req: Request, res: Response, next
     }
 
     const result = await likeComment(commentId, uid);
+
+    // Send notification if this is a new like and the liker is not the owner
+    if (!result.wasAlreadyLiked && result.ownerId !== uid) {
+      sendNotification({
+        userId: result.ownerId,
+        type: "like",
+        title: "コメントにいいねされました",
+        body: "あなたのコメントにいいねがつきました",
+        metadata: { commentId, likerUid: uid }
+      }).catch((err) => console.error("Failed to send comment like notification:", err));
+    }
+
     res.status(200).json(result);
   } catch (error) {
     next(error);
@@ -161,6 +186,16 @@ export const followUserActionHandler = async (req: Request, res: Response, next:
     }
 
     const result = await followUser(uid, targetUserId);
+
+    // Send notification to the followed user
+    sendNotification({
+      userId: targetUserId,
+      type: "follow",
+      title: "フォローされました",
+      body: "新しいフォロワーがいます",
+      metadata: { followerUid: uid }
+    }).catch((err) => console.error("Failed to send follow notification:", err));
+
     res.status(200).json(result);
   } catch (error) {
     if (error instanceof Error && error.message.includes("yourself")) {

@@ -724,37 +724,73 @@
   border-radius: 12px;
   padding: 0.85rem 1rem;
   display: flex;
-  flex-direction: column;
-  gap: 0.6rem;
+  flex-direction: row;
+  align-items: flex-start;
+  gap: 0.75rem;
 }
 
 .notification-card-urgent {
   border-color: rgba(248, 113, 113, 0.45);
   box-shadow: 0 12px 26px rgba(248, 113, 113, 0.18);
+  background: rgba(254, 242, 242, 0.95);
+}
+
+.notification-icon {
+  flex: 0 0 auto;
+  width: 36px;
+  height: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.25rem;
+  background: rgba(241, 245, 249, 0.9);
+  border-radius: 10px;
+}
+
+.notification-card-urgent .notification-icon {
+  background: rgba(254, 226, 226, 0.9);
 }
 
 .notification-main {
+  flex: 1 1 auto;
   display: flex;
-  justify-content: space-between;
-  align-items: flex-start;
-  gap: 0.75rem;
+  flex-direction: column;
+  gap: 0.25rem;
+  min-width: 0;
+}
+
+.notification-title {
+  margin: 0;
+  font-size: 0.88rem;
+  font-weight: 600;
+  color: #0f172a;
+  line-height: 1.3;
 }
 
 .notification-message {
   margin: 0;
-  font-size: 0.92rem;
-  color: #1f2937;
-  line-height: 1.5;
+  font-size: 0.85rem;
+  color: #475569;
+  line-height: 1.45;
 }
 
 .notification-time {
-  font-size: 0.78rem;
+  font-size: 0.75rem;
   color: #94a3b8;
+  margin-top: 0.15rem;
 }
 
 .notification-actions {
-  display: inline-flex;
-  gap: clamp(0.4rem, 1.8vw, 0.75rem);
+  flex: 0 0 auto;
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  align-items: flex-end;
+}
+
+.notification-actions .button.subtle {
+  padding: 0.35rem 0.75rem;
+  font-size: 0.78rem;
 }
 
 .notification-panel__footer {
@@ -767,6 +803,122 @@
   margin: 0.4rem 0 0;
   font-size: 0.78rem;
   color: #64748b;
+}
+
+/* Notification Settings Component ---------------------------------------- */
+.notification-settings {
+  background: #ffffff;
+  border-radius: 16px;
+  padding: 1.5rem;
+}
+
+.notification-settings__header h3 {
+  margin: 0;
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: #0f172a;
+}
+
+.notification-settings__subtitle {
+  margin: 0.35rem 0 0;
+  font-size: 0.85rem;
+  color: #64748b;
+}
+
+.notification-settings__list {
+  list-style: none;
+  margin: 1.25rem 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.notification-setting-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 0.85rem 1rem;
+  background: rgba(248, 250, 252, 0.95);
+  border: 1px solid rgba(148, 163, 184, 0.15);
+  border-radius: 12px;
+}
+
+.notification-setting-info {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+}
+
+.notification-setting-label {
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: #0f172a;
+}
+
+.notification-setting-description {
+  font-size: 0.78rem;
+  color: #64748b;
+}
+
+.notification-settings__footer {
+  display: flex;
+  justify-content: flex-end;
+  padding-top: 0.5rem;
+}
+
+/* Toggle Switch --------------------------------------------------------- */
+.toggle-switch {
+  position: relative;
+  display: inline-block;
+  width: 46px;
+  height: 26px;
+  flex: 0 0 auto;
+}
+
+.toggle-switch input {
+  opacity: 0;
+  width: 0;
+  height: 0;
+}
+
+.toggle-slider {
+  position: absolute;
+  cursor: pointer;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(148, 163, 184, 0.35);
+  transition: 0.25s;
+  border-radius: 26px;
+}
+
+.toggle-slider::before {
+  position: absolute;
+  content: "";
+  height: 20px;
+  width: 20px;
+  left: 3px;
+  bottom: 3px;
+  background-color: #ffffff;
+  transition: 0.25s;
+  border-radius: 50%;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.15);
+}
+
+.toggle-switch input:checked+.toggle-slider {
+  background-color: #22c55e;
+}
+
+.toggle-switch input:checked+.toggle-slider::before {
+  transform: translateX(20px);
+}
+
+.toggle-switch input:disabled+.toggle-slider {
+  opacity: 0.5;
+  cursor: not-allowed;
 }
 
 @media (max-width: 640px) {

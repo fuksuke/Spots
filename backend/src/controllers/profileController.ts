@@ -7,7 +7,7 @@ import { z } from "zod";
 import { SPOT_CATEGORY_VALUES } from "../constants/categories.js";
 import { firebaseAuth, firestore } from "../services/firebaseAdmin.js";
 import type { SpotResponse } from "../services/firestoreService.js";
-import { fetchSpotsByIds } from "../services/firestoreService.js";
+import { fetchSpotsByIds, updateNotificationPreferences } from "../services/firestoreService.js";
 import { sanitizeStringArray, sanitizeUserIds } from "../utils/sanitize.js";
 import { COLLECTIONS } from "../constants/collections.js";
 
@@ -170,8 +170,8 @@ const buildProfileResponse = async (uid: string): Promise<ProfileResponse> => {
       typeof data.promotion_quota_updated_at === "string"
         ? data.promotion_quota_updated_at
         : data.promotion_quota_updated_at && typeof data.promotion_quota_updated_at.toDate === "function"
-        ? data.promotion_quota_updated_at.toDate().toISOString()
-        : null,
+          ? data.promotion_quota_updated_at.toDate().toISOString()
+          : null,
     isVerified: Boolean(data.flags?.is_verified),
     isSponsor: Boolean(data.flags?.is_sponsor),
     stripeCustomerId:
@@ -183,8 +183,8 @@ const buildProfileResponse = async (uid: string): Promise<ProfileResponse> => {
       typeof data.phone_verified_at === "string"
         ? data.phone_verified_at
         : data.phone_verified_at && typeof (data.phone_verified_at as Timestamp).toDate === "function"
-        ? (data.phone_verified_at as Timestamp).toDate().toISOString()
-        : null
+          ? (data.phone_verified_at as Timestamp).toDate().toISOString()
+          : null
   } satisfies ProfileResponse;
 };
 
@@ -304,6 +304,41 @@ export const updateProfileHandler = async (req: Request, res: Response, next: Ne
 
     const profile = await buildProfileResponse(uid);
     res.json(profile);
+  } catch (error) {
+    next(error);
+  }
+};
+
+const notificationPreferencesSchema = z.object({
+  like: z.boolean().optional(),
+  follow: z.boolean().optional(),
+  newPost: z.boolean().optional(),
+  postApproved: z.boolean().optional(),
+  postRejected: z.boolean().optional(),
+  postActive: z.boolean().optional(),
+  adminAction: z.boolean().optional()
+});
+
+export const updateNotificationPreferencesHandler = async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const uid = (req as Request & { uid?: string }).uid;
+    if (!uid) {
+      return res.status(401).json({ message: "Authentication required" });
+    }
+
+    const preferences = notificationPreferencesSchema.parse(req.body);
+
+    await updateNotificationPreferences(uid, {
+      like: preferences.like,
+      follow: preferences.follow,
+      new_post: preferences.newPost,
+      post_approved: preferences.postApproved,
+      post_rejected: preferences.postRejected,
+      post_active: preferences.postActive,
+      admin_action: preferences.adminAction
+    });
+
+    res.json({ status: "ok" });
   } catch (error) {
     next(error);
   }

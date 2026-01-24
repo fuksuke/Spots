@@ -208,17 +208,5 @@ export class TaskScheduler {
  * TypeScript declarations for requestIdleCallback
  * (Not available in all TypeScript lib definitions)
  */
-declare global {
-  interface Window {
-    requestIdleCallback: (
-      callback: (deadline: IdleDeadline) => void,
-      options?: { timeout: number }
-    ) => number;
-    cancelIdleCallback: (id: number) => void;
-  }
-
-  interface IdleDeadline {
-    readonly didTimeout: boolean;
-    timeRemaining(): number;
-  }
-}
+// Removed conflicting global declarations
+// If requestIdleCallback is missing in your environment, please add it to your tsconfig lib or global d.ts

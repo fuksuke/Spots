@@ -15,6 +15,7 @@ import {
   SchedulingRuleError
 } from "./posterProfileService.js";
 import { notifySystemAlert } from "./notificationService.js";
+import { sendNotification } from "./userNotificationService.js";
 
 export type AnnouncementType = "short_term_notice" | "long_term_campaign";
 
@@ -631,6 +632,15 @@ export const publishDueScheduledSpots = async (): Promise<PublishResult> => {
         });
         activatedPromotionIds.push(promotionRef.id);
       }
+
+      // Notify owner that their post is now active
+      sendNotification({
+        userId: data.owner_id,
+        type: "post_active",
+        title: "投稿が公開されました",
+        body: `「${data.title}」がアクティブになりました`,
+        metadata: { spotId: spotRef.id, scheduledSpotId: doc.id }
+      }).catch((err) => console.error("Failed to send post_active notification:", err));
     }
 
     if (publishedSpotIds.length > 0) {

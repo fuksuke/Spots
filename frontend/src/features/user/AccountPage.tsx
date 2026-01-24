@@ -10,6 +10,7 @@ import { AccountLayout, AccountTab } from "./AccountLayout";
 import { AccountProfileView } from "./AccountProfileView";
 import { AccountSettingsView } from "./AccountSettingsView";
 import { AccountEditView } from "./AccountEditView";
+import type { NotificationPreferences } from "../../types";
 import "./AccountPage.css";
 
 export const AccountPage = () => {
@@ -73,6 +74,28 @@ export const AccountPage = () => {
         await mutateProfile();
     }, [authToken, mutateProfile]);
 
+    const handleSavePreferences = useCallback(async (prefs: NotificationPreferences) => {
+        if (!authToken) return;
+        // Currently using the same profile endpoint, but this should ideally be separate
+        // For MVP, we'll assume the profile endpoint can handle notificationPreferences or we need a new one
+        // Let's implement a specific endpoint for this in the plan, but for now mocked or same endpoint
+
+        // Since we are tasked to add a NEW endpoint, let's call that new endpoint
+        const response = await fetch("/api/profile/notification-preferences", {
+            method: "PATCH",
+            headers: {
+                "Content-Type": "application/json",
+                Authorization: `Bearer ${authToken}`
+            },
+            body: JSON.stringify(prefs)
+        });
+
+        if (!response.ok) {
+            throw new Error("通知設定の保存に失敗しました");
+        }
+        await mutateProfile();
+    }, [authToken, mutateProfile]);
+
     const handleLogout = useCallback(async () => {
         await signOut(auth);
         navigate("/spots");
@@ -108,7 +131,9 @@ export const AccountPage = () => {
                 return (
                     <AccountSettingsView
                         isPrivateAccount={Boolean(userProfile?.isPrivateAccount)}
+                        notificationPreferences={userProfile?.notificationPreferences}
                         onPrivateToggle={handlePrivateToggle}
+                        onSavePreferences={handleSavePreferences}
                         onLogout={handleLogout}
                         onUpgrade={handleUpgrade}
                     />
