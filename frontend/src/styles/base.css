@@ -1616,9 +1616,43 @@ select.input:focus {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 0.2rem;
-  color: rgba(15, 23, 42, 0.75);
-  font-size: 0.85rem;
+  gap: 0.25rem;
+  padding: 0.5rem;
+  border: none;
+  border-radius: 10px;
+  background: transparent;
+  color: #94a3b8;
+  font-size: 0.7rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.action-bar-button svg {
+  opacity: 0.7;
+}
+
+.action-bar-button:hover {
+  background: #f1f5f9;
+  color: #64748b;
+}
+
+.action-bar-button:hover svg {
+  opacity: 1;
+}
+
+.action-bar-button.primary {
+  background: #FEF5F4;
+  color: #F16F66;
+  font-weight: 600;
+}
+
+.action-bar-button.primary svg {
+  opacity: 1;
+}
+
+.action-bar-button.primary:hover {
+  background: #FDE8E6;
 }
 
 .action-icon {
@@ -3870,12 +3904,35 @@ body.mode-list .category-tabs {
   color: #ffffff;
 }
 
-.admin-spot-badge.category-event { background: rgba(16, 185, 129, 0.9); color: #fff; }
-.admin-spot-badge.category-sale { background: rgba(245, 158, 11, 0.9); color: #fff; }
-.admin-spot-badge.category-food { background: rgba(239, 68, 68, 0.9); color: #fff; }
-.admin-spot-badge.category-music { background: rgba(168, 85, 247, 0.9); color: #fff; }
-.admin-spot-badge.category-art { background: rgba(236, 72, 153, 0.9); color: #fff; }
-.admin-spot-badge.category-other { background: rgba(107, 114, 128, 0.9); color: #fff; }
+.admin-spot-badge.category-event {
+  background: rgba(16, 185, 129, 0.9);
+  color: #fff;
+}
+
+.admin-spot-badge.category-sale {
+  background: rgba(245, 158, 11, 0.9);
+  color: #fff;
+}
+
+.admin-spot-badge.category-food {
+  background: rgba(239, 68, 68, 0.9);
+  color: #fff;
+}
+
+.admin-spot-badge.category-music {
+  background: rgba(168, 85, 247, 0.9);
+  color: #fff;
+}
+
+.admin-spot-badge.category-art {
+  background: rgba(236, 72, 153, 0.9);
+  color: #fff;
+}
+
+.admin-spot-badge.category-other {
+  background: rgba(107, 114, 128, 0.9);
+  color: #fff;
+}
 
 /* コンテンツエリア */
 .admin-spot-card-content {
@@ -4123,11 +4180,30 @@ body.mode-list .category-tabs {
   font-weight: 600;
 }
 
-.admin-report-reason-badge.reason-spam { background: #fee2e2; color: #991b1b; }
-.admin-report-reason-badge.reason-misinfo { background: #fef3c7; color: #92400e; }
-.admin-report-reason-badge.reason-inappropriate { background: #fce7f3; color: #9d174d; }
-.admin-report-reason-badge.reason-safety { background: #fef2f2; color: #dc2626; }
-.admin-report-reason-badge.reason-other { background: #f3f4f6; color: #4b5563; }
+.admin-report-reason-badge.reason-spam {
+  background: #fee2e2;
+  color: #991b1b;
+}
+
+.admin-report-reason-badge.reason-misinfo {
+  background: #fef3c7;
+  color: #92400e;
+}
+
+.admin-report-reason-badge.reason-inappropriate {
+  background: #fce7f3;
+  color: #9d174d;
+}
+
+.admin-report-reason-badge.reason-safety {
+  background: #fef2f2;
+  color: #dc2626;
+}
+
+.admin-report-reason-badge.reason-other {
+  background: #f3f4f6;
+  color: #4b5563;
+}
 
 .admin-report-card-body {
   padding: 1rem;
@@ -4245,6 +4321,7 @@ body.mode-list .category-tabs {
 
 /* タブレット (768px以下) */
 @media (max-width: 768px) {
+
   /* カードグリッド */
   .admin-card-grid {
     grid-template-columns: 1fr;
@@ -4340,6 +4417,7 @@ body.mode-list .category-tabs {
 
 /* スマホ (480px以下) */
 @media (max-width: 480px) {
+
   /* カード */
   .admin-spot-card-content {
     padding: 1rem;
