@@ -871,31 +871,43 @@ export const SpotDetailSheet = ({
                 ✕
               </button>
             </header>
-            <form className="sheet-report-form" onSubmit={handleSubmitReport}>
-              <label className="sheet-report-field">
-                <span>カテゴリ</span>
-                <select value={reportCategory} onChange={(event) => setReportCategory(event.target.value)}>
-                  {REPORT_CATEGORIES.map((category) => (
-                    <option key={category.value} value={category.value}>
-                      {category.label}
-                    </option>
-                  ))}
-                </select>
-              </label>
-              <label className="sheet-report-field">
-                <span>詳細 (任意)</span>
-                <textarea value={reportDetails} onChange={(event) => setReportDetails(event.target.value)} rows={3} />
-              </label>
-              {reportError ? <p className="sheet-report-error">{reportError}</p> : null}
-              <div className="sheet-report-actions">
-                <button type="button" className="button subtle" onClick={() => setIsReportModalOpen(false)}>
-                  キャンセル
-                </button>
-                <button type="submit" className="button danger" disabled={isSubmittingReport}>
-                  {isSubmittingReport ? "送信中..." : "送信"}
-                </button>
+            {authToken?.trim() ? (
+              <form className="sheet-report-form" onSubmit={handleSubmitReport}>
+                <label className="sheet-report-field">
+                  <span>カテゴリ</span>
+                  <select value={reportCategory} onChange={(event) => setReportCategory(event.target.value)}>
+                    {REPORT_CATEGORIES.map((category) => (
+                      <option key={category.value} value={category.value}>
+                        {category.label}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+                <label className="sheet-report-field">
+                  <span>詳細 (任意)</span>
+                  <textarea value={reportDetails} onChange={(event) => setReportDetails(event.target.value)} rows={3} />
+                </label>
+                {reportError ? <p className="sheet-report-error">{reportError}</p> : null}
+                <div className="sheet-report-actions">
+                  <button type="button" className="button subtle" onClick={() => setIsReportModalOpen(false)}>
+                    キャンセル
+                  </button>
+                  <button type="submit" className="button danger" disabled={isSubmittingReport}>
+                    {isSubmittingReport ? "送信中..." : "送信"}
+                  </button>
+                </div>
+              </form>
+            ) : (
+              <div className="sheet-report-login-required">
+                <p>通報するにはログインが必要です。</p>
+                <p className="sheet-report-login-hint">右上のメニューからログインしてください。</p>
+                <div className="sheet-report-actions">
+                  <button type="button" className="button subtle" onClick={() => setIsReportModalOpen(false)}>
+                    閉じる
+                  </button>
+                </div>
               </div>
-            </form>
+            )}
           </div>
         </div>
       ) : null}

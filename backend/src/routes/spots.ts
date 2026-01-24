@@ -11,9 +11,11 @@ import {
   popularSpotsHandler,
   trendingNewSpotsHandler,
   recordSpotViewHandler,
-  reportSpotHandler
+  reportSpotHandler,
+  deleteSpotHandler
 } from "../controllers/spotsController.js";
 import { requireAuth } from "../middleware/requireAuth.js";
+import { reportLimiter } from "../middleware/rateLimit.js";
 
 const router = Router();
 
@@ -27,6 +29,7 @@ router.post("/:id/comments", requireAuth, createCommentHandler);
 router.post("/:id/like", requireAuth, likeSpotHandler);
 router.post("/:id/unlike", requireAuth, unlikeSpotHandler);
 router.post("/:id/view", recordSpotViewHandler);
-router.post("/:id/report", reportSpotHandler);
+router.post("/:id/report", requireAuth, reportLimiter, reportSpotHandler);
+router.delete("/:id", requireAuth, deleteSpotHandler);
 
 export default router;

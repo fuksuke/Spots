@@ -12,6 +12,7 @@ import socialRouter from "./routes/social.js";
 import spotsRouter from "./routes/spots.js";
 import spotReportsRouter from "./routes/spotReports.js";
 import analyticsRouter from "./routes/analytics.js";
+import notificationsRouter from "./routes/notifications.js";
 
 export const createApp = () => {
   const app = express();
@@ -43,6 +44,7 @@ export const createApp = () => {
   app.use("/api/spots", spotsRouter);
   app.use("/api", spotReportsRouter);
   app.use("/api", analyticsRouter);
+  app.use("/api", notificationsRouter);
 
   app.use(sentryErrorHandler());
   app.use(

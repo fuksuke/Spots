@@ -28,7 +28,7 @@ export const createSpotReport = async ({
   reason: string;
   details: string | null;
 }) => {
-  await firestore.collection(COLLECTION).add({
+  return firestore.collection(COLLECTION).add({
     spot_id: spotId,
     reporter_uid: reporterUid,
     reason,

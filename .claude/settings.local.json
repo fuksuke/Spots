@@ -3,7 +3,8 @@
     "allow": [
       "Bash(npx vite:*)",
       "Bash(git stash:*)",
-      "Bash(npm run build:*)"
+      "Bash(npm run build:*)",
+      "Bash(npx tsc:*)"
     ]
   }
 }

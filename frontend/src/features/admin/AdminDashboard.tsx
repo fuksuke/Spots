@@ -9,6 +9,7 @@ import { trackEvent } from "../../lib/analytics";
 import { AdminScheduledSpotsPanel } from "./AdminScheduledSpotsPanel";
 import { AdminSpotReportsPanel } from "./AdminSpotReportsPanel";
 import { AdminAnalyticsPanel } from "./AdminAnalyticsPanel";
+import { AdminLayout } from "./AdminLayout";
 
 const STATUS_OPTIONS: Array<{ value: ScheduledSpot["status"]; label: string }> = [
   { value: "pending", label: "審査待ち" },
@@ -51,12 +52,20 @@ export const AdminDashboard = ({ authToken, onClose, onInspectSpot }: AdminDashb
   const [statusFilter, setStatusFilter] = useState<ScheduledSpot["status"]>("pending");
   const [typeFilter, setTypeFilter] = useState<"all" | ScheduledSpot["announcementType"]>("all");
   const [searchTerm, setSearchTerm] = useState("");
+  const [ownerIdFilter, setOwnerIdFilter] = useState("");
+  const [publishStartFilter, setPublishStartFilter] = useState("");
+  const [publishEndFilter, setPublishEndFilter] = useState("");
   const [sortKey, setSortKey] = useState<(typeof SORT_OPTIONS)[number]["value"]>("publish_at");
   const [sortDesc, setSortDesc] = useState(true);
   const [panelView, setPanelView] = useState<AdminPanelView>("scheduled");
   const [reportStatusFilter, setReportStatusFilter] = useState<SpotReportStatus>("open");
 
-  const { adminScheduledSpots, error, isLoading, mutate } = useAdminScheduledSpots(authToken, statusFilter);
+  const { adminScheduledSpots, error, isLoading, mutate } = useAdminScheduledSpots(authToken, {
+    status: statusFilter,
+    ownerId: ownerIdFilter.trim() || undefined,
+    publishStart: publishStartFilter ? new Date(publishStartFilter).toISOString() : undefined,
+    publishEnd: publishEndFilter ? new Date(publishEndFilter + "T23:59:59").toISOString() : undefined
+  });
   const shouldFetchReports = panelView === "reports" ? authToken : undefined;
   const {
     spotReports,
@@ -118,62 +127,25 @@ export const AdminDashboard = ({ authToken, onClose, onInspectSpot }: AdminDashb
     trackEvent("admin_sort_direction", { descending: !sortDesc });
   };
 
-  const heroMetrics = (
-    <div className="hero-metrics-row">
-      <div className="hero-metric">
-        <span>予約</span>
-        <strong>{filteredSpots.length}</strong>
-      </div>
-      <div className="hero-metric">
-        <span>通報</span>
-        <strong>{spotReports.length}</strong>
-      </div>
-    </div>
-  );
-
   return (
-    <div className="panel admin-dashboard">
-      <header className="admin-dashboard-hero">
-        <div className="hero-text-row">
-          <p className="eyebrow">管理パネル</p>
-          <button
-            type="button"
-            className="icon-button hero-close"
-            aria-label="閉じる"
-            onClick={() => {
-              trackEvent("admin_dashboard_close", {});
-              onClose();
-            }}
-          >
-            ✕
-          </button>
-        </div>
-        {heroMetrics}
-        <div className="segment-control" role="tablist" aria-label="管理タブ">
-          <button
-            type="button"
-            className={`segment-button ${panelView === "scheduled" ? "active" : ""}`.trim()}
-            onClick={() => setPanelView("scheduled")}
-          >
-            予約
-          </button>
-          <button
-            type="button"
-            className={`segment-button ${panelView === "reports" ? "active" : ""}`.trim()}
-            onClick={() => setPanelView("reports")}
-          >
-            通報
-          </button>
-          <button
-            type="button"
-            className={`segment-button ${panelView === "analytics" ? "active" : ""}`.trim()}
-            onClick={() => setPanelView("analytics")}
-          >
-            アナリティクス
-          </button>
-        </div>
-      </header>
-
+    <AdminLayout
+      activeTab={panelView}
+      onTabChange={setPanelView}
+      title="管理パネル"
+      actions={
+        <button
+          type="button"
+          className="icon-button hero-close"
+          aria-label="閉じる"
+          onClick={() => {
+            trackEvent("admin_dashboard_close", {});
+            onClose();
+          }}
+        >
+          ✕
+        </button>
+      }
+    >
       {panelView === "scheduled" ? (
         <>
           <div className="admin-toolbar">
@@ -183,11 +155,46 @@ export const AdminDashboard = ({ authToken, onClose, onInspectSpot }: AdminDashb
                 className="admin-search-input"
                 value={searchTerm}
                 onChange={handleSearchChange}
-                placeholder="タイトル / 投稿者IDで検索..."
+                placeholder="タイトル内検索..."
+              />
+              <input
+                type="search"
+                className="admin-search-input"
+                value={ownerIdFilter}
+                onChange={(e) => setOwnerIdFilter(e.target.value)}
+                placeholder="投稿者IDでフィルタ"
+                style={{ width: "180px", marginLeft: "8px" }}
               />
               <button type="button" className="button subtle compact" onClick={handleRefresh}>
                 再読込
               </button>
+            </div>
+            <div className="admin-date-filter-row">
+              <label className="filter-inline">
+                <span>公開予定:</span>
+                <input
+                  type="date"
+                  className="admin-date-input"
+                  value={publishStartFilter}
+                  onChange={(e) => setPublishStartFilter(e.target.value)}
+                />
+                <span>〜</span>
+                <input
+                  type="date"
+                  className="admin-date-input"
+                  value={publishEndFilter}
+                  onChange={(e) => setPublishEndFilter(e.target.value)}
+                />
+                {(publishStartFilter || publishEndFilter) && (
+                  <button
+                    type="button"
+                    className="button subtle compact"
+                    onClick={() => { setPublishStartFilter(""); setPublishEndFilter(""); }}
+                  >
+                    クリア
+                  </button>
+                )}
+              </label>
             </div>
             <div className="status-group" role="tablist" aria-label="ステータスフィルタ">
               {STATUS_OPTIONS.map((option) => (
@@ -280,6 +287,6 @@ export const AdminDashboard = ({ authToken, onClose, onInspectSpot }: AdminDashb
           ) : null}
         </>
       )}
-    </div>
+    </AdminLayout>
   );
 };

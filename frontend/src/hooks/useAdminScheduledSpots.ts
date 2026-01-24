@@ -14,10 +14,17 @@ const fetcher = async ([endpoint, token]: [string, string]) => {
   return (await res.json()) as ScheduledSpot[];
 };
 
-export const useAdminScheduledSpots = (authToken?: string, status = "pending") => {
+export type AdminScheduledSpotFilters = {
+  status: string;
+  ownerId?: string;
+  publishStart?: string;
+  publishEnd?: string;
+};
+
+export const useAdminScheduledSpots = (authToken?: string, filters: AdminScheduledSpotFilters = { status: "pending" }) => {
   // モックモード
   if (ADMIN_MOCK_MODE) {
-    const mockData = status === "approved" ? MOCK_SCHEDULED_SPOTS_APPROVED : MOCK_SCHEDULED_SPOTS;
+    const mockData = filters.status === "approved" ? MOCK_SCHEDULED_SPOTS_APPROVED : MOCK_SCHEDULED_SPOTS;
     return {
       adminScheduledSpots: mockData,
       error: undefined,
@@ -26,7 +33,13 @@ export const useAdminScheduledSpots = (authToken?: string, status = "pending") =
     };
   }
 
-  const key = authToken?.trim() ? [`/api/admin/scheduled_spots?status=${status}`, authToken.trim()] : null;
+  const queryParams = new URLSearchParams();
+  queryParams.set("status", filters.status);
+  if (filters.ownerId) queryParams.set("ownerId", filters.ownerId);
+  if (filters.publishStart) queryParams.set("publishStart", filters.publishStart);
+  if (filters.publishEnd) queryParams.set("publishEnd", filters.publishEnd);
+
+  const key = authToken?.trim() ? [`/api/admin/scheduled_spots?${queryParams.toString()}`, authToken.trim()] : null;
   const { data, error, isLoading, mutate } = useSWR<ScheduledSpot[]>(key, fetcher, {
     revalidateOnFocus: false,
     dedupingInterval: 30_000

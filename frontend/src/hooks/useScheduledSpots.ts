@@ -16,6 +16,28 @@ export type ScheduledSpot = {
   ownerId: string;
   imageUrl?: string | null;
   reviewNotes?: string | null;
+  // 新規追加フィールド
+  speechBubble?: string | null;
+  locationName?: string | null;
+  locationDetails?: string | null;
+  pricing?: {
+    label?: string;
+    amount?: number;
+    currency?: string;
+    isFree: boolean;
+  } | null;
+  contact?: {
+    phone?: string | null;
+    email?: string | null;
+    sns?: Record<string, string> | null;
+  } | null;
+  externalLinks?: Array<{
+    label: string;
+    url: string;
+    icon?: string | null;
+  }> | null;
+  ownerDisplayName?: string | null;
+  ownerPhotoUrl?: string | null;
 };
 
 const fetcher = async ([endpoint, token]: [string, string]) => {

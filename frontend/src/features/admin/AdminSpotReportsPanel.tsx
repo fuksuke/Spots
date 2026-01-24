@@ -56,6 +56,44 @@ export const AdminSpotReportsPanel = ({
     }
   };
 
+  const handleDeleteSpot = async (report: SpotReport) => {
+    if (!window.confirm("本当にこのスポットを削除しますか？\nこの操作は取り消せません。")) return;
+    if (updatingId) return;
+
+    try {
+      setUpdatingId(report.id);
+      // 1. Delete the spot
+      const deleteRes = await fetch(`/api/spots/${report.spotId}`, {
+        method: "DELETE",
+        headers: { Authorization: `Bearer ${authToken}` }
+      });
+      if (!deleteRes.ok) {
+        throw new Error("スポットの削除に失敗しました");
+      }
+
+      // 2. Mark report as resolved
+      const resolveRes = await fetch(`/api/admin/spot_reports/${report.id}`, {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${authToken}`
+        },
+        body: JSON.stringify({ status: "resolved" })
+      });
+      if (!resolveRes.ok) {
+        // Log warning but don't fail properly since spot is gone
+        console.warn("Retport status update failed after spot deletion");
+      }
+
+      onRefresh();
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "削除処理に失敗しました";
+      window.alert(message);
+    } finally {
+      setUpdatingId(null);
+    }
+  };
+
   if (isLoading) {
     return <div className="panel admin-spot-reports-panel">通報を読み込み中...</div>;
   }
@@ -71,53 +109,79 @@ export const AdminSpotReportsPanel = ({
 
   return (
     <div className="admin-reports-panel">
-      <ul className="admin-report-list">
+      <div className="admin-report-grid">
         {reports.map((report) => {
-          const createdAtLabel = new Date(report.createdAt).toLocaleDateString("ja-JP");
+          const createdAt = new Date(report.createdAt);
+          const createdAtLabel = createdAt.toLocaleDateString("ja-JP", { month: "short", day: "numeric" });
+          const createdTimeLabel = createdAt.toLocaleTimeString("ja-JP", { hour: "2-digit", minute: "2-digit" });
           const reasonLabel = REASON_LABELS[report.reason] ?? report.reason;
           const isResolved = report.status === "resolved";
 
           return (
-            <li key={report.id} className={`admin-report-card ${isResolved ? "resolved" : "open"}`}>
-              <div className="admin-report-header">
-                <span className={`admin-report-status ${isResolved ? "resolved" : "open"}`}>
-                  {isResolved ? "対応済み" : "未対応"}
+            <article key={report.id} className={`admin-report-card-v2 ${isResolved ? "resolved" : "open"}`}>
+              {/* ヘッダー：ステータスと理由 */}
+              <div className="admin-report-card-header">
+                <div className="admin-report-card-status">
+                  <span className={`status-indicator ${isResolved ? "resolved" : "open"}`} />
+                  <span className="status-text">{isResolved ? "対応済み" : "未対応"}</span>
+                </div>
+                <span className={`admin-report-reason-badge reason-${report.reason}`}>
+                  {reasonLabel}
                 </span>
-                <span className="admin-report-reason">{reasonLabel}</span>
-                <span className="admin-report-date">{createdAtLabel}</span>
               </div>
-              <div className="admin-report-body">
-                <p className="admin-report-spot">スポット: {report.spotId}</p>
-                {report.details ? (
-                  <p className="admin-report-details">{report.details}</p>
-                ) : (
-                  <p className="admin-report-details muted">詳細なし</p>
-                )}
+
+              {/* メインコンテンツ */}
+              <div className="admin-report-card-body">
+                <div className="admin-report-spot-id">
+                  <span className="label">スポットID:</span>
+                  <code>{report.spotId.slice(0, 12)}...</code>
+                </div>
+                <div className="admin-report-details-box">
+                  {report.details ? (
+                    <p className="details-text">{report.details}</p>
+                  ) : (
+                    <p className="details-empty">詳細情報なし</p>
+                  )}
+                </div>
+                <div className="admin-report-meta">
+                  <span className="meta-date">{createdAtLabel}</span>
+                  <span className="meta-time">{createdTimeLabel}</span>
+                </div>
               </div>
-              <div className="admin-report-actions">
+
+              {/* アクションボタン */}
+              <div className="admin-report-card-actions">
                 <button
                   type="button"
-                  className="admin-btn-secondary"
+                  className="admin-report-btn view"
                   onClick={() => onInspectSpot?.(report.spotId)}
                 >
-                  スポットを確認
+                  確認
                 </button>
                 <button
                   type="button"
-                  className={isResolved ? "admin-btn-secondary" : "admin-btn-primary"}
+                  className="admin-report-btn delete"
+                  disabled={Boolean(updatingId) || isResolved}
+                  onClick={() => void handleDeleteSpot(report)}
+                >
+                  強制削除
+                </button>
+                <button
+                  type="button"
+                  className={`admin-report-btn ${isResolved ? "reopen" : "resolve"}`}
                   disabled={Boolean(updatingId)}
                   onClick={() => handleUpdateStatus(report, isResolved ? "open" : "resolved")}
                 >
-                  {isResolved ? "未対応に戻す" : "対応済みにする"}
+                  {isResolved ? "再開" : "解決"}
                 </button>
               </div>
-            </li>
+            </article>
           );
         })}
         {reports.length === 0 ? (
-          <li className="admin-empty">{statusFilter === "open" ? "未対応の通報はありません。" : "対応済み通報はありません。"}</li>
+          <div className="admin-empty">{statusFilter === "open" ? "未対応の通報はありません。" : "対応済み通報はありません。"}</div>
         ) : null}
-      </ul>
+      </div>
     </div>
   );
 };

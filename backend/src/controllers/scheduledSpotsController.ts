@@ -20,8 +20,28 @@ import {
   reviewScheduledSpot,
   updateScheduledSpot
 } from "../services/scheduledSpotService.js";
+import { notifyAdminOfPendingSpot } from "../services/notificationService.js";
 
 const announcementTypeSchema = z.enum(["short_term_notice", "long_term_campaign"]);
+
+const pricingSchema = z.object({
+  label: z.string().max(50).optional(),
+  amount: z.number().nonnegative().optional(),
+  currency: z.string().max(10).optional(),
+  isFree: z.boolean()
+}).nullable().optional();
+
+const contactSchema = z.object({
+  phone: z.string().max(20).nullable().optional(),
+  email: z.string().email().nullable().optional(),
+  sns: z.record(z.string()).nullable().optional()
+}).nullable().optional();
+
+const externalLinkSchema = z.object({
+  label: z.string().max(50),
+  url: z.string().url(),
+  icon: z.string().max(50).nullable().optional()
+});
 
 const scheduledSpotPayloadSchema = z.object({
   title: z.string().min(1).max(120),
@@ -33,7 +53,15 @@ const scheduledSpotPayloadSchema = z.object({
   endTime: z.string().datetime(),
   publishAt: z.string().datetime(),
   announcementType: announcementTypeSchema,
-  imageUrl: z.string().url().nullable().optional()
+  imageUrl: z.string().url().nullable().optional(),
+  speechBubble: z.string().max(100).nullable().optional(),
+  locationName: z.string().max(100).nullable().optional(),
+  locationDetails: z.string().max(200).nullable().optional(),
+  pricing: pricingSchema,
+  contact: contactSchema,
+  externalLinks: z.array(externalLinkSchema).max(10).nullable().optional(),
+  ownerDisplayName: z.string().max(100).nullable().optional(),
+  ownerPhotoUrl: z.string().url().nullable().optional()
 });
 
 const updateScheduledSpotSchema = scheduledSpotPayloadSchema.partial();
@@ -77,10 +105,26 @@ export const createScheduledSpotHandler = async (req: Request, res: Response, ne
       publishAt: new Date(payload.publishAt),
       ownerId: uid,
       announcementType: payload.announcementType as AnnouncementType,
-      imageUrl: payload.imageUrl ?? null
+      imageUrl: payload.imageUrl ?? null,
+      speechBubble: payload.speechBubble ?? null,
+      locationName: payload.locationName ?? null,
+      locationDetails: payload.locationDetails ?? null,
+      pricing: payload.pricing ?? null,
+      contact: payload.contact ?? null,
+      externalLinks: payload.externalLinks ?? null,
+      ownerDisplayName: payload.ownerDisplayName ?? null,
+      ownerPhotoUrl: payload.ownerPhotoUrl ?? null
     } satisfies Parameters<typeof createScheduledSpot>[0];
 
     const spot = await createScheduledSpot(input, poster);
+
+    // Notify admin if the spot requires manual review
+    if (spot.status === "pending") {
+      notifyAdminOfPendingSpot(spot.id, spot.title).catch((err) => {
+        console.error("Failed to notify admin of pending spot:", err);
+      });
+    }
+
     res.status(201).json(toApiSpot(spot));
   } catch (error) {
     if (error instanceof PhoneVerificationRequiredError) {
@@ -135,7 +179,8 @@ export const cancelScheduledSpotHandler = async (req: Request, res: Response, ne
     if (!uid) {
       return res.status(401).json({ message: "Authentication required" });
     }
-    await cancelScheduledSpot(req.params.id, uid);
+    const isAdmin = (req as Request & { isAdmin?: boolean }).isAdmin;
+    await cancelScheduledSpot(req.params.id, { uid, isAdmin });
     res.status(204).end();
   } catch (error) {
     if (error instanceof SchedulingRuleError) {
@@ -172,14 +217,23 @@ const ensureAdmin = (req: Request) => {
 
 const adminListQuerySchema = z.object({
   status: z.enum(["pending", "approved", "published", "rejected", "cancelled"]).optional(),
-  limit: z.coerce.number().int().min(1).max(100).optional()
+  limit: z.coerce.number().int().min(1).max(100).optional(),
+  ownerId: z.string().optional(),
+  publishStart: z.string().datetime().optional(),
+  publishEnd: z.string().datetime().optional()
 });
 
 export const listScheduledSpotsForAdminHandler = async (req: Request, res: Response, next: NextFunction) => {
   try {
     ensureAdmin(req);
-    const { status, limit } = adminListQuerySchema.parse(req.query);
-    const spots = await listScheduledSpotsForAdmin({ status: status as ScheduledSpot["status"] | undefined, limit });
+    const { status, limit, ownerId, publishStart, publishEnd } = adminListQuerySchema.parse(req.query);
+    const spots = await listScheduledSpotsForAdmin({
+      status: status as ScheduledSpot["status"] | undefined,
+      limit,
+      ownerId,
+      publishStart: publishStart ? new Date(publishStart) : undefined,
+      publishEnd: publishEnd ? new Date(publishEnd) : undefined
+    });
     res.json(spots.map(toApiSpot));
   } catch (error) {
     if (error instanceof SchedulingRuleError) {
@@ -264,9 +318,9 @@ export const reviewScheduledSpotHandler = async (req: Request, res: Response, ne
         reviewNotes: payload.reviewNotes,
         promotion: payload.promotion
           ? {
-              ...payload.promotion,
-              expiresAt: payload.promotion.expiresAt ? new Date(payload.promotion.expiresAt) : undefined
-            }
+            ...payload.promotion,
+            expiresAt: payload.promotion.expiresAt ? new Date(payload.promotion.expiresAt) : undefined
+          }
           : null,
         templateId: payload.templateId
       },

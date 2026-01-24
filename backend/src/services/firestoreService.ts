@@ -801,6 +801,37 @@ export const favoriteSpot = async (spotId: string, userId: string): Promise<Favo
   });
 };
 
+export const deleteSpot = async (spotId: string) => {
+  const spotRef = firestore.collection("spots").doc(spotId);
+
+  await firestore.runTransaction(async (transaction) => {
+    const spotSnapshot = await transaction.get(spotRef);
+    if (!spotSnapshot.exists) {
+      throw new Error("Spot not found");
+    }
+
+    // Note: In a real production app, we should recursively delete sub-collections (comments, likes)
+    // or use a scheduled function. For MVP, we might leave orphans or delete critical ones.
+    // Deleting the spot document itself hides it from lists.
+    transaction.delete(spotRef);
+
+    // Also delete any promotion referencing this spot
+    // This requires a query, which we can't do easily inside a transaction if we want to be efficient,
+    // but we can try. However, transactions require reads before writes.
+    // Let's keep it simple: just delete the spot.
+  });
+
+  // Cleanup promotions outside transaction (best effort)
+  const promoSnap = await firestore.collection("promotions").where("spot_id", "==", spotId).get();
+  const batch = firestore.batch();
+  promoSnap.docs.forEach((doc) => {
+    batch.delete(doc.ref);
+  });
+  if (!promoSnap.empty) {
+    await batch.commit();
+  }
+};
+
 export const unfavoriteSpot = async (spotId: string, userId: string): Promise<FavoriteMutationResult> => {
   const userRef = firestore.collection("users").doc(userId);
 

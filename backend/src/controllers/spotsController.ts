@@ -14,11 +14,13 @@ import {
   unlikeSpot,
   fetchPopularSpotsFromLeaderboard,
   fetchTrendingNewSpots,
-  recordSpotView
+  recordSpotView,
+  deleteSpot
 } from "../services/firestoreService.js";
 import { createSpotReport } from "../services/spotReportService.js";
 import { PhoneVerificationRequiredError, SchedulingRuleError } from "../services/posterProfileService.js";
 import { extractUidFromAuthorization, InvalidAuthTokenError } from "../utils/auth.js";
+import { notifyAdminOfReport } from "../services/notificationService.js";
 
 import { enforceRealtimeSpotWindow } from "./scheduledSpotsController.js";
 
@@ -32,9 +34,9 @@ const listSpotsQuerySchema = z.object({
       return Array.isArray(value)
         ? value.filter(Boolean)
         : value
-            .split(",")
-            .map((item) => item.trim())
-            .filter(Boolean);
+          .split(",")
+          .map((item) => item.trim())
+          .filter(Boolean);
     })
 });
 
@@ -170,22 +172,23 @@ export const recordSpotViewHandler = async (req: Request, res: Response, next: N
 
 export const reportSpotHandler = async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const { reason, details } = spotReportBodySchema.parse(req.body);
-    let reporterUid: string | null = null;
-    try {
-      const extracted = await extractUidFromAuthorization(req.headers.authorization);
-      reporterUid = extracted ?? null;
-    } catch (error) {
-      if (!(error instanceof InvalidAuthTokenError)) {
-        throw error;
-      }
+    const reporterUid = (req as Request & { uid?: string }).uid;
+    if (!reporterUid) {
+      return res.status(401).json({ message: "通報するにはログインが必要です" });
     }
 
-    await createSpotReport({
+    const { reason, details } = spotReportBodySchema.parse(req.body);
+
+    const reportRef = await createSpotReport({
       spotId: req.params.id,
       reporterUid,
       reason,
       details: details?.trim() ? details.trim() : null
+    });
+
+    // Notify admin asynchronously
+    notifyAdminOfReport(reportRef.id, req.params.id, reason).catch((err) => {
+      console.error("Failed to notify admin of report:", err);
     });
 
     res.status(201).json({ status: "ok" });
@@ -343,6 +346,26 @@ export const unlikeSpotHandler = async (req: Request, res: Response, next: NextF
     }
     const result = await unlikeSpot(req.params.id, uid);
     res.status(200).json(result);
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const deleteSpotHandler = async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const uid = (req as Request & { uid?: string }).uid;
+    if (!uid) {
+      return res.status(401).json({ message: "Authentication required" });
+    }
+    const spot = await fetchSpotById(req.params.id);
+    if (!spot) {
+      return res.status(404).json({ message: "Spot not found" });
+    }
+    if (spot.ownerId !== uid) {
+      return res.status(403).json({ message: "この投稿を削除する権限がありません" });
+    }
+    await deleteSpot(req.params.id);
+    res.status(200).json({ status: "ok" });
   } catch (error) {
     next(error);
   }

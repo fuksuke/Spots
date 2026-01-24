@@ -5,6 +5,69 @@ import { trackError, trackEvent } from "../../lib/analytics";
 import { ScheduledSpot } from "../../hooks/useScheduledSpots";
 import { useReviewTemplates } from "../../hooks/useReviewTemplates";
 
+const YenIcon = () => (
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <line x1="12" y1="1" x2="12" y2="23" />
+    <path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6" />
+  </svg>
+);
+
+const CalendarIcon = () => (
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <rect x="3" y="4" width="18" height="18" rx="2" ry="2" />
+    <line x1="16" y1="2" x2="16" y2="6" />
+    <line x1="8" y1="2" x2="8" y2="6" />
+    <line x1="3" y1="10" x2="21" y2="10" />
+  </svg>
+);
+
+const PhoneIcon = () => (
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z" />
+  </svg>
+);
+
+const UserIcon = () => (
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
+    <circle cx="12" cy="7" r="4" />
+  </svg>
+);
+
+const LinkIcon = () => (
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71" />
+    <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71" />
+  </svg>
+);
+
+const formatPricing = (pricing: ScheduledSpot["pricing"]): string => {
+  if (!pricing) return "未設定";
+  if (pricing.isFree) return "無料";
+  if (pricing.amount !== undefined) {
+    const currency = pricing.currency || "¥";
+    const label = pricing.label ? ` (${pricing.label})` : "";
+    return `${currency}${pricing.amount.toLocaleString()}${label}`;
+  }
+  return pricing.label || "未設定";
+};
+
+const formatDateTime = (startTime: string, endTime?: string): string => {
+  const start = new Date(startTime);
+  const startStr = start.toLocaleDateString("ja-JP", { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" });
+  if (!endTime) return startStr;
+  const end = new Date(endTime);
+  const endStr = end.toLocaleDateString("ja-JP", { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" });
+  return `${startStr} - ${endStr}`;
+};
+
+const getGoogleMapUrl = (spot: ScheduledSpot): string => {
+  const query = spot.locationName
+    ? encodeURIComponent(spot.locationName)
+    : `${spot.lat},${spot.lng}`;
+  return `https://www.google.com/maps/search/?api=1&query=${query}`;
+};
+
 type AdminScheduledSpotsPanelProps = {
   spots: ScheduledSpot[];
   isLoading: boolean;
@@ -34,7 +97,8 @@ export const AdminScheduledSpotsPanel = ({
   const [submittingId, setSubmittingId] = useState<string | null>(null);
   const [expandedSpotId, setExpandedSpotId] = useState<string | null>(null);
   const [reviewDrafts, setReviewDrafts] = useState<Record<string, ReviewDraft>>({});
-  const canReview = statusFilter === "pending";
+  // Review is allowed for pending spots AND published spots (to unpublish/reject)
+  const canReview = statusFilter === "pending" || statusFilter === "published";
   const { templates, isLoading: isTemplateLoading, error: templateError } = useReviewTemplates(authToken);
 
   const templateOptions = useMemo(() => {
@@ -158,94 +222,209 @@ export const AdminScheduledSpotsPanel = ({
     return <div className="panel error">{message}</div>;
   }
 
+  const getCategoryLabel = (category: string) => {
+    const labels: Record<string, string> = {
+      event: "イベント",
+      sale: "セール",
+      food: "グルメ",
+      music: "音楽",
+      art: "アート",
+      other: "その他"
+    };
+    return labels[category] ?? category;
+  };
+
+  const getOwnerInitial = (spot: ScheduledSpot) => {
+    if (spot.ownerDisplayName) {
+      return spot.ownerDisplayName.charAt(0).toUpperCase();
+    }
+    return spot.ownerId.charAt(0).toUpperCase();
+  };
+
   return (
     <div className="admin-scheduled-panel">
-      <ul className="admin-scheduled-list">
+      <div className="admin-card-grid">
         {spots.map((spot) => (
-          <li key={spot.id} className="admin-scheduled-item">
-            <div className="admin-card-header">
-              <span className="admin-type-badge">
-                {spot.announcementType === "long_term_campaign" ? "長期" : "短期"}
-              </span>
-              <span className="admin-meta-inline">
-                {new Date(spot.publishAt).toLocaleDateString("ja-JP")} 公開予定
-              </span>
+          <article key={spot.id} className="admin-review-card">
+            {/* 角のリボンラベル */}
+            <div className={`admin-review-card__corner-label type-${spot.announcementType}`}>
+              {spot.announcementType === "long_term_campaign" ? "長期" : "短期"}
             </div>
-            <h3 className="admin-card-title">{spot.title}</h3>
-            <p className="admin-card-description">{spot.description}</p>
-            <div className="admin-card-meta">
-              <span>開始: {new Date(spot.startTime).toLocaleString("ja-JP", { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" })}</span>
-              <span>投稿者: {spot.ownerId}</span>
-            </div>
-            {spot.reviewNotes ? <p className="admin-card-notes">{spot.reviewNotes}</p> : null}
 
-            {canReview ? (
-              <div className="admin-review-section">
-                <details className="admin-review-details">
-                  <summary>コメント・テンプレート</summary>
-                  <div className="admin-review-fields">
-                    <textarea
-                      className="admin-review-textarea"
-                      value={getReviewDraft(spot.id).note}
-                      placeholder="審査コメント（却下時は必須）"
-                      onChange={(event) => handleNoteChange(spot.id, event)}
-                      rows={2}
-                      aria-label="審査コメント"
-                    />
-                    <select
-                      className="admin-review-select"
-                      value={getReviewDraft(spot.id).templateId ?? ""}
-                      onChange={(event) => handleTemplateChange(spot.id, event)}
-                    >
-                      <option value="">テンプレートを選択</option>
-                      {templateOptions.map((template) => (
-                        <option key={template.id} value={template.id}>
-                          {template.displayLabel}
-                        </option>
-                      ))}
-                    </select>
-                    {isTemplateLoading ? <span className="admin-hint">読み込み中...</span> : null}
-                    {templateError ? <span className="admin-hint error">取得失敗</span> : null}
+            {/* ヘッダー: 画像 + 店舗情報 */}
+            <div className="admin-review-card__header">
+              <div className="admin-review-card__image">
+                {spot.imageUrl ? (
+                  <img src={spot.imageUrl} alt={spot.title} loading="lazy" />
+                ) : (
+                  <div className="admin-review-card__image-placeholder">
+                    {getCategoryLabel(spot.category)}
                   </div>
-                </details>
-                <div className="admin-action-buttons">
-                  <button
-                    type="button"
-                    className="admin-btn-approve"
-                    disabled={submittingId === spot.id}
-                    onClick={() => void handleReview(spot, "approved")}
-                  >
-                    承認する
-                  </button>
-                  <button
-                    type="button"
-                    className="admin-btn-reject"
-                    disabled={submittingId === spot.id}
-                    onClick={() => void handleReview(spot, "rejected")}
-                  >
-                    却下
-                  </button>
+                )}
+              </div>
+              <div className="admin-review-card__owner">
+                <div className="admin-review-card__owner-row">
+                  <div className="admin-review-card__owner-avatar">
+                    {spot.ownerPhotoUrl ? (
+                      <img src={spot.ownerPhotoUrl} alt="" />
+                    ) : (
+                      getOwnerInitial(spot)
+                    )}
+                  </div>
+                  <span className="admin-review-card__user-id">
+                    {spot.ownerId.slice(0, 8)}...
+                  </span>
+                </div>
+                <h3 className="admin-review-card__spot-title">{spot.title}</h3>
+                <span className="admin-review-card__catchcopy">
+                  {spot.speechBubble || "キャッチコピー未設定"}
+                </span>
+              </div>
+            </div>
+
+            {/* 詳細リスト */}
+            <div className="admin-review-card__details">
+              <div className="admin-review-card__detail-item">
+                <span className="admin-review-card__detail-icon"><YenIcon /></span>
+                <span className="admin-review-card__detail-text">{formatPricing(spot.pricing)}</span>
+              </div>
+              <div className="admin-review-card__detail-item">
+                <span className="admin-review-card__detail-icon"><CalendarIcon /></span>
+                <span className="admin-review-card__detail-text">
+                  {formatDateTime(spot.startTime, spot.endTime)}
+                </span>
+              </div>
+              <div className="admin-review-card__detail-item">
+                <span className="admin-review-card__detail-icon"><PhoneIcon /></span>
+                <span className="admin-review-card__detail-text">
+                  {spot.contact?.phone || "未登録"}
+                </span>
+              </div>
+              <div className="admin-review-card__detail-item">
+                <span className="admin-review-card__detail-icon"><UserIcon /></span>
+                <span className="admin-review-card__detail-text">
+                  {spot.ownerDisplayName || "アカウント名未設定"}
+                </span>
+              </div>
+            </div>
+
+            {/* 説明文 */}
+            <p className="admin-review-card__description">{spot.description}</p>
+
+            {/* Google Map検索ボタン */}
+            <a
+              className="admin-review-card__map-btn"
+              href={getGoogleMapUrl(spot)}
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              Google Mapで検索
+            </a>
+
+            {/* SNSリンク */}
+            {spot.externalLinks && spot.externalLinks.length > 0 && (
+              <div className="admin-review-card__links">
+                <div className="admin-review-card__links-label">
+                  <LinkIcon /> URLs
+                </div>
+                <div className="admin-review-card__links-icons">
+                  {spot.externalLinks.map((link) => (
+                    <a
+                      key={link.url}
+                      className="admin-review-card__link-item"
+                      href={link.url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                    >
+                      {link.label}
+                    </a>
+                  ))}
                 </div>
               </div>
-            ) : (
-              <div className="admin-status-row">
-                <span className={`badge status-${spot.status}`.trim()}>{spot.status.toUpperCase()}</span>
+            )}
+
+            {/* 審査メモ */}
+            {spot.reviewNotes && (
+              <div className="admin-review-card__notes">
+                <span className="admin-review-card__notes-label">審査メモ:</span>
+                <span className="admin-review-card__notes-text">{spot.reviewNotes}</span>
               </div>
             )}
-            <button
-              type="button"
-              className="admin-toggle-history"
-              onClick={() => setExpandedSpotId((current) => (current === spot.id ? null : spot.id))}
-            >
-              {expandedSpotId === spot.id ? "履歴を閉じる" : "履歴を表示"}
-            </button>
-            {expandedSpotId === spot.id ? (
-              <ReviewLogSection spotId={spot.id} authToken={authToken} templateLabelMap={templateLabelMap} />
-            ) : null}
-          </li>
+
+            {/* 審査アクション */}
+            <div className="admin-review-card__actions">
+              {canReview ? (
+                <>
+                  <details className="admin-review-card__review-details">
+                    <summary>コメント・テンプレート</summary>
+                    <div className="admin-review-card__review-fields">
+                      <textarea
+                        className="admin-review-card__review-textarea"
+                        value={getReviewDraft(spot.id).note}
+                        placeholder="審査コメント（却下時は必須）"
+                        onChange={(event) => handleNoteChange(spot.id, event)}
+                        rows={2}
+                        aria-label="審査コメント"
+                      />
+                      <select
+                        className="admin-review-card__review-select"
+                        value={getReviewDraft(spot.id).templateId ?? ""}
+                        onChange={(event) => handleTemplateChange(spot.id, event)}
+                      >
+                        <option value="">テンプレートを選択</option>
+                        {templateOptions.map((template) => (
+                          <option key={template.id} value={template.id}>
+                            {template.displayLabel}
+                          </option>
+                        ))}
+                      </select>
+                      {isTemplateLoading ? <span className="admin-hint">読み込み中...</span> : null}
+                      {templateError ? <span className="admin-hint error">取得失敗</span> : null}
+                    </div>
+                  </details>
+                  <div className="admin-review-card__action-buttons">
+                    <button
+                      type="button"
+                      className="admin-review-card__btn-approve"
+                      disabled={submittingId === spot.id || spot.status === "published"}
+                      onClick={() => void handleReview(spot, "approved")}
+                    >
+                      承認
+                    </button>
+                    <button
+                      type="button"
+                      className="admin-review-card__btn-reject"
+                      disabled={submittingId === spot.id}
+                      onClick={() => void handleReview(spot, "rejected")}
+                    >
+                      {spot.status === "published" ? "公開停止" : "却下"}
+                    </button>
+                  </div>
+                </>
+              ) : (
+                <div className="admin-review-card__status-only">
+                  <span className={`badge status-${spot.status}`.trim()}>{spot.status.toUpperCase()}</span>
+                </div>
+              )}
+              <button
+                type="button"
+                className="admin-review-card__btn-secondary"
+                onClick={() => setExpandedSpotId((current) => (current === spot.id ? null : spot.id))}
+              >
+                {expandedSpotId === spot.id ? "履歴を閉じる" : "履歴を表示"}
+              </button>
+            </div>
+
+            {/* 履歴セクション */}
+            {expandedSpotId === spot.id && (
+              <div className="admin-review-card__history">
+                <ReviewLogSection spotId={spot.id} authToken={authToken} templateLabelMap={templateLabelMap} />
+              </div>
+            )}
+          </article>
         ))}
-        {spots.length === 0 && <li className="admin-empty">{emptyMessage ?? "該当する告知はありません。"}</li>}
-      </ul>
+        {spots.length === 0 && <div className="admin-empty">{emptyMessage ?? "該当する告知はありません。"}</div>}
+      </div>
     </div>
   );
 };
