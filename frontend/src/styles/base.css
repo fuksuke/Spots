@@ -4069,23 +4069,17 @@ body.mode-list .category-tabs {
 .admin-report-card-v2 {
   background: #ffffff;
   border-radius: 14px;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
   overflow: hidden;
-  border-left: 4px solid transparent;
   transition: all 0.2s ease;
 }
 
-.admin-report-card-v2.open {
-  border-left-color: #f59e0b;
-}
-
 .admin-report-card-v2.resolved {
-  border-left-color: #10b981;
-  opacity: 0.85;
+  opacity: 0.75;
 }
 
 .admin-report-card-v2:hover {
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
 }
 
 .admin-report-card-header {
@@ -4093,7 +4087,6 @@ body.mode-list .category-tabs {
   align-items: center;
   justify-content: space-between;
   padding: 0.75rem 1rem;
-  background: #f8fafc;
 }
 
 .admin-report-card-status {

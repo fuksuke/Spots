@@ -1,7 +1,7 @@
 import useSWR from "swr";
 
 import { SpotReport, SpotReportStatus } from "../types";
-import { ADMIN_MOCK_MODE, MOCK_SPOT_REPORTS, MOCK_SPOT_REPORTS_RESOLVED } from "../mocks/mockAdminData";
+import { ADMIN_MOCK_MODE, MOCK_SPOT_REPORTS } from "../mocks/mockAdminData";
 
 const fetcher = async ([endpoint, token]: [string, string]) => {
   const response = await fetch(endpoint, {
@@ -19,7 +19,7 @@ const fetcher = async ([endpoint, token]: [string, string]) => {
 export const useSpotReports = (authToken?: string | null, status: SpotReportStatus = "open") => {
   // モックモード
   if (ADMIN_MOCK_MODE) {
-    const mockData = status === "resolved" ? MOCK_SPOT_REPORTS_RESOLVED : MOCK_SPOT_REPORTS;
+    const mockData = MOCK_SPOT_REPORTS.filter((r) => r.status === status);
     return {
       spotReports: mockData,
       error: undefined,

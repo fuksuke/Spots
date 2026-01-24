@@ -96,12 +96,12 @@ export const AdminLayout = ({ activeTab, onTabChange, children, title, actions }
                 </nav>
 
                 <div className="admin-content">
-                    <AdminNotificationsPanel
-                        notifications={notifications}
-                        onMarkRead={markAsRead}
-                        onMarkAllRead={markAllAsRead}
-                    />
                     <main className="admin-main">
+                        <AdminNotificationsPanel
+                            notifications={notifications}
+                            onMarkRead={markAsRead}
+                            onMarkAllRead={markAllAsRead}
+                        />
                         {children}
                     </main>
                 </div>

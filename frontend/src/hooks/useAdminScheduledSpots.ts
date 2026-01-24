@@ -1,6 +1,6 @@
 import useSWR from "swr";
 import { ScheduledSpot } from "./useScheduledSpots";
-import { ADMIN_MOCK_MODE, MOCK_SCHEDULED_SPOTS, MOCK_SCHEDULED_SPOTS_APPROVED } from "../mocks/mockAdminData";
+import { ADMIN_MOCK_MODE, MOCK_SCHEDULED_SPOTS } from "../mocks/mockAdminData";
 
 const fetcher = async ([endpoint, token]: [string, string]) => {
   const res = await fetch(endpoint, {
@@ -24,7 +24,7 @@ export type AdminScheduledSpotFilters = {
 export const useAdminScheduledSpots = (authToken?: string, filters: AdminScheduledSpotFilters = { status: "pending" }) => {
   // モックモード
   if (ADMIN_MOCK_MODE) {
-    const mockData = filters.status === "approved" ? MOCK_SCHEDULED_SPOTS_APPROVED : MOCK_SCHEDULED_SPOTS;
+    const mockData = MOCK_SCHEDULED_SPOTS.filter((s) => s.status === filters.status);
     return {
       adminScheduledSpots: mockData,
       error: undefined,
