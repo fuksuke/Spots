@@ -102,7 +102,6 @@ export const AccountPage = () => {
                         spotCount={mySpotCount}
                         onShare={handleShare}
                         onEdit={() => handleTabChange("edit")}
-                        onUpgrade={handleUpgrade}
                     />
                 );
             case "settings":
@@ -111,6 +110,7 @@ export const AccountPage = () => {
                         isPrivateAccount={Boolean(userProfile?.isPrivateAccount)}
                         onPrivateToggle={handlePrivateToggle}
                         onLogout={handleLogout}
+                        onUpgrade={handleUpgrade}
                     />
                 );
             case "edit":

@@ -4,12 +4,14 @@ export type AccountSettingsViewProps = {
     isPrivateAccount: boolean;
     onPrivateToggle: (next: boolean) => Promise<void> | void;
     onLogout: () => Promise<void> | void;
+    onUpgrade: () => void;
 };
 
 export const AccountSettingsView = ({
     isPrivateAccount: initialPrivate,
     onPrivateToggle,
-    onLogout
+    onLogout,
+    onUpgrade
 }: AccountSettingsViewProps) => {
     const [isPrivateAccount, setIsPrivateAccount] = useState(initialPrivate);
     const [isTogglingPrivate, setIsTogglingPrivate] = useState(false);
@@ -72,6 +74,9 @@ export const AccountSettingsView = ({
 
             <div className="settings-section">
                 <h2 className="settings-section-title">アカウント</h2>
+                <button type="button" className="button primary" onClick={onUpgrade} style={{ marginBottom: "12px", width: "100%" }}>
+                    アップグレード
+                </button>
                 <button type="button" className="button danger" onClick={handleLogoutClick}>
                     ログアウト
                 </button>

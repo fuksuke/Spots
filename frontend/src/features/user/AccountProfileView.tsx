@@ -12,7 +12,6 @@ export type AccountProfileViewProps = {
     spotCount: number;
     onShare: () => void;
     onEdit: () => void;
-    onUpgrade: () => void;
 };
 
 const normalizeWebsite = (value: string) => {
@@ -29,8 +28,7 @@ export const AccountProfileView = ({
     profile,
     spotCount,
     onShare,
-    onEdit,
-    onUpgrade
+    onEdit
 }: AccountProfileViewProps) => {
     const displayName = profile?.displayName ?? user?.displayName ?? "ユーザー";
     const avatarUrl = profile?.photoUrl ?? user?.photoURL ?? undefined;
@@ -97,9 +95,6 @@ export const AccountProfileView = ({
                         共有
                     </button>
                 </div>
-                <button type="button" className="button primary" onClick={onUpgrade}>
-                    アップグレード
-                </button>
             </div>
 
             <div className="account-profile-archive-section">
